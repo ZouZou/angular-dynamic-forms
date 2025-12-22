@@ -1,0 +1,84 @@
+@if (fields().length){
+<div class="form-container">
+  <h2>{{ title() }}</h2>
+
+  <form>
+    @for (field of fields(); track field.name) {
+    <div class="form-group">
+      <label class="form-label">
+        {{ field.label }}
+        @if (field.validations?.required || field.validations?.requiredTrue) {
+        <span class="required">*</span>
+        }
+      </label>
+
+      <!-- Text / Email -->
+      @if (field.type === 'text' || field.type === 'email') {
+      <input
+        [type]="field.type"
+        class="form-control"
+        [value]="formValues()[field.name]"
+        (input)="updateFormValue(field.name, $any($event.target).value)"
+      />
+      }
+
+      <!-- Select -->
+      @if (field.type === 'select') {
+      <select
+        class="form-select"
+        [value]="formValues()[field.name]"
+        (change)="updateFormValue(field.name, $any($event.target).value)"
+      >
+        <option value="">Chose a country</option>
+        @for (opt of field.options; track opt) {
+        <option [value]="opt">
+          {{ opt }}
+        </option>
+        }
+      </select>
+      }
+
+      <!-- Checkbox -->
+      @if (field.type === 'checkbox') {
+      <input
+        type="checkbox"
+        class="form-checkbox"
+        [checked]="formValues()[field.name]"
+        (change)="updateFormValue(field.name, $any($event.target).checked)"
+      />
+      }
+
+      <!-- Error -->
+      @if (touched()[field.name] && errors()[field.name]) {
+      <div class="error">
+        {{ errors()[field.name] }}
+      </div>
+      }
+    </div>
+    }
+
+    <button
+      class="submit-btn"
+      type="button"
+      [disabled]="!isValid()"
+      (click)="saveUserData()"
+    >
+      Submit
+    </button>
+  </form>
+</div>
+
+} @if (submitted()) {
+<div class="submitted-data">
+  <h3>Submitted Data</h3>
+
+  <ul>
+    @for (field of fields(); track field.name) {
+    <li>
+      <strong>{{ field.label }}:</strong>
+      {{ submittedData()?.[field.name] }}
+    </li>
+    }
+  </ul>
+</div>
+}
