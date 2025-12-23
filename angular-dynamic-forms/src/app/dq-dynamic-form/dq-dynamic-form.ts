@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { Field, FieldOption } from './models/field.model';
+import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
 
 @Component({
@@ -137,7 +137,14 @@ export class DqDynamicForm {
       const initialDirty: Record<string, boolean> = {};
 
       for (const field of schema.fields) {
-        initialValues[field.name] = field.type === 'checkbox' ? false : '';
+        // Set appropriate initial values based on field type
+        if (field.type === 'checkbox') {
+          initialValues[field.name] = false;
+        } else if (field.type === 'number') {
+          initialValues[field.name] = field.min ?? 0;
+        } else {
+          initialValues[field.name] = '';
+        }
         initialTouched[field.name] = false;
         initialDirty[field.name] = false;
       }
@@ -314,6 +321,130 @@ export class DqDynamicForm {
     return field?.label.toLowerCase() || fieldName;
   }
 
+  /**
+   * Check if a field should be visible based on visibility conditions
+   */
+  isFieldVisible(field: Field): boolean {
+    if (!field.visibleWhen) {
+      return true; // No visibility condition, always visible
+    }
+
+    return this.evaluateVisibilityCondition(field.visibleWhen);
+  }
+
+  /**
+   * Evaluate a visibility condition (simple or complex)
+   */
+  private evaluateVisibilityCondition(condition: VisibilityCondition): boolean {
+    // Check if it's a complex condition (has 'and' or 'or' operator)
+    if ('conditions' in condition) {
+      return this.evaluateComplexCondition(condition as ComplexVisibilityCondition);
+    }
+
+    // It's a simple condition
+    return this.evaluateSimpleCondition(condition as SimpleVisibilityCondition);
+  }
+
+  /**
+   * Evaluate a complex visibility condition with AND/OR logic
+   */
+  private evaluateComplexCondition(condition: ComplexVisibilityCondition): boolean {
+    const results = condition.conditions.map((c) =>
+      this.evaluateVisibilityCondition(c)
+    );
+
+    if (condition.operator === 'and') {
+      return results.every((r) => r === true);
+    } else {
+      // 'or'
+      return results.some((r) => r === true);
+    }
+  }
+
+  /**
+   * Evaluate a simple visibility condition
+   */
+  private evaluateSimpleCondition(condition: SimpleVisibilityCondition): boolean {
+    const fieldValue = this.formValues()[condition.field];
+    const { operator, value } = condition;
+
+    switch (operator) {
+      case 'equals':
+        return fieldValue === value;
+
+      case 'notEquals':
+        return fieldValue !== value;
+
+      case 'contains':
+        return (
+          typeof fieldValue === 'string' &&
+          typeof value === 'string' &&
+          fieldValue.includes(value)
+        );
+
+      case 'notContains':
+        return (
+          typeof fieldValue === 'string' &&
+          typeof value === 'string' &&
+          !fieldValue.includes(value)
+        );
+
+      case 'greaterThan':
+        return (
+          typeof fieldValue === 'number' &&
+          typeof value === 'number' &&
+          fieldValue > value
+        );
+
+      case 'lessThan':
+        return (
+          typeof fieldValue === 'number' &&
+          typeof value === 'number' &&
+          fieldValue < value
+        );
+
+      case 'greaterThanOrEqual':
+        return (
+          typeof fieldValue === 'number' &&
+          typeof value === 'number' &&
+          fieldValue >= value
+        );
+
+      case 'lessThanOrEqual':
+        return (
+          typeof fieldValue === 'number' &&
+          typeof value === 'number' &&
+          fieldValue <= value
+        );
+
+      case 'in':
+        return Array.isArray(value) && value.includes(fieldValue);
+
+      case 'notIn':
+        return Array.isArray(value) && !value.includes(fieldValue);
+
+      case 'isEmpty':
+        return (
+          fieldValue === '' ||
+          fieldValue === null ||
+          fieldValue === undefined ||
+          (Array.isArray(fieldValue) && fieldValue.length === 0)
+        );
+
+      case 'isNotEmpty':
+        return !(
+          fieldValue === '' ||
+          fieldValue === null ||
+          fieldValue === undefined ||
+          (Array.isArray(fieldValue) && fieldValue.length === 0)
+        );
+
+      default:
+        console.warn(`Unknown visibility operator: ${operator}`);
+        return true;
+    }
+  }
+
   readonly errors = computed<Record<string, string>>(() => {
     const validationErrors: Record<string, string> = {};
     const values = this.formValues();
@@ -347,6 +478,44 @@ export class DqDynamicForm {
         if (!emailRegex.test(fieldValue)) {
           validationErrors[field.name] = `${field.label} must be a valid email address`;
         }
+      }
+
+      // Number validation (min/max)
+      if (field.type === 'number' && fieldValue !== '' && fieldValue !== null) {
+        const numValue = typeof fieldValue === 'number' ? fieldValue : parseFloat(fieldValue as string);
+
+        if (field.min !== undefined && numValue < field.min) {
+          validationErrors[field.name] = `${field.label} must be at least ${field.min}`;
+        }
+
+        if (field.max !== undefined && numValue > field.max) {
+          validationErrors[field.name] = `${field.label} must be at most ${field.max}`;
+        }
+      }
+
+      // Date validation (min/max)
+      if (field.type === 'date' && fieldValue && typeof fieldValue === 'string') {
+        const dateValue = new Date(fieldValue);
+
+        if (field.min && new Date(field.min) > dateValue) {
+          validationErrors[field.name] = `${field.label} must be on or after ${field.min}`;
+        }
+
+        if (field.max && new Date(field.max) < dateValue) {
+          validationErrors[field.name] = `${field.label} must be on or before ${field.max}`;
+        }
+      }
+
+      // Textarea validation (same as text - maxLength)
+      if (
+        field.type === 'textarea' &&
+        rules?.maxLength &&
+        typeof fieldValue === 'string' &&
+        fieldValue.length > rules.maxLength
+      ) {
+        validationErrors[
+          field.name
+        ] = `${field.label} must be at most ${rules.maxLength} characters`;
       }
     }
 

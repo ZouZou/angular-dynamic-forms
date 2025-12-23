@@ -12,7 +12,10 @@ A flexible, JSON-driven dynamic form generator for Angular 21+ with support for 
 ### Key Features
 
 - **JSON-Driven Forms**: Define entire forms in JSON configuration
+- **Conditional Visibility**: Show/hide fields based on other field values with complex logic
+- **Multiple Field Types**: Text, email, textarea, number, date, radio buttons, checkboxes, and select dropdowns
 - **Dependent Dropdowns**: Cascading dropdowns where one field's options depend on another
+- **Dependent Checkboxes**: Checkboxes with same/opposite relationships
 - **API-Driven Options**: Fetch dropdown options dynamically from APIs with intelligent caching
 - **Smart Caching**: 5-minute TTL cache to reduce server load
 - **Loading States**: Per-field loading indicators for better UX
@@ -20,6 +23,80 @@ A flexible, JSON-driven dynamic form generator for Angular 21+ with support for 
 - **Angular Signals**: Reactive state management using Angular's latest signals API
 - **TypeScript**: Fully typed with interfaces for type safety
 - **Backward Compatible**: Supports static options, dependent options, and API-driven options
+
+---
+
+## Conditional Visibility
+
+Show or hide fields dynamically based on other field values. Supports both simple conditions and complex logical expressions.
+
+### Simple Conditions
+
+```json
+{
+  "type": "text",
+  "label": "Company Name",
+  "name": "companyName",
+  "visibleWhen": {
+    "field": "accountType",
+    "operator": "equals",
+    "value": "business"
+  }
+}
+```
+
+### Supported Operators
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `equals` | Field value equals specific value | Age equals 18 |
+| `notEquals` | Field value does not equal value | Status not equals "inactive" |
+| `contains` | String contains substring | Name contains "John" |
+| `notContains` | String does not contain substring | Email not contains "temp" |
+| `greaterThan` | Numeric value greater than | Age greater than 18 |
+| `lessThan` | Numeric value less than | Price less than 100 |
+| `greaterThanOrEqual` | Numeric value >= | Score >= 90 |
+| `lessThanOrEqual` | Numeric value <= | Quantity <= 10 |
+| `in` | Value in array | Color in ["red", "blue"] |
+| `notIn` | Value not in array | Size not in ["XS", "S"] |
+| `isEmpty` | Field is empty/null/undefined | Description is empty |
+| `isNotEmpty` | Field has value | Comments is not empty |
+
+### Complex Conditions (AND/OR Logic)
+
+```json
+{
+  "type": "text",
+  "label": "Student ID",
+  "name": "studentId",
+  "visibleWhen": {
+    "operator": "and",
+    "conditions": [
+      { "field": "age", "operator": "lessThan", "value": 25 },
+      { "field": "accountType", "operator": "equals", "value": "student" }
+    ]
+  }
+}
+```
+
+**Nested Conditions:**
+```json
+{
+  "visibleWhen": {
+    "operator": "or",
+    "conditions": [
+      {
+        "operator": "and",
+        "conditions": [
+          { "field": "age", "operator": "greaterThan", "value": 18 },
+          { "field": "country", "operator": "equals", "value": "USA" }
+        ]
+      },
+      { "field": "hasParentConsent", "operator": "equals", "value": true }
+    ]
+  }
+}
+```
 
 ---
 
@@ -196,17 +273,26 @@ All caching, error handling, and loading states work automatically!
 
 ```typescript
 interface Field {
-  type: string;                             // 'text', 'email', 'select', 'checkbox'
+  type: string;                             // Field type (see Supported Field Types)
   label: string;                            // Display label
   name: string;                             // Unique field identifier
-  options?: string[] | FieldOption[];       // Static options (string array or objects)
+  options?: string[] | FieldOption[];       // Static options (for select/radio)
   dependsOn?: string;                       // Parent field name for dependent fields
   optionsMap?: Record<string, FieldOption[]>; // Static dependent options mapping
   optionsEndpoint?: string;                 // API endpoint for dynamic options
+  dependencyType?: 'same' | 'opposite';     // For checkbox dependencies
+  visibleWhen?: VisibilityCondition;        // Conditional visibility
+  placeholder?: string;                     // Custom placeholder text
+  rows?: number;                            // Number of rows (textarea)
+  min?: number;                             // Minimum value (number/date)
+  max?: number;                             // Maximum value (number/date)
+  step?: number;                            // Step increment (number)
+  layout?: 'horizontal' | 'vertical';       // Layout for radio buttons
   validations?: {                           // Validation rules
-    required?: boolean;
-    minLength?: number;
-    requiredTrue?: boolean;  // For checkboxes
+    required?: boolean;                     // Field is required
+    minLength?: number;                     // Minimum string length
+    maxLength?: number;                     // Maximum string length
+    requiredTrue?: boolean;                 // Checkbox must be checked
   };
 }
 
@@ -226,18 +312,139 @@ When multiple option sources are defined, the system uses this priority:
 
 ### Supported Field Types
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `text` | Text input | Name, address |
-| `email` | Email input with validation | user@example.com |
-| `select` | Dropdown (single select) | Country, state, category |
-| `checkbox` | Boolean checkbox | Accept terms |
+| Type | Description | Attributes | Example Use Cases |
+|------|-------------|------------|-------------------|
+| `text` | Single-line text input | `placeholder`, `minLength`, `maxLength` | Name, address, username |
+| `email` | Email input with validation | `placeholder` | Email address |
+| `textarea` | Multi-line text input | `rows`, `placeholder`, `maxLength` | Bio, comments, description |
+| `number` | Numeric input with spinners | `min`, `max`, `step`, `placeholder` | Age, quantity, price |
+| `date` | Date picker | `min`, `max` | Birth date, start date, deadline |
+| `select` | Dropdown (single select) | `options`, `optionsMap`, `optionsEndpoint` | Country, state, category |
+| `radio` | Radio buttons (mutually exclusive) | `options`, `layout` | Gender, account type, size |
+| `checkbox` | Boolean checkbox | `dependencyType` | Accept terms, preferences |
 
 ---
 
 ## Examples
 
-### Example 1: Simple Form with Static Options
+### Example 1: All Field Types Showcase
+
+```json
+{
+  "title": "Comprehensive Form",
+  "fields": [
+    {
+      "type": "text",
+      "label": "Full Name",
+      "name": "fullName",
+      "placeholder": "Enter your full name",
+      "validations": { "required": true, "minLength": 3 }
+    },
+    {
+      "type": "email",
+      "label": "Email",
+      "name": "email",
+      "placeholder": "your.email@example.com",
+      "validations": { "required": true }
+    },
+    {
+      "type": "number",
+      "label": "Age",
+      "name": "age",
+      "min": 13,
+      "max": 120,
+      "step": 1,
+      "validations": { "required": true }
+    },
+    {
+      "type": "date",
+      "label": "Birth Date",
+      "name": "birthDate",
+      "min": "1900-01-01",
+      "max": "2010-12-31",
+      "validations": { "required": true }
+    },
+    {
+      "type": "radio",
+      "label": "Gender",
+      "name": "gender",
+      "layout": "horizontal",
+      "options": [
+        { "value": "male", "label": "Male" },
+        { "value": "female", "label": "Female" },
+        { "value": "other", "label": "Other" }
+      ],
+      "validations": { "required": true }
+    },
+    {
+      "type": "textarea",
+      "label": "Bio",
+      "name": "bio",
+      "rows": 4,
+      "placeholder": "Tell us about yourself...",
+      "validations": { "maxLength": 500 }
+    },
+    {
+      "type": "checkbox",
+      "label": "Accept Terms",
+      "name": "terms",
+      "validations": { "requiredTrue": true }
+    }
+  ]
+}
+```
+
+### Example 2: Conditional Visibility
+
+```json
+{
+  "title": "User Registration",
+  "fields": [
+    {
+      "type": "radio",
+      "label": "Account Type",
+      "name": "accountType",
+      "options": [
+        { "value": "personal", "label": "Personal" },
+        { "value": "business", "label": "Business" }
+      ],
+      "validations": { "required": true }
+    },
+    {
+      "type": "text",
+      "label": "Company Name",
+      "name": "companyName",
+      "visibleWhen": {
+        "field": "accountType",
+        "operator": "equals",
+        "value": "business"
+      },
+      "validations": { "required": true }
+    },
+    {
+      "type": "number",
+      "label": "Age",
+      "name": "age",
+      "min": 13,
+      "max": 120,
+      "validations": { "required": true }
+    },
+    {
+      "type": "checkbox",
+      "label": "I am over 18 years old",
+      "name": "ageConfirmation",
+      "visibleWhen": {
+        "field": "age",
+        "operator": "greaterThanOrEqual",
+        "value": 18
+      },
+      "validations": { "requiredTrue": true }
+    }
+  ]
+}
+```
+
+### Example 3: Simple Form with Static Options
 
 ```json
 {

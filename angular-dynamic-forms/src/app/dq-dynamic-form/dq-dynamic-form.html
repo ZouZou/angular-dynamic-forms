@@ -13,6 +13,8 @@
 
   <form>
     @for (field of fields(); track field.name) {
+    <!-- Only show field if visibility condition is met -->
+    @if (isFieldVisible(field)) {
     <div class="form-group">
       <!-- Text / Email -->
       @if (field.type === 'text' || field.type === 'email') {
@@ -26,9 +28,88 @@
         [type]="field.type"
         class="form-control"
         [value]="formValues()[field.name]"
-        [placeholder]="'Enter ' + field.label.toLowerCase()"
+        [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()"
         (input)="updateFormValue(field.name, $any($event.target).value)"
       />
+      }
+
+      <!-- Textarea -->
+      @if (field.type === 'textarea') {
+      <label class="form-label">
+        {{ field.label }}
+        @if (field.validations?.required) {
+        <span class="required">*</span>
+        }
+      </label>
+      <textarea
+        class="form-control"
+        [value]="formValues()[field.name]"
+        [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()"
+        [rows]="field.rows || 4"
+        (input)="updateFormValue(field.name, $any($event.target).value)"
+      ></textarea>
+      }
+
+      <!-- Number -->
+      @if (field.type === 'number') {
+      <label class="form-label">
+        {{ field.label }}
+        @if (field.validations?.required) {
+        <span class="required">*</span>
+        }
+      </label>
+      <input
+        type="number"
+        class="form-control"
+        [value]="formValues()[field.name]"
+        [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()"
+        [min]="field.min"
+        [max]="field.max"
+        [step]="field.step || 1"
+        (input)="updateFormValue(field.name, $any($event.target).valueAsNumber)"
+      />
+      }
+
+      <!-- Date -->
+      @if (field.type === 'date') {
+      <label class="form-label">
+        {{ field.label }}
+        @if (field.validations?.required) {
+        <span class="required">*</span>
+        }
+      </label>
+      <input
+        type="date"
+        class="form-control"
+        [value]="formValues()[field.name]"
+        [min]="field.min"
+        [max]="field.max"
+        (input)="updateFormValue(field.name, $any($event.target).value)"
+      />
+      }
+
+      <!-- Radio Buttons -->
+      @if (field.type === 'radio') {
+      <label class="form-label">
+        {{ field.label }}
+        @if (field.validations?.required) {
+        <span class="required">*</span>
+        }
+      </label>
+      <div class="radio-group" [class.radio-horizontal]="field.layout === 'horizontal'">
+        @for (opt of normalizeOptions(field.options || []); track opt.value) {
+        <div class="radio-option">
+          <input
+            type="radio"
+            [name]="field.name"
+            [value]="opt.value"
+            [checked]="formValues()[field.name] === opt.value"
+            (change)="updateFormValue(field.name, opt.value)"
+          />
+          <label>{{ opt.label }}</label>
+        </div>
+        }
+      </div>
       }
 
       <!-- Select -->
@@ -94,6 +175,7 @@
       </div>
       }
     </div>
+    }
     }
 
     <button

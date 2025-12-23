@@ -108,6 +108,14 @@
   }
 }
 
+/* Textarea specific styles */
+textarea.form-control {
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
 .form-select {
   cursor: pointer;
   appearance: none;
@@ -152,6 +160,60 @@
   &:focus {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
+  }
+}
+
+/* Radio Buttons */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+
+  &.radio-horizontal {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  user-select: none;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: var(--color-gray-50);
+  }
+
+  input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--color-primary);
+    transition: transform var(--transition-fast);
+
+    &:hover {
+      transform: scale(1.1);
+    }
+
+    &:focus {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  label {
+    cursor: pointer;
+    font-size: 0.9375rem;
+    color: var(--color-gray-800);
+    font-weight: 500;
+    margin: 0;
+    text-transform: none;
+    letter-spacing: normal;
   }
 }
 

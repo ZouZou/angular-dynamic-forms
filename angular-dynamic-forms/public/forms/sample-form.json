@@ -5,19 +5,84 @@
       "type": "text",
       "label": "First Name",
       "name": "firstName",
+      "placeholder": "Enter your first name",
       "validations": { "required": true, "minLength": 3 }
     },
     {
       "type": "text",
       "label": "Last Name",
       "name": "lastName",
+      "placeholder": "Enter your last name",
       "validations": { "required": true }
     },
     {
       "type": "email",
       "label": "Email",
       "name": "email",
+      "placeholder": "your.email@example.com",
       "validations": { "required": true }
+    },
+    {
+      "type": "date",
+      "label": "Date of Birth",
+      "name": "dateOfBirth",
+      "min": "1900-01-01",
+      "max": "2010-12-31",
+      "validations": { "required": true }
+    },
+    {
+      "type": "number",
+      "label": "Age",
+      "name": "age",
+      "min": 13,
+      "max": 120,
+      "step": 1,
+      "placeholder": "Enter your age",
+      "validations": { "required": true }
+    },
+    {
+      "type": "radio",
+      "label": "Account Type",
+      "name": "accountType",
+      "layout": "horizontal",
+      "options": [
+        { "value": "personal", "label": "Personal" },
+        { "value": "business", "label": "Business" },
+        { "value": "student", "label": "Student" }
+      ],
+      "validations": { "required": true }
+    },
+    {
+      "type": "text",
+      "label": "Company Name",
+      "name": "companyName",
+      "placeholder": "Enter your company name",
+      "visibleWhen": {
+        "field": "accountType",
+        "operator": "equals",
+        "value": "business"
+      },
+      "validations": { "required": true, "minLength": 2 }
+    },
+    {
+      "type": "text",
+      "label": "School Name",
+      "name": "schoolName",
+      "placeholder": "Enter your school name",
+      "visibleWhen": {
+        "field": "accountType",
+        "operator": "equals",
+        "value": "student"
+      },
+      "validations": { "required": true, "minLength": 2 }
+    },
+    {
+      "type": "textarea",
+      "label": "Bio",
+      "name": "bio",
+      "rows": 5,
+      "placeholder": "Tell us about yourself...",
+      "validations": { "required": false, "maxLength": 500 }
     },
     {
       "type": "select",
@@ -43,8 +108,44 @@
       "validations": { "required": false }
     },
     {
+      "type": "radio",
+      "label": "How did you hear about us?",
+      "name": "referralSource",
+      "layout": "vertical",
+      "options": [
+        { "value": "search", "label": "Search Engine" },
+        { "value": "social", "label": "Social Media" },
+        { "value": "friend", "label": "Friend or Colleague" },
+        { "value": "other", "label": "Other" }
+      ],
+      "validations": { "required": true }
+    },
+    {
+      "type": "text",
+      "label": "Please specify",
+      "name": "referralOther",
+      "placeholder": "Tell us more...",
+      "visibleWhen": {
+        "field": "referralSource",
+        "operator": "equals",
+        "value": "other"
+      },
+      "validations": { "required": true, "minLength": 3 }
+    },
+    {
       "type": "checkbox",
-      "label": "Accept Terms",
+      "label": "I am over 18 years old",
+      "name": "ageConfirmation",
+      "visibleWhen": {
+        "field": "age",
+        "operator": "greaterThanOrEqual",
+        "value": 18
+      },
+      "validations": { "requiredTrue": true }
+    },
+    {
+      "type": "checkbox",
+      "label": "Accept Terms & Conditions",
       "name": "terms",
       "validations": { "requiredTrue": true }
     },
