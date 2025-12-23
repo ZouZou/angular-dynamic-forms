@@ -10,6 +10,7 @@ A flexible, JSON-driven dynamic form generator for Angular 21+ with support for 
 
 - **JSON-Driven Forms**: Define entire forms in JSON configuration
 - **Dependent Dropdowns**: Cascading dropdowns where one field's options depend on another
+- **Dependent Checkboxes**: Bidirectional checkbox relationships with 'same' and 'opposite' modes
 - **API-Driven Options**: Fetch dropdown options dynamically from APIs with intelligent caching
 - **Smart Caching**: 5-minute TTL cache to reduce server load
 - **Loading States**: Per-field loading indicators for better UX
@@ -107,6 +108,87 @@ Fetch options dynamically from API endpoints with template variable support.
 
 ---
 
+## Dependent Checkboxes
+
+### Basic Concept
+
+Dependent checkboxes allow two checkboxes to maintain a relationship where one automatically updates based on the other's state. This feature supports bidirectional relationships with two modes:
+
+- **Same**: Both checkboxes stay in sync (both checked or both unchecked)
+- **Opposite**: Checkboxes maintain inverse states (when one is checked, the other is unchecked)
+
+### Use Cases
+
+**Same Relationship:**
+- "Subscribe to Newsletter" ↔ "Send me product updates"
+- "Enable notifications" ↔ "Enable email alerts"
+- "Agree to terms" ↔ "Acknowledge privacy policy"
+
+**Opposite Relationship:**
+- "Enable email notifications" ↔ "Disable all notifications"
+- "Show advanced options" ↔ "Use simple mode"
+- "Auto-save enabled" ↔ "Manual save mode"
+
+### Configuration
+
+```json
+{
+  "type": "checkbox",
+  "label": "Subscribe to Newsletter",
+  "name": "newsletter",
+  "validations": { "required": false }
+},
+{
+  "type": "checkbox",
+  "label": "Send me product updates",
+  "name": "productUpdates",
+  "dependsOn": "newsletter",
+  "dependencyType": "same",
+  "validations": { "required": false }
+}
+```
+
+### Dependency Types
+
+| Type | Behavior | Example |
+|------|----------|---------|
+| `same` | Both checkboxes mirror each other | Checking newsletter also checks productUpdates |
+| `opposite` | Checkboxes maintain inverse states | Checking emailNotifications unchecks disableNotifications |
+
+### Technical Details
+
+**Bidirectional Updates:**
+- Changes to either checkbox trigger the dependency logic
+- Automatic loop prevention to avoid infinite updates
+- Works seamlessly with dirty tracking and validation
+
+**Implementation:**
+```typescript
+// Automatically handled by Angular effects in component
+// No manual event handling required
+// Loop prevention using programmatic update tracking
+```
+
+**Example JSON:**
+```json
+{
+  "type": "checkbox",
+  "label": "Enable email notifications",
+  "name": "emailNotifications"
+},
+{
+  "type": "checkbox",
+  "label": "Disable all notifications",
+  "name": "disableNotifications",
+  "dependsOn": "emailNotifications",
+  "dependencyType": "opposite"
+}
+```
+
+When user checks "Enable email notifications", "Disable all notifications" automatically unchecks (and vice versa).
+
+---
+
 ## API-Driven Options Architecture
 
 ### Caching Strategy
@@ -200,6 +282,7 @@ interface Field {
   dependsOn?: string;                       // Parent field name for dependent fields
   optionsMap?: Record<string, FieldOption[]>; // Static dependent options mapping
   optionsEndpoint?: string;                 // API endpoint for dynamic options
+  dependencyType?: 'same' | 'opposite';     // For checkbox dependencies: 'same' = mirror, 'opposite' = inverse
   validations?: {                           // Validation rules
     required?: boolean;
     minLength?: number;

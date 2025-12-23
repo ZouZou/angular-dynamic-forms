@@ -47,6 +47,34 @@
       "label": "Accept Terms",
       "name": "terms",
       "validations": { "requiredTrue": true }
+    },
+    {
+      "type": "checkbox",
+      "label": "Subscribe to Newsletter",
+      "name": "newsletter",
+      "validations": { "required": false }
+    },
+    {
+      "type": "checkbox",
+      "label": "Send me product updates",
+      "name": "productUpdates",
+      "dependsOn": "newsletter",
+      "dependencyType": "same",
+      "validations": { "required": false }
+    },
+    {
+      "type": "checkbox",
+      "label": "Enable email notifications",
+      "name": "emailNotifications",
+      "validations": { "required": false }
+    },
+    {
+      "type": "checkbox",
+      "label": "Disable all notifications",
+      "name": "disableNotifications",
+      "dependsOn": "emailNotifications",
+      "dependencyType": "opposite",
+      "validations": { "required": false }
     }
   ]
 }

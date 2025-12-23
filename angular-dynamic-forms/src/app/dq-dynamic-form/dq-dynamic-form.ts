@@ -30,6 +30,8 @@ export class DqDynamicForm {
   protected readonly dirty = signal<Record<string, boolean>>({});
   // Store initial values for dirty tracking
   private readonly initialValues = signal<Record<string, unknown>>({});
+  // Track programmatic updates to prevent infinite loops in checkbox dependencies
+  private readonly isUpdatingProgrammatically = signal<Set<string>>(new Set());
 
   // Computed: Check if entire form is pristine (no changes)
   protected readonly pristine = computed<boolean>(() =>
@@ -85,6 +87,44 @@ export class DqDynamicForm {
         }
       });
     });
+
+    // Watch for checkbox dependencies ('same' or 'opposite' relationships)
+    effect(() => {
+      const values = this.formValues();
+      const fields = this.fields();
+      const updatingFields = this.isUpdatingProgrammatically();
+
+      fields.forEach((field) => {
+        // Only process checkbox dependencies
+        if (
+          field.type === 'checkbox' &&
+          field.dependsOn &&
+          field.dependencyType
+        ) {
+          const currentValue = values[field.name] as boolean;
+          const dependentValue = values[field.dependsOn] as boolean;
+
+          // Skip if this field is being updated programmatically to prevent loops
+          if (updatingFields.has(field.name)) {
+            return;
+          }
+
+          // Determine the expected value based on dependency type
+          let expectedValue: boolean;
+          if (field.dependencyType === 'same') {
+            expectedValue = dependentValue;
+          } else {
+            // 'opposite'
+            expectedValue = !dependentValue;
+          }
+
+          // Update if values don't match expected relationship
+          if (currentValue !== expectedValue) {
+            this.updateCheckboxProgrammatically(field.name, expectedValue);
+          }
+        }
+      });
+    });
   }
 
   ngOnInit(): void {
@@ -130,6 +170,47 @@ export class DqDynamicForm {
       ...current,
       [fieldName]: isDirty,
     }));
+  }
+
+  /**
+   * Update checkbox value programmatically (used for dependencies)
+   * Prevents infinite loops by marking the field as being updated programmatically
+   */
+  private updateCheckboxProgrammatically(
+    fieldName: string,
+    value: boolean
+  ): void {
+    // Mark this field as being updated programmatically
+    this.isUpdatingProgrammatically.update((current) => {
+      const updated = new Set(current);
+      updated.add(fieldName);
+      return updated;
+    });
+
+    // Update the value
+    this.formValues.update((current) => ({
+      ...current,
+      [fieldName]: value,
+    }));
+
+    // Track dirty state
+    const initialValue = this.initialValues()[fieldName];
+    const isDirty = value !== initialValue;
+
+    this.dirty.update((current) => ({
+      ...current,
+      [fieldName]: isDirty,
+    }));
+
+    // Clear the programmatic update flag after a brief delay
+    // This allows the effect to complete before allowing user updates again
+    setTimeout(() => {
+      this.isUpdatingProgrammatically.update((current) => {
+        const updated = new Set(current);
+        updated.delete(fieldName);
+        return updated;
+      });
+    }, 0);
   }
 
   /**
