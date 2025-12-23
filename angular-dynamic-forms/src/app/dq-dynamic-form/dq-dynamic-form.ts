@@ -19,6 +19,7 @@ export class DqDynamicForm {
   protected readonly submittedData = signal<Record<string, unknown> | null>(
     null
   );
+  protected readonly loading = signal(true);
 
   // constructor(private readonly formService: DynamicFormsService) {}
 
@@ -37,6 +38,7 @@ export class DqDynamicForm {
 
       this.formValues.set(initialValues);
       this.touched.set(initialTouched);
+      this.loading.set(false);
     });
   }
 
