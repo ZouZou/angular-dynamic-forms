@@ -1,5 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { Field } from './models/field.model';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Field, FieldOption } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
 
 @Component({
@@ -21,7 +21,36 @@ export class DqDynamicForm {
   );
   protected readonly loading = signal(true);
 
-  // constructor(private readonly formService: DynamicFormsService) {}
+  constructor() {
+    // Watch for changes in form values to reset dependent fields
+    effect(() => {
+      const values = this.formValues();
+      const fields = this.fields();
+
+      // Find all dependent fields
+      fields.forEach((field) => {
+        if (field.dependsOn) {
+          const parentValue = values[field.dependsOn];
+          const currentValue = values[field.name];
+
+          // Reset child field if parent changed and current value is invalid
+          if (currentValue && field.optionsMap) {
+            const validOptions = field.optionsMap[parentValue as string] || [];
+            const isValidOption = validOptions.some(
+              (opt) => opt.value === currentValue
+            );
+
+            if (!isValidOption) {
+              this.formValues.update((current) => ({
+                ...current,
+                [field.name]: '',
+              }));
+            }
+          }
+        }
+      });
+    });
+  }
 
   ngOnInit(): void {
     this._formService.getFormSchema().subscribe((schema) => {
@@ -52,6 +81,47 @@ export class DqDynamicForm {
       ...current,
       [fieldName]: true,
     }));
+  }
+
+  // Get available options for a field based on dependencies
+  getAvailableOptions(field: Field): FieldOption[] {
+    // If field has no dependencies, return static options
+    if (!field.dependsOn || !field.optionsMap) {
+      return this.normalizeOptions(field.options || []);
+    }
+
+    // Get parent field value
+    const parentValue = this.formValues()[field.dependsOn];
+
+    // Return mapped options based on parent value
+    return parentValue && field.optionsMap[parentValue as string]
+      ? field.optionsMap[parentValue as string]
+      : [];
+  }
+
+  // Normalize options to consistent format
+  normalizeOptions(options: string[] | FieldOption[]): FieldOption[] {
+    if (!options.length) return [];
+
+    // If already object format, return as is
+    if (typeof options[0] === 'object') {
+      return options as FieldOption[];
+    }
+
+    // Convert string array to object format
+    return (options as string[]).map((opt) => ({ value: opt, label: opt }));
+  }
+
+  // Check if a field should be disabled
+  isFieldDisabled(field: Field): boolean {
+    // Disable if depends on another field that has no value
+    return !!field.dependsOn && !this.formValues()[field.dependsOn];
+  }
+
+  // Get label for a field by name
+  getLabelForField(fieldName: string): string {
+    const field = this.fields().find((f) => f.name === fieldName);
+    return field?.label.toLowerCase() || fieldName;
   }
 
   readonly errors = computed<Record<string, string>>(() => {

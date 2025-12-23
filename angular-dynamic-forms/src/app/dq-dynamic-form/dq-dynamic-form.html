@@ -42,15 +42,19 @@
       <select
         class="form-select"
         [value]="formValues()[field.name]"
+        [disabled]="isFieldDisabled(field)"
         (change)="updateFormValue(field.name, $any($event.target).value)"
       >
         <option value="">Choose {{ field.label.toLowerCase() }}</option>
-        @for (opt of field.options; track opt) {
-        <option [value]="opt">
-          {{ opt }}
+        @for (opt of getAvailableOptions(field); track opt.value) {
+        <option [value]="opt.value">
+          {{ opt.label }}
         </option>
         }
       </select>
+      @if (field.dependsOn && !formValues()[field.dependsOn]) {
+      <small class="text-muted">Please select {{ getLabelForField(field.dependsOn) }} first</small>
+      }
       }
 
       <!-- Checkbox -->
