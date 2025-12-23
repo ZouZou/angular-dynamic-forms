@@ -23,8 +23,24 @@
       "type": "select",
       "label": "Country",
       "name": "country",
-      "options": ["Bangladesh", "Turkey", "Poland"],
+      "optionsEndpoint": "/api/countries",
       "validations": { "required": true }
+    },
+    {
+      "type": "select",
+      "label": "State/Province",
+      "name": "state",
+      "dependsOn": "country",
+      "optionsEndpoint": "/api/states?country={{country}}",
+      "validations": { "required": true }
+    },
+    {
+      "type": "select",
+      "label": "City",
+      "name": "city",
+      "dependsOn": "state",
+      "optionsEndpoint": "/api/cities?state={{state}}",
+      "validations": { "required": false }
     },
     {
       "type": "checkbox",

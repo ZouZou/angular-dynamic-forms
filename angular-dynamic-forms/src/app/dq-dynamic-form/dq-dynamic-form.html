@@ -38,19 +38,35 @@
         @if (field.validations?.required) {
         <span class="required">*</span>
         }
+        @if (fieldLoading()[field.name]) {
+        <span class="loading-indicator">Loading...</span>
+        }
       </label>
       <select
         class="form-select"
         [value]="formValues()[field.name]"
+        [disabled]="isFieldDisabled(field) || fieldLoading()[field.name]"
         (change)="updateFormValue(field.name, $any($event.target).value)"
       >
-        <option value="">Choose {{ field.label.toLowerCase() }}</option>
-        @for (opt of field.options; track opt) {
-        <option [value]="opt">
-          {{ opt }}
+        <option value="">
+          @if (fieldLoading()[field.name]) {
+            Loading options...
+          } @else {
+            Choose {{ field.label.toLowerCase() }}
+          }
+        </option>
+        @for (opt of getAvailableOptions(field); track opt.value) {
+        <option [value]="opt.value">
+          {{ opt.label }}
         </option>
         }
       </select>
+      @if (field.dependsOn && !formValues()[field.dependsOn]) {
+      <small class="text-muted">Please select {{ getLabelForField(field.dependsOn) }} first</small>
+      }
+      @if (fieldErrors()[field.name]) {
+      <small class="text-error">{{ fieldErrors()[field.name] }}</small>
+      }
       }
 
       <!-- Checkbox -->
