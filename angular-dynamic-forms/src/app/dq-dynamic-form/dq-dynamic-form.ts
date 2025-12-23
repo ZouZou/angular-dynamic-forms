@@ -26,6 +26,15 @@ export class DqDynamicForm {
   protected readonly fieldLoading = signal<Record<string, boolean>>({});
   // Track errors per field (for API failures)
   protected readonly fieldErrors = signal<Record<string, string>>({});
+  // Track dirty state per field (has value changed from initial?)
+  protected readonly dirty = signal<Record<string, boolean>>({});
+  // Store initial values for dirty tracking
+  private readonly initialValues = signal<Record<string, unknown>>({});
+
+  // Computed: Check if entire form is pristine (no changes)
+  protected readonly pristine = computed<boolean>(() =>
+    !Object.values(this.dirty()).some(isDirty => isDirty)
+  );
 
   constructor() {
     // Watch for changes in form values to reset dependent fields
@@ -85,14 +94,19 @@ export class DqDynamicForm {
 
       const initialValues: Record<string, unknown> = {};
       const initialTouched: Record<string, boolean> = {};
+      const initialDirty: Record<string, boolean> = {};
 
       for (const field of schema.fields) {
         initialValues[field.name] = field.type === 'checkbox' ? false : '';
         initialTouched[field.name] = false;
+        initialDirty[field.name] = false;
       }
 
       this.formValues.set(initialValues);
       this.touched.set(initialTouched);
+      this.dirty.set(initialDirty);
+      // Store initial values for comparison
+      this.initialValues.set({ ...initialValues });
       this.loading.set(false);
     });
   }
@@ -106,6 +120,15 @@ export class DqDynamicForm {
     this.touched.update((current) => ({
       ...current,
       [fieldName]: true,
+    }));
+
+    // Track dirty state by comparing with initial value
+    const initialValue = this.initialValues()[fieldName];
+    const isDirty = value !== initialValue;
+
+    this.dirty.update((current) => ({
+      ...current,
+      [fieldName]: isDirty,
     }));
   }
 
