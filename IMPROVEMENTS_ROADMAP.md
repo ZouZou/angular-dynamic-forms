@@ -152,9 +152,9 @@ Allow users to add/remove repeating field groups.
 
 ---
 
-## 4. Cross-Field Validation 📋
+## 4. Cross-Field Validation ✅
 
-**Priority:** Medium | **Complexity:** Medium
+**Priority:** Medium | **Complexity:** Medium | **Status:** Completed
 
 Validate fields based on other field values.
 
@@ -179,9 +179,9 @@ Validate fields based on other field values.
 
 ---
 
-## 5. Layout & Styling Options 📋
+## 5. Layout & Styling Options ✅
 
-**Priority:** Medium | **Complexity:** Medium
+**Priority:** Medium | **Complexity:** Medium | **Status:** Completed
 
 Enhanced form layout capabilities.
 
@@ -487,21 +487,22 @@ Tools to improve developer productivity.
 
 ## Implementation Priority Matrix
 
-### Phase 1 (Current Sprint) 🚧
+### Phase 1 (Completed) ✅
 1. ✅ Conditional visibility
-2. ✅ Additional field types (textarea, radio, date, number)
+2. ✅ Additional field types (textarea, radio, date, number, password)
 
-### Phase 2 (Next Sprint) 📋
-3. Multi-step forms
-4. Cross-field validation
-5. Layout & styling options
-6. Form submission enhancements
+### Phase 2 (Completed) ✅
+3. ✅ Cross-field validation (matchesField, requiredIf, greaterThanField, lessThanField)
+4. ✅ Layout & styling options (field width, readonly, disabled, custom CSS classes)
+5. ✅ Form submission configuration support
+6. ✅ Password field type
 
-### Phase 3 (Future) 📋
-7. Dynamic field arrays
-8. Async validators
-9. Autosave & draft persistence
-10. Accessibility enhancements
+### Phase 3 (Next Sprint) 📋
+7. Multi-step forms
+8. Dynamic field arrays
+9. Async validators
+10. Autosave & draft persistence
+11. Accessibility enhancements
 
 ### Phase 4 (Backlog) 💡
 11. Field masking & formatting

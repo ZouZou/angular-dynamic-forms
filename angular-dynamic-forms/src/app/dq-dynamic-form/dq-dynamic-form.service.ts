@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
-import { Field, FieldOption } from './models/field.model';
+import { Field, FieldOption, FormSchema } from './models/field.model';
 import { MockApiService } from './mock-api.service';
 
 interface CacheEntry {
@@ -19,8 +19,8 @@ export class DynamicFormsService {
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
   private readonly optionsCache = new Map<string, CacheEntry>();
 
-  getFormSchema(): Observable<{ title: string; fields: Field[] }> {
-    return this.http.get<{ title: string; fields: Field[] }>(
+  getFormSchema(): Observable<FormSchema> {
+    return this.http.get<FormSchema>(
       'forms/sample-form.json'
     );
   }

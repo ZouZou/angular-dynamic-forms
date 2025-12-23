@@ -23,6 +23,26 @@
       "validations": { "required": true }
     },
     {
+      "type": "password",
+      "label": "Password",
+      "name": "password",
+      "placeholder": "Enter a strong password",
+      "width": "half",
+      "validations": { "required": true, "minLength": 8 }
+    },
+    {
+      "type": "password",
+      "label": "Confirm Password",
+      "name": "confirmPassword",
+      "placeholder": "Re-enter your password",
+      "width": "half",
+      "validations": {
+        "required": true,
+        "matchesField": "password",
+        "customMessage": "Passwords do not match"
+      }
+    },
+    {
       "type": "date",
       "label": "Date of Birth",
       "name": "dateOfBirth",
@@ -83,6 +103,50 @@
       "rows": 5,
       "placeholder": "Tell us about yourself...",
       "validations": { "required": false, "maxLength": 500 }
+    },
+    {
+      "type": "checkbox",
+      "label": "I plan to travel",
+      "name": "planToTravel",
+      "validations": { "required": false }
+    },
+    {
+      "type": "date",
+      "label": "Travel Start Date",
+      "name": "travelStartDate",
+      "width": "half",
+      "visibleWhen": {
+        "field": "planToTravel",
+        "operator": "equals",
+        "value": true
+      },
+      "validations": {
+        "requiredIf": {
+          "field": "planToTravel",
+          "operator": "equals",
+          "value": true
+        }
+      }
+    },
+    {
+      "type": "date",
+      "label": "Travel End Date",
+      "name": "travelEndDate",
+      "width": "half",
+      "visibleWhen": {
+        "field": "planToTravel",
+        "operator": "equals",
+        "value": true
+      },
+      "validations": {
+        "requiredIf": {
+          "field": "planToTravel",
+          "operator": "equals",
+          "value": true
+        },
+        "greaterThanField": "travelStartDate",
+        "customMessage": "End date must be after start date"
+      }
     },
     {
       "type": "select",

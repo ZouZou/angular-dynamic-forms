@@ -100,6 +100,153 @@ Show or hide fields dynamically based on other field values. Supports both simpl
 
 ---
 
+## Cross-Field Validation
+
+Validate fields based on the values of other fields. Supports password confirmation, date ranges, conditional required fields, and custom comparisons.
+
+### Password Confirmation
+
+```json
+{
+  "type": "password",
+  "label": "Password",
+  "name": "password",
+  "validations": { "required": true, "minLength": 8 }
+},
+{
+  "type": "password",
+  "label": "Confirm Password",
+  "name": "confirmPassword",
+  "validations": {
+    "required": true,
+    "matchesField": "password",
+    "customMessage": "Passwords do not match"
+  }
+}
+```
+
+### Date Range Validation
+
+```json
+{
+  "type": "date",
+  "label": "Start Date",
+  "name": "startDate",
+  "validations": { "required": true }
+},
+{
+  "type": "date",
+  "label": "End Date",
+  "name": "endDate",
+  "validations": {
+    "required": true,
+    "greaterThanField": "startDate",
+    "customMessage": "End date must be after start date"
+  }
+}
+```
+
+### Conditional Required
+
+```json
+{
+  "type": "checkbox",
+  "label": "I have a referral code",
+  "name": "hasReferralCode"
+},
+{
+  "type": "text",
+  "label": "Referral Code",
+  "name": "referralCode",
+  "validations": {
+    "requiredIf": {
+      "field": "hasReferralCode",
+      "operator": "equals",
+      "value": true
+    }
+  }
+}
+```
+
+### Supported Cross-Field Validators
+
+| Validator | Description | Example |
+|-----------|-------------|---------|
+| `matchesField` | Value must match another field | Password confirmation |
+| `requiredIf` | Required when condition is met | Conditional required fields |
+| `greaterThanField` | Value > another field | End date > Start date |
+| `lessThanField` | Value < another field | Min budget < Max budget |
+| `pattern` | Custom regex pattern | Phone number, SSN, etc. |
+| `customMessage` | Override default error message | Any validator |
+
+---
+
+## Layout & Styling Options
+
+Control field width, appearance, and behavior with layout options.
+
+### Field Width
+
+Fields can span full width or be arranged side-by-side:
+
+```json
+{
+  "type": "text",
+  "label": "Street Address",
+  "name": "street",
+  "width": "full"
+},
+{
+  "type": "text",
+  "label": "City",
+  "name": "city",
+  "width": "half"
+},
+{
+  "type": "text",
+  "label": "ZIP Code",
+  "name": "zip",
+  "width": "half"
+}
+```
+
+**Width Options:**
+- `full` - 100% width (default)
+- `half` - 50% width (2 fields per row)
+- `third` - 33.33% width (3 fields per row)
+- `quarter` - 25% width (4 fields per row)
+
+### Read-only and Disabled Fields
+
+```json
+{
+  "type": "text",
+  "label": "User ID",
+  "name": "userId",
+  "readonly": true,
+  "value": "12345"
+},
+{
+  "type": "email",
+  "label": "Email",
+  "name": "email",
+  "disabled": true
+}
+```
+
+### Custom CSS Classes
+
+```json
+{
+  "type": "text",
+  "label": "Premium Field",
+  "name": "premium",
+  "cssClass": "highlight-field"
+}
+```
+
+---
+
 ## Dependent Dropdowns
 
 ### Basic Concept
@@ -288,11 +435,21 @@ interface Field {
   max?: number;                             // Maximum value (number/date)
   step?: number;                            // Step increment (number)
   layout?: 'horizontal' | 'vertical';       // Layout for radio buttons
+  readonly?: boolean;                       // Field is read-only
+  disabled?: boolean;                       // Field is disabled
+  cssClass?: string;                        // Custom CSS class
+  width?: 'full' | 'half' | 'third' | 'quarter'; // Field width
   validations?: {                           // Validation rules
     required?: boolean;                     // Field is required
     minLength?: number;                     // Minimum string length
     maxLength?: number;                     // Maximum string length
     requiredTrue?: boolean;                 // Checkbox must be checked
+    matchesField?: string;                  // Must match another field
+    requiredIf?: {...};                     // Conditionally required
+    greaterThanField?: string;              // Must be > another field
+    lessThanField?: string;                 // Must be < another field
+    pattern?: string | RegExp;              // Custom regex pattern
+    customMessage?: string;                 // Custom error message
   };
 }
 
@@ -316,9 +473,10 @@ When multiple option sources are defined, the system uses this priority:
 |------|-------------|------------|-------------------|
 | `text` | Single-line text input | `placeholder`, `minLength`, `maxLength` | Name, address, username |
 | `email` | Email input with validation | `placeholder` | Email address |
+| `password` | Password input (masked) | `placeholder`, `minLength`, `matchesField` | Password, confirm password |
 | `textarea` | Multi-line text input | `rows`, `placeholder`, `maxLength` | Bio, comments, description |
 | `number` | Numeric input with spinners | `min`, `max`, `step`, `placeholder` | Age, quantity, price |
-| `date` | Date picker | `min`, `max` | Birth date, start date, deadline |
+| `date` | Date picker | `min`, `max`, `greaterThanField`, `lessThanField` | Birth date, start date, deadline |
 | `select` | Dropdown (single select) | `options`, `optionsMap`, `optionsEndpoint` | Country, state, category |
 | `radio` | Radio buttons (mutually exclusive) | `options`, `layout` | Gender, account type, size |
 | `checkbox` | Boolean checkbox | `dependencyType` | Accept terms, preferences |

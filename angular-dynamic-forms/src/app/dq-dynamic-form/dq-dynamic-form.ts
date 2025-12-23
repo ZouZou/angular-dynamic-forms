@@ -130,13 +130,23 @@ export class DqDynamicForm {
   ngOnInit(): void {
     this._formService.getFormSchema().subscribe((schema) => {
       this.title.set(schema.title);
-      this.fields.set(schema.fields);
+
+      // Handle both single-step and multi-step forms
+      const allFields = schema.fields || [];
+      // For multi-step forms, flatten all section fields
+      if (schema.sections) {
+        schema.sections.forEach(section => {
+          allFields.push(...section.fields);
+        });
+      }
+
+      this.fields.set(allFields);
 
       const initialValues: Record<string, unknown> = {};
       const initialTouched: Record<string, boolean> = {};
       const initialDirty: Record<string, boolean> = {};
 
-      for (const field of schema.fields) {
+      for (const field of allFields) {
         // Set appropriate initial values based on field type
         if (field.type === 'checkbox') {
           initialValues[field.name] = false;
@@ -516,6 +526,113 @@ export class DqDynamicForm {
         validationErrors[
           field.name
         ] = `${field.label} must be at most ${rules.maxLength} characters`;
+      }
+
+      // Cross-field validation: matchesField (e.g., password confirmation)
+      if (rules?.matchesField) {
+        const matchFieldValue = values[rules.matchesField];
+        const matchField = fields.find(f => f.name === rules.matchesField);
+        const matchFieldLabel = matchField?.label.toLowerCase() || rules.matchesField;
+
+        if (fieldValue && matchFieldValue && fieldValue !== matchFieldValue) {
+          validationErrors[field.name] = rules.customMessage ||
+            `${field.label} must match ${matchFieldLabel}`;
+        }
+      }
+
+      // Cross-field validation: requiredIf (conditional required)
+      if (rules?.requiredIf) {
+        const conditionField = rules.requiredIf.field;
+        const conditionValue = values[conditionField];
+        const { operator, value } = rules.requiredIf;
+
+        let conditionMet = false;
+        switch (operator) {
+          case 'equals':
+            conditionMet = conditionValue === value;
+            break;
+          case 'notEquals':
+            conditionMet = conditionValue !== value;
+            break;
+          case 'greaterThan':
+            conditionMet = typeof conditionValue === 'number' && typeof value === 'number' && conditionValue > value;
+            break;
+          case 'lessThan':
+            conditionMet = typeof conditionValue === 'number' && typeof value === 'number' && conditionValue < value;
+            break;
+          case 'isEmpty':
+            conditionMet = !conditionValue || conditionValue === '';
+            break;
+          case 'isNotEmpty':
+            conditionMet = !!conditionValue && conditionValue !== '';
+            break;
+          default:
+            conditionMet = false;
+        }
+
+        if (conditionMet && !fieldValue) {
+          const condField = fields.find(f => f.name === conditionField);
+          const condFieldLabel = condField?.label.toLowerCase() || conditionField;
+          validationErrors[field.name] = rules.customMessage ||
+            `${field.label} is required when ${condFieldLabel} ${operator === 'equals' ? 'is' : operator === 'notEquals' ? 'is not' : operator} ${value}`;
+        }
+      }
+
+      // Cross-field validation: greaterThanField (for dates/numbers)
+      if (rules?.greaterThanField) {
+        const compareFieldValue = values[rules.greaterThanField];
+        const compareField = fields.find(f => f.name === rules.greaterThanField);
+        const compareFieldLabel = compareField?.label.toLowerCase() || rules.greaterThanField;
+
+        if (fieldValue && compareFieldValue) {
+          let isInvalid = false;
+
+          if (field.type === 'date' && typeof fieldValue === 'string' && typeof compareFieldValue === 'string') {
+            isInvalid = new Date(fieldValue) <= new Date(compareFieldValue);
+          } else if (field.type === 'number') {
+            const numValue = typeof fieldValue === 'number' ? fieldValue : parseFloat(fieldValue as string);
+            const compareNumValue = typeof compareFieldValue === 'number' ? compareFieldValue : parseFloat(compareFieldValue as string);
+            isInvalid = numValue <= compareNumValue;
+          }
+
+          if (isInvalid) {
+            validationErrors[field.name] = rules.customMessage ||
+              `${field.label} must be after ${compareFieldLabel}`;
+          }
+        }
+      }
+
+      // Cross-field validation: lessThanField (for dates/numbers)
+      if (rules?.lessThanField) {
+        const compareFieldValue = values[rules.lessThanField];
+        const compareField = fields.find(f => f.name === rules.lessThanField);
+        const compareFieldLabel = compareField?.label.toLowerCase() || rules.lessThanField;
+
+        if (fieldValue && compareFieldValue) {
+          let isInvalid = false;
+
+          if (field.type === 'date' && typeof fieldValue === 'string' && typeof compareFieldValue === 'string') {
+            isInvalid = new Date(fieldValue) >= new Date(compareFieldValue);
+          } else if (field.type === 'number') {
+            const numValue = typeof fieldValue === 'number' ? fieldValue : parseFloat(fieldValue as string);
+            const compareNumValue = typeof compareFieldValue === 'number' ? compareFieldValue : parseFloat(compareFieldValue as string);
+            isInvalid = numValue >= compareNumValue;
+          }
+
+          if (isInvalid) {
+            validationErrors[field.name] = rules.customMessage ||
+              `${field.label} must be before ${compareFieldLabel}`;
+          }
+        }
+      }
+
+      // Custom pattern validation
+      if (rules?.pattern && fieldValue && typeof fieldValue === 'string') {
+        const regex = typeof rules.pattern === 'string' ? new RegExp(rules.pattern) : rules.pattern;
+        if (!regex.test(fieldValue)) {
+          validationErrors[field.name] = rules.customMessage ||
+            `${field.label} format is invalid`;
+        }
       }
     }
 

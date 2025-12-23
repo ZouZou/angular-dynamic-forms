@@ -59,6 +59,29 @@
       animation-delay: #{$i * 50}ms;
     }
   }
+
+  /* Field width utilities */
+  &.width-full {
+    width: 100%;
+  }
+
+  &.width-half {
+    width: calc(50% - var(--spacing-sm));
+    display: inline-flex;
+    margin-right: var(--spacing-md);
+  }
+
+  &.width-third {
+    width: calc(33.333% - var(--spacing-sm));
+    display: inline-flex;
+    margin-right: var(--spacing-md);
+  }
+
+  &.width-quarter {
+    width: calc(25% - var(--spacing-sm));
+    display: inline-flex;
+    margin-right: var(--spacing-md);
+  }
 }
 
 /* Form Label */
@@ -105,6 +128,34 @@
 
   &::placeholder {
     color: var(--color-gray-400);
+  }
+
+  &:read-only {
+    background-color: var(--color-gray-50);
+    color: var(--color-gray-600);
+    cursor: not-allowed;
+    border-color: var(--color-gray-300);
+
+    &:hover,
+    &:focus {
+      border-color: var(--color-gray-300);
+      box-shadow: none;
+      transform: none;
+    }
+  }
+
+  &:disabled {
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-400);
+    cursor: not-allowed;
+    border-color: var(--color-gray-300);
+
+    &:hover,
+    &:focus {
+      border-color: var(--color-gray-300);
+      box-shadow: none;
+      transform: none;
+    }
   }
 }
 

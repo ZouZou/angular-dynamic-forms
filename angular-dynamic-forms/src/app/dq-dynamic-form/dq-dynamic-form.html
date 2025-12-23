@@ -15,12 +15,12 @@
     @for (field of fields(); track field.name) {
     <!-- Only show field if visibility condition is met -->
     @if (isFieldVisible(field)) {
-    <div class="form-group">
-      <!-- Text / Email -->
-      @if (field.type === 'text' || field.type === 'email') {
+    <div class="form-group" [class]="'width-' + (field.width || 'full') + (field.cssClass ? ' ' + field.cssClass : '')">
+      <!-- Text / Email / Password -->
+      @if (field.type === 'text' || field.type === 'email' || field.type === 'password') {
       <label class="form-label">
         {{ field.label }}
-        @if (field.validations?.required) {
+        @if (field.validations?.required || field.validations?.requiredIf) {
         <span class="required">*</span>
         }
       </label>
@@ -29,6 +29,8 @@
         class="form-control"
         [value]="formValues()[field.name]"
         [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()"
+        [readonly]="field.readonly || false"
+        [disabled]="field.disabled || false"
         (input)="updateFormValue(field.name, $any($event.target).value)"
       />
       }
