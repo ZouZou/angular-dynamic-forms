@@ -17,7 +17,7 @@
       "type": "email",
       "label": "Email",
       "name": "email",
-      "validations": { "required": false }
+      "validations": { "required": true }
     },
     {
       "type": "select",

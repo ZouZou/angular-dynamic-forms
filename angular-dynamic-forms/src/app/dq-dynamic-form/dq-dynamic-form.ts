@@ -340,6 +340,14 @@ export class DqDynamicForm {
       if (rules?.requiredTrue && fieldValue !== true) {
         validationErrors[field.name] = `${field.label} must be checked`;
       }
+
+      // Email validation
+      if (field.type === 'email' && fieldValue && typeof fieldValue === 'string') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(fieldValue)) {
+          validationErrors[field.name] = `${field.label} must be a valid email address`;
+        }
+      }
     }
 
     return validationErrors;
