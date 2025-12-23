@@ -23,12 +23,7 @@
       "type": "select",
       "label": "Country",
       "name": "country",
-      "options": [
-        { "value": "usa", "label": "United States" },
-        { "value": "canada", "label": "Canada" },
-        { "value": "mexico", "label": "Mexico" },
-        { "value": "uk", "label": "United Kingdom" }
-      ],
+      "optionsEndpoint": "/api/countries",
       "validations": { "required": true }
     },
     {
@@ -36,36 +31,16 @@
       "label": "State/Province",
       "name": "state",
       "dependsOn": "country",
-      "optionsMap": {
-        "usa": [
-          { "value": "ca", "label": "California" },
-          { "value": "ny", "label": "New York" },
-          { "value": "tx", "label": "Texas" },
-          { "value": "fl", "label": "Florida" },
-          { "value": "il", "label": "Illinois" }
-        ],
-        "canada": [
-          { "value": "on", "label": "Ontario" },
-          { "value": "qc", "label": "Quebec" },
-          { "value": "bc", "label": "British Columbia" },
-          { "value": "ab", "label": "Alberta" },
-          { "value": "mb", "label": "Manitoba" }
-        ],
-        "mexico": [
-          { "value": "cdmx", "label": "Mexico City" },
-          { "value": "jal", "label": "Jalisco" },
-          { "value": "nl", "label": "Nuevo León" },
-          { "value": "pue", "label": "Puebla" },
-          { "value": "yuc", "label": "Yucatán" }
-        ],
-        "uk": [
-          { "value": "eng", "label": "England" },
-          { "value": "sco", "label": "Scotland" },
-          { "value": "wal", "label": "Wales" },
-          { "value": "ni", "label": "Northern Ireland" }
-        ]
-      },
+      "optionsEndpoint": "/api/states?country={{country}}",
       "validations": { "required": true }
+    },
+    {
+      "type": "select",
+      "label": "City",
+      "name": "city",
+      "dependsOn": "state",
+      "optionsEndpoint": "/api/cities?state={{state}}",
+      "validations": { "required": false }
     },
     {
       "type": "checkbox",

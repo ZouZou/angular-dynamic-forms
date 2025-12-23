@@ -20,6 +20,12 @@ export class DqDynamicForm {
     null
   );
   protected readonly loading = signal(true);
+  // Store dynamically fetched options per field
+  protected readonly dynamicOptions = signal<Record<string, FieldOption[]>>({});
+  // Track loading state per field (for API-driven dropdowns)
+  protected readonly fieldLoading = signal<Record<string, boolean>>({});
+  // Track errors per field (for API failures)
+  protected readonly fieldErrors = signal<Record<string, string>>({});
 
   constructor() {
     // Watch for changes in form values to reset dependent fields
@@ -46,6 +52,26 @@ export class DqDynamicForm {
                 [field.name]: '',
               }));
             }
+          }
+        }
+      });
+    });
+
+    // Watch for form value changes and fetch API options for dependent fields
+    effect(() => {
+      const values = this.formValues();
+      const fields = this.fields();
+
+      fields.forEach((field) => {
+        // Only fetch if field has API endpoint
+        if (field.optionsEndpoint) {
+          // For independent fields, fetch immediately
+          if (!field.dependsOn) {
+            this.fetchOptionsForField(field);
+          }
+          // For dependent fields, fetch when parent has value
+          else if (values[field.dependsOn]) {
+            this.fetchOptionsForField(field, values);
           }
         }
       });
@@ -83,20 +109,80 @@ export class DqDynamicForm {
     }));
   }
 
+  /**
+   * Fetch options from API for a field
+   */
+  private fetchOptionsForField(
+    field: Field,
+    params: Record<string, unknown> = {}
+  ): void {
+    if (!field.optionsEndpoint) return;
+
+    // Set loading state
+    this.fieldLoading.update((current) => ({
+      ...current,
+      [field.name]: true,
+    }));
+
+    // Clear any previous errors
+    this.fieldErrors.update((current) => {
+      const updated = { ...current };
+      delete updated[field.name];
+      return updated;
+    });
+
+    // Fetch options from service
+    this._formService
+      .fetchOptionsFromEndpoint(field.optionsEndpoint, params)
+      .subscribe({
+        next: (options) => {
+          // Store fetched options
+          this.dynamicOptions.update((current) => ({
+            ...current,
+            [field.name]: options,
+          }));
+
+          // Clear loading state
+          this.fieldLoading.update((current) => ({
+            ...current,
+            [field.name]: false,
+          }));
+        },
+        error: (error) => {
+          console.error(`Error fetching options for ${field.name}:`, error);
+
+          // Store error
+          this.fieldErrors.update((current) => ({
+            ...current,
+            [field.name]: 'Failed to load options',
+          }));
+
+          // Clear loading state
+          this.fieldLoading.update((current) => ({
+            ...current,
+            [field.name]: false,
+          }));
+        },
+      });
+  }
+
   // Get available options for a field based on dependencies
   getAvailableOptions(field: Field): FieldOption[] {
-    // If field has no dependencies, return static options
-    if (!field.dependsOn || !field.optionsMap) {
-      return this.normalizeOptions(field.options || []);
+    // Priority 1: API-driven options (dynamically fetched)
+    if (field.optionsEndpoint) {
+      return this.dynamicOptions()[field.name] || [];
     }
 
-    // Get parent field value
-    const parentValue = this.formValues()[field.dependsOn];
+    // Priority 2: Static options with dependencies (optionsMap)
+    if (field.dependsOn && field.optionsMap) {
+      const parentValue = this.formValues()[field.dependsOn];
+      return parentValue && field.optionsMap[parentValue as string]
+        ? field.optionsMap[parentValue as string]
+        : [];
+    }
 
-    // Return mapped options based on parent value
-    return parentValue && field.optionsMap[parentValue as string]
-      ? field.optionsMap[parentValue as string]
-      : [];
+    // Priority 3: Static options (no dependencies)
+    return this.normalizeOptions(field.options || []);
   }
 
   // Normalize options to consistent format

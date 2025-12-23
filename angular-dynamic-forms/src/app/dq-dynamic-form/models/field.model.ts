@@ -10,5 +10,6 @@ export interface Field {
   options?: string[] | FieldOption[];
   dependsOn?: string;
   optionsMap?: Record<string, FieldOption[]>;
+  optionsEndpoint?: string; // API endpoint to fetch options dynamically
   validations?: any;
 }
