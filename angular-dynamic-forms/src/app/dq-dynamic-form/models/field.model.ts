@@ -11,5 +11,6 @@ export interface Field {
   dependsOn?: string;
   optionsMap?: Record<string, FieldOption[]>;
   optionsEndpoint?: string; // API endpoint to fetch options dynamically
+  dependencyType?: 'same' | 'opposite'; // For checkbox dependencies: 'same' = both checked/unchecked together, 'opposite' = inverse relationship
   validations?: any;
 }
