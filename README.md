@@ -1129,3 +1129,275 @@ These features help achieve WCAG 2.1 Level AA compliance:
 - Understandable: Clear instructions and error messages
 - Robust: Semantic HTML and proper ARIA attributes
 
+---
+
+## Field Masking & Formatting (Phase 4)
+
+Automatic formatting of user input with predefined or custom mask patterns. Prevents invalid input and provides visual guidance for expected formats.
+
+### Predefined Masks
+
+```json
+{
+  "type": "text",
+  "label": "Phone Number",
+  "name": "phone",
+  "mask": "phone"
+}
+```
+
+**Available Predefined Masks:**
+
+| Mask Type | Pattern | Example Output |
+|-----------|---------|----------------|
+| `phone` | `(000) 000-0000` | (555) 123-4567 |
+| `phone-intl` | `+1 (000) 000-0000` | +1 (555) 123-4567 |
+| `ssn` | `000-00-0000` | 123-45-6789 |
+| `credit-card` | `0000 0000 0000 0000` | 1234 5678 9012 3456 |
+| `zip` | `00000` | 12345 |
+| `zip-plus4` | `00000-0000` | 12345-6789 |
+| `date-us` | `00/00/0000` | 12/31/2025 |
+| `time` | `00:00` | 14:30 |
+| `currency` | `$0,000.00` | $1,234.56 |
+
+### Custom Mask Patterns
+
+Create your own mask patterns using these characters:
+
+- `0` = Digit (0-9)
+- `A` = Letter (a-zA-Z)
+- `*` = Alphanumeric (0-9, a-zA-Z)
+- `\` = Escape next character (literal)
+- Any other character = Literal (shown as-is)
+
+```json
+{
+  "type": "text",
+  "label": "License Plate",
+  "name": "licensePlate",
+  "mask": {
+    "type": "custom",
+    "pattern": "AAA-0000",
+    "placeholder": "ABC-1234",
+    "prefix": "",
+    "suffix": "",
+    "showMaskOnHover": true
+  }
+}
+```
+
+### Mask Features
+
+**Automatic Formatting:**
+- User types "5551234567" → Displays as "(555) 123-4567"
+- User types "123456789" → Displays as "123-45-6789" (SSN)
+- Input is formatted in real-time as user types
+
+**Validation:**
+- Incomplete values show error messages
+- Error: "Please enter a complete value in the format: (000) 000-0000"
+- Validation checks both too-short and too-long inputs
+
+**Max Length Enforcement:**
+- Browser prevents typing beyond mask length
+- Phone: max 14 characters for "(555) 123-4567"
+- Paste operations automatically truncated to max length
+
+**Visual Hints:**
+- Mask pattern shown next to label: `Phone Number ((000) 000-0000)`
+- Monospace font for better alignment
+- Placeholder shows expected format
+
+### Example Configuration
+
+```json
+{
+  "type": "text",
+  "label": "Social Security Number",
+  "name": "ssn",
+  "mask": "ssn",
+  "placeholder": "Enter your SSN",
+  "validations": {
+    "required": true
+  }
+}
+```
+
+---
+
+## Computed/Calculated Fields (Phase 4)
+
+Fields that automatically calculate their value based on other fields using formulas. Updates in real-time when dependencies change.
+
+### Basic Computation
+
+```json
+{
+  "type": "text",
+  "label": "Total Price",
+  "name": "total",
+  "readonly": true,
+  "computed": {
+    "formula": "price * quantity",
+    "dependencies": ["price", "quantity"],
+    "formatAs": "currency",
+    "prefix": "$",
+    "decimal": 2
+  }
+}
+```
+
+### String Concatenation
+
+```json
+{
+  "type": "text",
+  "label": "Full Name",
+  "name": "fullName",
+  "readonly": true,
+  "computed": {
+    "formula": "firstName + ' ' + lastName",
+    "dependencies": ["firstName", "lastName"],
+    "formatAs": "text"
+  }
+}
+```
+
+### Computed Field Configuration
+
+```typescript
+interface ComputedFieldConfig {
+  formula: string;              // JavaScript expression
+  dependencies: string[];       // Field names to watch
+  formatAs?: 'number' | 'currency' | 'text';
+  decimal?: number;            // Decimal places (default: 2)
+  prefix?: string;             // e.g., "$", "Total: "
+  suffix?: string;             // e.g., "%", " kg"
+}
+```
+
+### Supported Formula Operations
+
+**Arithmetic:**
+```javascript
+"price * quantity"           // Multiplication
+"subtotal + tax"             // Addition
+"total - discount"           // Subtraction
+"amount / count"             // Division
+"(price * quantity) * 1.08"  // Complex expressions
+```
+
+**String Operations:**
+```javascript
+"firstName + ' ' + lastName"              // Concatenation
+"'Dr. ' + lastName"                       // Prefix
+"city + ', ' + state + ' ' + zipCode"    // Multiple fields
+```
+
+**Mathematical Functions:**
+```javascript
+"Math.round(price * quantity)"           // Rounding
+"Math.max(price1, price2, price3)"       // Maximum
+"Math.min(discount1, discount2)"          // Minimum
+```
+
+### Format Options
+
+**Currency:**
+```json
+{
+  "formatAs": "currency",
+  "prefix": "$",
+  "decimal": 2
+}
+// Output: $1,234.56
+```
+
+**Number:**
+```json
+{
+  "formatAs": "number",
+  "decimal": 3,
+  "suffix": " kg"
+}
+// Output: 123.456 kg
+```
+
+**Text:**
+```json
+{
+  "formatAs": "text",
+  "prefix": "Welcome, "
+}
+// Output: Welcome, John Doe
+```
+
+### Real-Time Updates
+
+Computed fields automatically recalculate when any dependency changes:
+
+1. User enters `price = 10` → Total shows: `$0.00`
+2. User enters `quantity = 5` → Total shows: `$50.00`
+3. User changes `price = 15` → Total shows: `$75.00`
+
+### Advanced Examples
+
+**Tax Calculation:**
+```json
+{
+  "type": "text",
+  "label": "Tax Amount (8%)",
+  "name": "taxAmount",
+  "readonly": true,
+  "computed": {
+    "formula": "subtotal * 0.08",
+    "dependencies": ["subtotal"],
+    "formatAs": "currency",
+    "prefix": "$",
+    "decimal": 2
+  }
+}
+```
+
+**Grand Total:**
+```json
+{
+  "type": "text",
+  "label": "Grand Total",
+  "name": "grandTotal",
+  "readonly": true,
+  "computed": {
+    "formula": "subtotal + (subtotal * 0.08)",
+    "dependencies": ["subtotal"],
+    "formatAs": "currency",
+    "prefix": "$",
+    "decimal": 2
+  }
+}
+```
+
+**Percentage:**
+```json
+{
+  "type": "text",
+  "label": "Completion Rate",
+  "name": "completionRate",
+  "readonly": true,
+  "computed": {
+    "formula": "(completed / total) * 100",
+    "dependencies": ["completed", "total"],
+    "formatAs": "number",
+    "decimal": 1,
+    "suffix": "%"
+  }
+}
+```
+
+### Important Notes
+
+- **Read-only**: Computed fields are automatically read-only
+- **Null/Empty Handling**: Empty dependencies default to 0 in numeric formulas
+- **String Values**: Strings are automatically quoted in formulas
+- **Dependency Order**: Dependencies sorted by length to avoid partial replacements
+- **Error Handling**: Formula errors show empty value with console warning
+
