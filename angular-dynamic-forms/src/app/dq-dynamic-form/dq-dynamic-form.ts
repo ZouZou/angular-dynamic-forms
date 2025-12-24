@@ -91,7 +91,8 @@ export class DqDynamicForm {
 
       // Find all dependent fields
       fields.forEach((field) => {
-        if (field.dependsOn) {
+        if (field.dependsOn && typeof field.dependsOn === 'string') {
+          // Only handle single string dependencies here (for optionsMap)
           const parentValue = values[field.dependsOn];
           const currentValue = values[field.name];
 
@@ -125,8 +126,8 @@ export class DqDynamicForm {
           if (!field.dependsOn) {
             this.fetchOptionsForField(field);
           }
-          // For dependent fields, fetch when parent has value
-          else if (values[field.dependsOn]) {
+          // For dependent fields, fetch when ALL dependencies have values
+          else if (this.allDependenciesHaveValues(field)) {
             this.fetchOptionsForField(field, values);
           }
         }
@@ -140,10 +141,11 @@ export class DqDynamicForm {
       const updatingFields = this.isUpdatingProgrammatically();
 
       fields.forEach((field) => {
-        // Only process checkbox dependencies
+        // Only process checkbox dependencies (single dependency only)
         if (
           field.type === 'checkbox' &&
           field.dependsOn &&
+          typeof field.dependsOn === 'string' &&
           field.dependencyType
         ) {
           const currentValue = values[field.name] as boolean;
@@ -619,6 +621,12 @@ export class DqDynamicForm {
   ): void {
     if (!field.optionsEndpoint) return;
 
+    // Build dependency parameters if field has dependencies
+    const dependencyParams = field.dependsOn ? this.buildDependencyParams(field, params) : {};
+
+    // Replace template variables in endpoint URL with actual values
+    const endpoint = this.replaceTemplateVariables(field.optionsEndpoint, { ...params, ...dependencyParams });
+
     // Set loading state
     this.fieldLoading.update((current) => ({
       ...current,
@@ -634,7 +642,7 @@ export class DqDynamicForm {
 
     // Fetch options from service
     this._formService
-      .fetchOptionsFromEndpoint(field.optionsEndpoint, params)
+      .fetchOptionsFromEndpoint(endpoint, dependencyParams)
       .subscribe({
         next: (options) => {
           // Store fetched options
@@ -674,8 +682,8 @@ export class DqDynamicForm {
       return this.dynamicOptions()[field.name] || [];
     }
 
-    // Priority 2: Static options with dependencies (optionsMap)
-    if (field.dependsOn && field.optionsMap) {
+    // Priority 2: Static options with dependencies (optionsMap - single dependency only)
+    if (field.dependsOn && typeof field.dependsOn === 'string' && field.optionsMap) {
       const parentValue = this.formValues()[field.dependsOn];
       return parentValue && field.optionsMap[parentValue as string]
         ? field.optionsMap[parentValue as string]
@@ -701,8 +709,8 @@ export class DqDynamicForm {
 
   // Check if a field should be disabled
   isFieldDisabled(field: Field): boolean {
-    // Disable if depends on another field that has no value
-    return !!field.dependsOn && !this.formValues()[field.dependsOn];
+    // Disable if depends on other fields and not all dependencies have values
+    return !!field.dependsOn && !this.allDependenciesHaveValues(field);
   }
 
   // Get label for a field by name
@@ -1458,5 +1466,66 @@ export class DqDynamicForm {
     this.debounceTimer = setTimeout(() => {
       this.saveDraft();
     }, 1000); // Wait 1 second after last change before saving
+  }
+
+  /**
+   * Get dependencies for a field as an array
+   * Normalizes both single dependency (string) and multiple dependencies (string[])
+   */
+  private getDependencies(field: Field): string[] {
+    if (!field.dependsOn) return [];
+    return Array.isArray(field.dependsOn) ? field.dependsOn : [field.dependsOn];
+  }
+
+  /**
+   * Check if all dependencies of a field have values
+   */
+  private allDependenciesHaveValues(field: Field): boolean {
+    if (!field.dependsOn) return true;
+
+    const dependencies = this.getDependencies(field);
+    const values = this.formValues();
+
+    return dependencies.every(dep => {
+      const value = values[dep];
+      return value !== null && value !== undefined && value !== '';
+    });
+  }
+
+  /**
+   * Build parameters object for API calls, replacing template variables
+   * Supports both {{fieldName}} syntax in URLs and plain parameter passing
+   */
+  private buildDependencyParams(field: Field, values: Record<string, unknown>): Record<string, unknown> {
+    const dependencies = this.getDependencies(field);
+    const params: Record<string, unknown> = {};
+
+    dependencies.forEach(dep => {
+      params[dep] = values[dep];
+    });
+
+    return params;
+  }
+
+  /**
+   * Replace template variables in endpoint URL with actual values
+   * Supports {{fieldName}} syntax
+   */
+  private replaceTemplateVariables(endpoint: string, values: Record<string, unknown>): string {
+    let result = endpoint;
+
+    // Find all {{variable}} patterns and replace with actual values
+    const matches = endpoint.match(/\{\{([^}]+)\}\}/g);
+    if (matches) {
+      matches.forEach(match => {
+        const fieldName = match.replace(/\{\{|\}\}/g, '');
+        const value = values[fieldName];
+        if (value !== undefined && value !== null) {
+          result = result.replace(match, String(value));
+        }
+      });
+    }
+
+    return result;
   }
 }

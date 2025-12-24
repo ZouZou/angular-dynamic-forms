@@ -173,8 +173,8 @@
         </option>
         }
       </select>
-      @if (field.dependsOn && !formValues()[field.dependsOn]) {
-      <small class="text-muted">Please select {{ getLabelForField(field.dependsOn) }} first</small>
+      @if (isFieldDisabled(field)) {
+      <small class="text-muted">Please fill in required dependencies first</small>
       }
       @if (fieldErrors()[field.name]) {
       <small class="text-error">{{ fieldErrors()[field.name] }}</small>
