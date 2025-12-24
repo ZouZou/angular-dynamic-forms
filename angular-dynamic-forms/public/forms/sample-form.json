@@ -40,6 +40,18 @@
       "validations": { "required": true }
     },
     {
+      "type": "text",
+      "label": "Full Name",
+      "name": "fullName",
+      "placeholder": "Auto-generated from First and Last Name",
+      "readonly": true,
+      "computed": {
+        "formula": "firstName + ' ' + lastName",
+        "dependencies": ["firstName", "lastName"],
+        "formatAs": "text"
+      }
+    },
+    {
       "type": "email",
       "label": "Email",
       "name": "email",
@@ -129,6 +141,42 @@
       "validations": { "required": false, "maxLength": 500 }
     },
     {
+      "type": "text",
+      "label": "Social Security Number",
+      "name": "ssn",
+      "placeholder": "Enter your SSN",
+      "width": "half",
+      "mask": "ssn",
+      "validations": { "required": false }
+    },
+    {
+      "type": "text",
+      "label": "Zip Code",
+      "name": "zipCode",
+      "placeholder": "Enter zip code",
+      "width": "half",
+      "mask": "zip",
+      "validations": { "required": false }
+    },
+    {
+      "type": "text",
+      "label": "Primary Phone Number",
+      "name": "primaryPhone",
+      "placeholder": "Enter your phone number",
+      "width": "half",
+      "mask": "phone",
+      "validations": { "required": true }
+    },
+    {
+      "type": "text",
+      "label": "Credit Card Number",
+      "name": "creditCard",
+      "placeholder": "Enter card number",
+      "width": "half",
+      "mask": "credit-card",
+      "validations": { "required": false }
+    },
+    {
       "type": "array",
       "label": "Phone Number",
       "name": "phoneNumbers",
@@ -203,6 +251,49 @@
         "addButtonText": "+ Add Emergency Contact",
         "removeButtonText": "Remove"
       }
+    },
+    {
+      "type": "number",
+      "label": "Product Price",
+      "name": "productPrice",
+      "placeholder": "Enter unit price",
+      "width": "third",
+      "min": 0,
+      "step": 0.01,
+      "validations": { "required": false }
+    },
+    {
+      "type": "number",
+      "label": "Quantity",
+      "name": "quantity",
+      "placeholder": "Enter quantity",
+      "width": "third",
+      "min": 1,
+      "step": 1,
+      "validations": { "required": false }
+    },
+    {
+      "type": "text",
+      "label": "Total Price",
+      "name": "totalPrice",
+      "placeholder": "Auto-calculated",
+      "width": "third",
+      "readonly": true,
+      "computed": {
+        "formula": "productPrice * quantity",
+        "dependencies": ["productPrice", "quantity"],
+        "formatAs": "currency",
+        "prefix": "$",
+        "decimal": 2
+      }
+    },
+    {
+      "type": "text",
+      "label": "Annual Salary",
+      "name": "salary",
+      "placeholder": "Enter your annual salary",
+      "mask": "currency",
+      "validations": { "required": false }
     },
     {
       "type": "checkbox",

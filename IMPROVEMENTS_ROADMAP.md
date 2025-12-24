@@ -277,9 +277,9 @@ Automatically save form progress to prevent data loss.
 
 ---
 
-## 8. Field Masking & Formatting 📋
+## 8. Field Masking & Formatting ✅
 
-**Priority:** Low-Medium | **Complexity:** Medium
+**Priority:** Low-Medium | **Complexity:** Medium | **Status:** Completed
 
 Automatic formatting of input values.
 
@@ -303,9 +303,9 @@ Automatic formatting of input values.
 
 ---
 
-## 9. Calculated/Computed Fields 📋
+## 9. Calculated/Computed Fields ✅
 
-**Priority:** Low-Medium | **Complexity:** Medium
+**Priority:** Low-Medium | **Complexity:** Medium | **Status:** Completed
 
 Fields that auto-calculate based on other fields.
 
@@ -503,9 +503,11 @@ Tools to improve developer productivity.
 9. ✅ Autosave & draft persistence
 10. ✅ Accessibility enhancements
 
-### Phase 4 (Backlog) 💡
-11. Field masking & formatting
-12. Calculated/computed fields
+### Phase 4 (Completed) ✅
+11. ✅ Field masking & formatting
+12. ✅ Calculated/computed fields
+
+### Phase 5 (Backlog) 💡
 13. Advanced dependency features
 14. Internationalization
 15. Developer tools & form builder
@@ -521,5 +523,5 @@ Tools to improve developer productivity.
 
 ---
 
-**Last Updated:** 2025-12-23
+**Last Updated:** 2025-12-24
 **Project Version:** 1.0.0
