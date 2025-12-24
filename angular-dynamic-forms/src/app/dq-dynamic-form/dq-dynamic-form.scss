@@ -616,3 +616,17 @@ textarea.form-control {
     gap: var(--spacing-xs);
   }
 }
+
+/* Field Masking */
+.mask-hint {
+  margin-left: var(--spacing-xs);
+  font-size: 0.75rem;
+  color: var(--color-gray-500);
+  font-weight: 400;
+  font-family: 'Courier New', monospace;
+}
+
+.masked-input {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.05em;
+}

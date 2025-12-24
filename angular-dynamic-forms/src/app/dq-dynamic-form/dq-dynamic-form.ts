@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator } from './models/field.model';
+import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
+import { MaskService } from './mask.service';
 
 @Component({
   selector: 'dq-dynamic-form',
@@ -11,6 +12,7 @@ import { DynamicFormsService } from './dq-dynamic-form.service';
 })
 export class DqDynamicForm {
   private readonly _formService = inject(DynamicFormsService);
+  private readonly _maskService = inject(MaskService);
   protected readonly fields = signal<Field[]>([]);
   protected readonly title = signal<string>('');
   protected readonly formValues = signal<Record<string, unknown>>({});
@@ -170,6 +172,27 @@ export class DqDynamicForm {
         this.debouncedAutosave();
       }
     });
+
+    // Computed fields effect: recalculate when dependencies change
+    effect(() => {
+      const values = this.formValues();
+      const fields = this.fields();
+
+      fields.forEach(field => {
+        if (field.computed) {
+          const newValue = this.evaluateComputed(field.computed, values);
+          const currentValue = values[field.name];
+
+          // Only update if value changed to avoid infinite loops
+          if (newValue !== currentValue) {
+            this.formValues.update(current => ({
+              ...current,
+              [field.name]: newValue
+            }));
+          }
+        }
+      });
+    });
   }
 
   ngOnInit(): void {
@@ -297,6 +320,113 @@ export class DqDynamicForm {
     } else {
       // Clear async validation if no value
       this.clearAsyncValidation(fieldName);
+    }
+  }
+
+  /**
+   * Update form value with mask applied
+   */
+  updateMaskedFormValue(fieldName: string, rawValue: string, field: Field): void {
+    if (!field.mask) {
+      this.updateFormValue(fieldName, rawValue);
+      return;
+    }
+
+    // Apply mask to display value
+    const maskedValue = this._maskService.applyMask(rawValue, field.mask);
+
+    // Store masked value for display
+    this.formValues.update((current) => ({
+      ...current,
+      [fieldName]: maskedValue,
+    }));
+
+    this.touched.update((current) => ({
+      ...current,
+      [fieldName]: true,
+    }));
+
+    // Track dirty state
+    const initialValue = this.initialValues()[fieldName];
+    const isDirty = maskedValue !== initialValue;
+
+    this.dirty.update((current) => ({
+      ...current,
+      [fieldName]: isDirty,
+    }));
+
+    // For validation, use raw (unmasked) value
+    const rawForValidation = this._maskService.getRawValue(maskedValue, field.mask);
+    if (field.validations?.asyncValidator && rawForValidation) {
+      this.triggerAsyncValidation(fieldName, rawForValidation, field.validations.asyncValidator);
+    } else {
+      this.clearAsyncValidation(fieldName);
+    }
+  }
+
+  /**
+   * Get mask pattern for display
+   */
+  getMaskPattern(field: Field): string {
+    if (!field.mask) return '';
+    return this._maskService.getMaskPattern(field.mask);
+  }
+
+  /**
+   * Evaluate computed field formula
+   */
+  private evaluateComputed(config: ComputedFieldConfig, values: Record<string, unknown>): unknown {
+    try {
+      // Replace field names in formula with their values
+      let formula = config.formula;
+
+      // Sort dependencies by length (longest first) to avoid partial replacements
+      const sortedDeps = [...config.dependencies].sort((a, b) => b.length - a.length);
+
+      sortedDeps.forEach(dep => {
+        const value = values[dep];
+        // Handle different value types
+        if (typeof value === 'string') {
+          formula = formula.replace(new RegExp(`\\b${dep}\\b`, 'g'), `"${value}"`);
+        } else if (value === null || value === undefined || value === '') {
+          formula = formula.replace(new RegExp(`\\b${dep}\\b`, 'g'), '0');
+        } else {
+          formula = formula.replace(new RegExp(`\\b${dep}\\b`, 'g'), String(value));
+        }
+      });
+
+      // Evaluate the formula
+      // eslint-disable-next-line no-eval
+      let result = eval(formula);
+
+      // Format result based on configuration
+      if (config.formatAs === 'number' || (typeof result === 'number' && config.formatAs !== 'text')) {
+        if (typeof result === 'number') {
+          const decimal = config.decimal ?? 2;
+          result = result.toFixed(decimal);
+        }
+      }
+
+      if (config.formatAs === 'currency') {
+        if (typeof result === 'number') {
+          const decimal = config.decimal ?? 2;
+          result = result.toFixed(decimal);
+          result = result.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+      }
+
+      // Add prefix/suffix
+      if (config.prefix) {
+        result = config.prefix + result;
+      }
+      if (config.suffix) {
+        result = result + config.suffix;
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error evaluating computed field:', error, config.formula);
+      return '';
     }
   }
 

@@ -85,6 +85,34 @@ export interface Field {
   width?: 'full' | 'half' | 'third' | 'quarter'; // Field width
   // Dynamic field array (repeater) configuration
   arrayConfig?: ArrayFieldConfig; // For type 'array' - repeatable field groups
+  // Field masking and formatting
+  mask?: FieldMask; // Input mask configuration
+  // Computed/calculated field
+  computed?: ComputedFieldConfig; // Auto-calculate value based on other fields
+}
+
+// Field mask configuration
+export type FieldMask =
+  | 'phone'           // (123) 456-7890
+  | 'phone-intl'      // +1 (123) 456-7890
+  | 'credit-card'     // 1234 5678 9012 3456
+  | 'ssn'             // 123-45-6789
+  | 'zip'             // 12345
+  | 'zip-plus4'       // 12345-6789
+  | 'currency'        // $1,234.56
+  | 'date-us'         // MM/DD/YYYY
+  | 'time'            // HH:MM
+  | FieldMaskConfig;  // Custom configuration
+
+// Custom mask configuration
+export interface FieldMaskConfig {
+  type: 'custom';
+  pattern: string;              // Mask pattern (0=digit, A=letter, *=alphanumeric, \=escape)
+  placeholder?: string;         // Placeholder character (default: _)
+  prefix?: string;              // Prefix to add (e.g., $, +1)
+  suffix?: string;              // Suffix to add (e.g., %, kg)
+  showMaskOnHover?: boolean;    // Show mask pattern on hover (default: true)
+  showMaskOnFocus?: boolean;    // Show mask pattern on focus (default: true)
 }
 
 // Configuration for dynamic field arrays (repeaters)
@@ -125,6 +153,16 @@ export interface AutosaveConfig {
   key?: string;                            // Custom storage key (default: formDraft_{formTitle})
   expirationDays?: number;                 // Days until draft expires (default: 7)
   showIndicator?: boolean;                 // Show "Last saved" indicator (default: true)
+}
+
+// Computed/calculated field configuration
+export interface ComputedFieldConfig {
+  formula: string;                  // Formula to calculate (e.g., "price * quantity", "firstName + ' ' + lastName")
+  dependencies: string[];           // Field names this computation depends on
+  decimal?: number;                 // Decimal places for numbers (default: 2)
+  prefix?: string;                  // Prefix (e.g., "$", "Total: ")
+  suffix?: string;                  // Suffix (e.g., "%", " kg")
+  formatAs?: 'number' | 'currency' | 'text'; // Output format (default: based on result type)
 }
 
 // Form schema with optional multi-step support
