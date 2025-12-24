@@ -1,6 +1,30 @@
 {
   "title": "User Registration",
+  "autosave": {
+    "enabled": true,
+    "intervalSeconds": 30,
+    "storage": "localStorage",
+    "expirationDays": 7,
+    "showIndicator": true
+  },
   "fields": [
+    {
+      "type": "text",
+      "label": "Username",
+      "name": "username",
+      "placeholder": "Choose a unique username",
+      "validations": {
+        "required": true,
+        "minLength": 3,
+        "asyncValidator": {
+          "endpoint": "/api/validate/username",
+          "method": "POST",
+          "debounceMs": 500,
+          "errorMessage": "Username is already taken",
+          "validWhen": "custom"
+        }
+      }
+    },
     {
       "type": "text",
       "label": "First Name",
@@ -103,6 +127,82 @@
       "rows": 5,
       "placeholder": "Tell us about yourself...",
       "validations": { "required": false, "maxLength": 500 }
+    },
+    {
+      "type": "array",
+      "label": "Phone Number",
+      "name": "phoneNumbers",
+      "arrayConfig": {
+        "fields": [
+          {
+            "type": "select",
+            "label": "Type",
+            "name": "type",
+            "width": "third",
+            "options": [
+              { "value": "mobile", "label": "Mobile" },
+              { "value": "home", "label": "Home" },
+              { "value": "work", "label": "Work" }
+            ],
+            "validations": { "required": true }
+          },
+          {
+            "type": "text",
+            "label": "Number",
+            "name": "number",
+            "width": "half",
+            "placeholder": "+1 (555) 123-4567",
+            "validations": {
+              "required": true,
+              "pattern": "^[+]?[(]?[0-9]{1,4}[)]?[-\\s.]?[(]?[0-9]{1,4}[)]?[-\\s.]?[0-9]{1,9}$",
+              "customMessage": "Please enter a valid phone number"
+            }
+          }
+        ],
+        "minItems": 1,
+        "maxItems": 5,
+        "initialItems": 1,
+        "addButtonText": "+ Add Phone Number",
+        "removeButtonText": "Remove",
+        "itemLabel": "Phone {index}"
+      }
+    },
+    {
+      "type": "array",
+      "label": "Emergency Contact",
+      "name": "emergencyContacts",
+      "arrayConfig": {
+        "fields": [
+          {
+            "type": "text",
+            "label": "Name",
+            "name": "name",
+            "width": "half",
+            "placeholder": "Contact name",
+            "validations": { "required": true, "minLength": 2 }
+          },
+          {
+            "type": "text",
+            "label": "Relationship",
+            "name": "relationship",
+            "width": "half",
+            "placeholder": "e.g., Spouse, Parent, Friend",
+            "validations": { "required": true }
+          },
+          {
+            "type": "text",
+            "label": "Phone",
+            "name": "phone",
+            "placeholder": "+1 (555) 123-4567",
+            "validations": { "required": true }
+          }
+        ],
+        "minItems": 0,
+        "maxItems": 3,
+        "initialItems": 1,
+        "addButtonText": "+ Add Emergency Contact",
+        "removeButtonText": "Remove"
+      }
     },
     {
       "type": "checkbox",

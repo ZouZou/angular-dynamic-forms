@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator } from './models/field.model';
+import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
 
 @Component({
@@ -33,10 +33,43 @@ export class DqDynamicForm {
   // Track programmatic updates to prevent infinite loops in checkbox dependencies
   private readonly isUpdatingProgrammatically = signal<Set<string>>(new Set());
 
+  // Autosave state
+  protected readonly lastSaved = signal<Date | null>(null);
+  protected readonly autosaveEnabled = signal(false);
+  private autosaveTimer: any = null;
+  private autosaveKey = '';
+  private autosaveConfig: any = null;
+
+  // Dynamic field arrays (repeaters) state
+  // Stores the count of items for each array field
+  protected readonly arrayItemCounts = signal<Record<string, number>>({});
+
+  // Async validation state
+  // Stores validation state per field: 'idle' | 'validating' | 'valid' | 'invalid'
+  protected readonly asyncValidationState = signal<Record<string, 'idle' | 'validating' | 'valid' | 'invalid'>>({});
+  // Stores async validation error messages
+  protected readonly asyncErrors = signal<Record<string, string>>({});
+  // Debounce timers for async validation
+  private asyncValidationTimers: Record<string, any> = {};
+
   // Computed: Check if entire form is pristine (no changes)
   protected readonly pristine = computed<boolean>(() =>
     !Object.values(this.dirty()).some(isDirty => isDirty)
   );
+
+  // Computed: Last saved time formatted
+  protected readonly lastSavedText = computed<string>(() => {
+    const saved = this.lastSaved();
+    if (!saved) return '';
+
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - saved.getTime()) / 1000); // seconds
+
+    if (diff < 60) return 'Saved just now';
+    if (diff < 3600) return `Saved ${Math.floor(diff / 60)} minutes ago`;
+    if (diff < 86400) return `Saved ${Math.floor(diff / 3600)} hours ago`;
+    return `Saved on ${saved.toLocaleDateString()}`;
+  });
 
   constructor() {
     // Watch for changes in form values to reset dependent fields
@@ -125,6 +158,18 @@ export class DqDynamicForm {
         }
       });
     });
+
+    // Autosave effect: save draft when form values change
+    effect(() => {
+      const values = this.formValues();
+      const isDirty = !this.pristine();
+
+      // Only autosave if enabled, form is dirty, and form is not submitted
+      if (this.autosaveEnabled() && isDirty && !this.submitted()) {
+        // Debounce autosave to avoid excessive writes
+        this.debouncedAutosave();
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -145,18 +190,67 @@ export class DqDynamicForm {
       const initialValues: Record<string, unknown> = {};
       const initialTouched: Record<string, boolean> = {};
       const initialDirty: Record<string, boolean> = {};
+      const initialArrayCounts: Record<string, number> = {};
 
       for (const field of allFields) {
-        // Set appropriate initial values based on field type
-        if (field.type === 'checkbox') {
-          initialValues[field.name] = false;
-        } else if (field.type === 'number') {
-          initialValues[field.name] = field.min ?? 0;
+        // Handle array fields (repeaters)
+        if (field.type === 'array' && field.arrayConfig) {
+          const initialItems = field.arrayConfig.initialItems || 1;
+          initialArrayCounts[field.name] = initialItems;
+
+          // Initialize values for each initial array item
+          for (let i = 0; i < initialItems; i++) {
+            field.arrayConfig.fields.forEach(subField => {
+              const arrayFieldName = `${field.name}[${i}].${subField.name}`;
+              initialValues[arrayFieldName] = this.getInitialValueForField(subField);
+              initialTouched[arrayFieldName] = false;
+              initialDirty[arrayFieldName] = false;
+            });
+          }
         } else {
-          initialValues[field.name] = '';
+          // Set appropriate initial values based on field type
+          if (field.type === 'checkbox') {
+            initialValues[field.name] = false;
+          } else if (field.type === 'number') {
+            initialValues[field.name] = field.min ?? 0;
+          } else {
+            initialValues[field.name] = '';
+          }
+          initialTouched[field.name] = false;
+          initialDirty[field.name] = false;
         }
-        initialTouched[field.name] = false;
-        initialDirty[field.name] = false;
+      }
+
+      // Set array counts
+      this.arrayItemCounts.set(initialArrayCounts);
+
+      // Check for autosave configuration
+      if (schema.autosave?.enabled) {
+        this.autosaveConfig = schema.autosave;
+        this.autosaveKey = schema.autosave.key || `formDraft_${schema.title.replace(/\s+/g, '_')}`;
+        this.autosaveEnabled.set(true);
+
+        // Try to restore draft from storage
+        const draft = this.loadDraft();
+        if (draft) {
+          // Merge draft values with initial values
+          Object.keys(draft.values).forEach(key => {
+            if (initialValues.hasOwnProperty(key)) {
+              initialValues[key] = draft.values[key];
+            }
+          });
+          this.lastSaved.set(new Date(draft.timestamp));
+          console.log('Draft restored from', this.autosaveConfig.storage || 'localStorage');
+        }
+
+        // Set up periodic autosave if interval is configured
+        if (schema.autosave.intervalSeconds) {
+          this.autosaveTimer = setInterval(() => {
+            if (!this.pristine() && !this.submitted()) {
+              this.saveDraft();
+            }
+          }, schema.autosave.intervalSeconds * 1000);
+        }
       }
 
       this.formValues.set(initialValues);
@@ -166,6 +260,13 @@ export class DqDynamicForm {
       this.initialValues.set({ ...initialValues });
       this.loading.set(false);
     });
+  }
+
+  ngOnDestroy(): void {
+    // Clear autosave timer
+    if (this.autosaveTimer) {
+      clearInterval(this.autosaveTimer);
+    }
   }
 
   updateFormValue(fieldName: string, value: unknown): void {
@@ -187,6 +288,123 @@ export class DqDynamicForm {
       ...current,
       [fieldName]: isDirty,
     }));
+
+    // Trigger async validation if configured
+    const field = this.fields().find(f => f.name === fieldName ||
+      fieldName.startsWith(f.name + '['));
+    if (field?.validations?.asyncValidator && value) {
+      this.triggerAsyncValidation(fieldName, value, field.validations.asyncValidator);
+    } else {
+      // Clear async validation if no value
+      this.clearAsyncValidation(fieldName);
+    }
+  }
+
+  /**
+   * Trigger async validation for a field
+   */
+  private triggerAsyncValidation(fieldName: string, value: unknown, validator: AsyncValidator): void {
+    // Clear existing timer
+    if (this.asyncValidationTimers[fieldName]) {
+      clearTimeout(this.asyncValidationTimers[fieldName]);
+    }
+
+    // Set validating state
+    this.asyncValidationState.update(state => ({
+      ...state,
+      [fieldName]: 'validating'
+    }));
+
+    // Debounce the validation
+    const debounceMs = validator.debounceMs || 300;
+    this.asyncValidationTimers[fieldName] = setTimeout(() => {
+      this.performAsyncValidation(fieldName, value, validator);
+    }, debounceMs);
+  }
+
+  /**
+   * Perform async validation via API
+   */
+  private performAsyncValidation(fieldName: string, value: unknown, validator: AsyncValidator): void {
+    const method = validator.method || 'POST';
+    const validWhen = validator.validWhen || 'custom';
+
+    // Make API call
+    this._formService.validateFieldAsync(validator.endpoint, { value, fieldName }, method)
+      .subscribe({
+        next: (response: any) => {
+          let isValid = false;
+          let errorMessage = validator.errorMessage || 'Invalid value';
+
+          if (validWhen === 'exists') {
+            isValid = !!response.exists;
+          } else if (validWhen === 'notExists') {
+            isValid = !response.exists;
+          } else {
+            // 'custom' - expect { valid: boolean, message?: string }
+            isValid = response.valid === true;
+            if (response.message) {
+              errorMessage = response.message;
+            }
+          }
+
+          if (isValid) {
+            this.asyncValidationState.update(state => ({
+              ...state,
+              [fieldName]: 'valid'
+            }));
+            this.asyncErrors.update(errors => {
+              const updated = { ...errors };
+              delete updated[fieldName];
+              return updated;
+            });
+          } else {
+            this.asyncValidationState.update(state => ({
+              ...state,
+              [fieldName]: 'invalid'
+            }));
+            this.asyncErrors.update(errors => ({
+              ...errors,
+              [fieldName]: errorMessage
+            }));
+          }
+        },
+        error: (error) => {
+          console.error(`Async validation error for ${fieldName}:`, error);
+          this.asyncValidationState.update(state => ({
+            ...state,
+            [fieldName]: 'invalid'
+          }));
+          this.asyncErrors.update(errors => ({
+            ...errors,
+            [fieldName]: 'Validation failed. Please try again.'
+          }));
+        }
+      });
+  }
+
+  /**
+   * Clear async validation state for a field
+   */
+  private clearAsyncValidation(fieldName: string): void {
+    // Clear timer
+    if (this.asyncValidationTimers[fieldName]) {
+      clearTimeout(this.asyncValidationTimers[fieldName]);
+      delete this.asyncValidationTimers[fieldName];
+    }
+
+    // Reset state
+    this.asyncValidationState.update(state => {
+      const updated = { ...state };
+      delete updated[fieldName];
+      return updated;
+    });
+
+    this.asyncErrors.update(errors => {
+      const updated = { ...errors };
+      delete updated[fieldName];
+      return updated;
+    });
   }
 
   /**
@@ -332,6 +550,200 @@ export class DqDynamicForm {
   }
 
   /**
+   * Get the number of items for an array field
+   */
+  getArrayItemCount(fieldName: string): number {
+    return this.arrayItemCounts()[fieldName] || 0;
+  }
+
+  /**
+   * Get array of indices for an array field
+   */
+  getArrayIndices(fieldName: string): number[] {
+    const count = this.getArrayItemCount(fieldName);
+    return Array.from({ length: count }, (_, i) => i);
+  }
+
+  /**
+   * Add a new item to an array field
+   */
+  addArrayItem(field: Field): void {
+    if (!field.arrayConfig) return;
+
+    const currentCount = this.getArrayItemCount(field.name);
+    const maxItems = field.arrayConfig.maxItems;
+
+    // Check if we can add more items
+    if (maxItems && currentCount >= maxItems) {
+      return;
+    }
+
+    // Increment count
+    this.arrayItemCounts.update(counts => ({
+      ...counts,
+      [field.name]: currentCount + 1
+    }));
+
+    // Initialize values for new array item's fields
+    const newIndex = currentCount;
+    field.arrayConfig.fields.forEach(subField => {
+      const arrayFieldName = `${field.name}[${newIndex}].${subField.name}`;
+
+      this.formValues.update(current => ({
+        ...current,
+        [arrayFieldName]: this.getInitialValueForField(subField)
+      }));
+
+      this.touched.update(current => ({
+        ...current,
+        [arrayFieldName]: false
+      }));
+
+      this.dirty.update(current => ({
+        ...current,
+        [arrayFieldName]: false
+      }));
+
+      // Store initial value
+      this.initialValues.update(current => ({
+        ...current,
+        [arrayFieldName]: this.getInitialValueForField(subField)
+      }));
+    });
+  }
+
+  /**
+   * Remove an item from an array field
+   */
+  removeArrayItem(field: Field, index: number): void {
+    if (!field.arrayConfig) return;
+
+    const currentCount = this.getArrayItemCount(field.name);
+    const minItems = field.arrayConfig.minItems || 0;
+
+    // Check if we can remove items
+    if (currentCount <= minItems) {
+      return;
+    }
+
+    // Remove values for this array item
+    field.arrayConfig.fields.forEach(subField => {
+      const arrayFieldName = `${field.name}[${index}].${subField.name}`;
+
+      this.formValues.update(current => {
+        const updated = { ...current };
+        delete updated[arrayFieldName];
+        return updated;
+      });
+
+      this.touched.update(current => {
+        const updated = { ...current };
+        delete updated[arrayFieldName];
+        return updated;
+      });
+
+      this.dirty.update(current => {
+        const updated = { ...current };
+        delete updated[arrayFieldName];
+        return updated;
+      });
+
+      this.initialValues.update(current => {
+        const updated = { ...current };
+        delete updated[arrayFieldName];
+        return updated;
+      });
+    });
+
+    // Shift all subsequent items down
+    for (let i = index + 1; i < currentCount; i++) {
+      field.arrayConfig.fields.forEach(subField => {
+        const oldKey = `${field.name}[${i}].${subField.name}`;
+        const newKey = `${field.name}[${i - 1}].${subField.name}`;
+
+        const values = this.formValues();
+        const touchedState = this.touched();
+        const dirtyState = this.dirty();
+        const initialVals = this.initialValues();
+
+        this.formValues.update(current => {
+          const updated = { ...current };
+          updated[newKey] = values[oldKey];
+          delete updated[oldKey];
+          return updated;
+        });
+
+        this.touched.update(current => {
+          const updated = { ...current };
+          updated[newKey] = touchedState[oldKey];
+          delete updated[oldKey];
+          return updated;
+        });
+
+        this.dirty.update(current => {
+          const updated = { ...current };
+          updated[newKey] = dirtyState[oldKey];
+          delete updated[oldKey];
+          return updated;
+        });
+
+        this.initialValues.update(current => {
+          const updated = { ...current };
+          updated[newKey] = initialVals[oldKey];
+          delete updated[oldKey];
+          return updated;
+        });
+      });
+    }
+
+    // Decrement count
+    this.arrayItemCounts.update(counts => ({
+      ...counts,
+      [field.name]: currentCount - 1
+    }));
+  }
+
+  /**
+   * Get initial value for a field based on its type
+   */
+  private getInitialValueForField(field: Field): unknown {
+    if (field.type === 'checkbox') {
+      return false;
+    } else if (field.type === 'number') {
+      return field.min ?? 0;
+    } else {
+      return '';
+    }
+  }
+
+  /**
+   * Get the field name for an array item's sub-field
+   */
+  getArrayFieldName(arrayFieldName: string, index: number, subFieldName: string): string {
+    return `${arrayFieldName}[${index}].${subFieldName}`;
+  }
+
+  /**
+   * Check if add button should be disabled for an array field
+   */
+  canAddArrayItem(field: Field): boolean {
+    if (!field.arrayConfig) return false;
+    const currentCount = this.getArrayItemCount(field.name);
+    const maxItems = field.arrayConfig.maxItems;
+    return !maxItems || currentCount < maxItems;
+  }
+
+  /**
+   * Check if remove button should be disabled for an array field
+   */
+  canRemoveArrayItem(field: Field): boolean {
+    if (!field.arrayConfig) return false;
+    const currentCount = this.getArrayItemCount(field.name);
+    const minItems = field.arrayConfig.minItems || 0;
+    return currentCount > minItems;
+  }
+
+  /**
    * Check if a field should be visible based on visibility conditions
    */
   isFieldVisible(field: Field): boolean {
@@ -459,6 +871,7 @@ export class DqDynamicForm {
     const validationErrors: Record<string, string> = {};
     const values = this.formValues();
     const fields = this.fields();
+    const asyncErrs = this.asyncErrors();
 
     for (const field of fields) {
       const fieldValue = values[field.name]; // meaningful name
@@ -636,16 +1049,129 @@ export class DqDynamicForm {
       }
     }
 
-    return validationErrors;
+    // Merge async validation errors
+    return { ...validationErrors, ...asyncErrs };
   });
 
-  readonly isValid = computed<boolean>(
-    () => Object.keys(this.errors()).length === 0
-  );
+  readonly isValid = computed<boolean>(() => {
+    // Check if there are any validation errors
+    if (Object.keys(this.errors()).length > 0) {
+      return false;
+    }
+
+    // Check if any async validations are in progress
+    const asyncStates = Object.values(this.asyncValidationState());
+    const hasValidating = asyncStates.some(state => state === 'validating');
+
+    return !hasValidating;
+  });
 
   saveUserData(): void {
+    // Check if form is valid
+    if (!this.isValid()) {
+      // Focus on first field with error for better accessibility
+      this.focusFirstError();
+      return;
+    }
+
     this.submittedData.set(this.formValues());
     this.submitted.set(true);
     console.log('FORM VALUES (Signals):', this.formValues());
+
+    // Clear draft on successful submission
+    if (this.autosaveEnabled()) {
+      this.clearDraft();
+    }
+  }
+
+  /**
+   * Focus on the first field with a validation error (accessibility)
+   */
+  private focusFirstError(): void {
+    const errors = this.errors();
+    const firstErrorField = Object.keys(errors)[0];
+
+    if (firstErrorField) {
+      // Use setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        const element = document.getElementById(firstErrorField);
+        if (element) {
+          element.focus();
+          // Scroll to element if needed
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }
+
+  /**
+   * Save current form state to storage
+   */
+  private saveDraft(): void {
+    if (!this.autosaveKey) return;
+
+    const draft = {
+      values: this.formValues(),
+      timestamp: new Date().toISOString(),
+      expiresAt: this.autosaveConfig?.expirationDays
+        ? new Date(Date.now() + this.autosaveConfig.expirationDays * 24 * 60 * 60 * 1000).toISOString()
+        : null
+    };
+
+    const storage = this.autosaveConfig?.storage === 'sessionStorage' ? sessionStorage : localStorage;
+    storage.setItem(this.autosaveKey, JSON.stringify(draft));
+    this.lastSaved.set(new Date());
+  }
+
+  /**
+   * Load draft from storage
+   */
+  private loadDraft(): { values: Record<string, unknown>; timestamp: string } | null {
+    if (!this.autosaveKey) return null;
+
+    const storage = this.autosaveConfig?.storage === 'sessionStorage' ? sessionStorage : localStorage;
+    const draftStr = storage.getItem(this.autosaveKey);
+
+    if (!draftStr) return null;
+
+    try {
+      const draft = JSON.parse(draftStr);
+
+      // Check if draft has expired
+      if (draft.expiresAt && new Date(draft.expiresAt) < new Date()) {
+        this.clearDraft();
+        return null;
+      }
+
+      return draft;
+    } catch (e) {
+      console.error('Failed to parse draft:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Clear draft from storage
+   */
+  private clearDraft(): void {
+    if (!this.autosaveKey) return;
+
+    const storage = this.autosaveConfig?.storage === 'sessionStorage' ? sessionStorage : localStorage;
+    storage.removeItem(this.autosaveKey);
+    this.lastSaved.set(null);
+  }
+
+  /**
+   * Debounced autosave to avoid excessive writes
+   */
+  private debounceTimer: any = null;
+  private debouncedAutosave(): void {
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+    }
+
+    this.debounceTimer = setTimeout(() => {
+      this.saveDraft();
+    }, 1000); // Wait 1 second after last change before saving
   }
 }

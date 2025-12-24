@@ -837,3 +837,295 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+---
+
+## Autosave and Draft Persistence (Phase 3)
+
+Automatically save form progress to browser storage and restore it when the user returns. Perfect for long forms to prevent data loss.
+
+### Configuration
+
+Add the `autosave` object to your form schema:
+
+```json
+{
+  "title": "User Registration",
+  "autosave": {
+    "enabled": true,
+    "intervalSeconds": 30,
+    "storage": "localStorage",
+    "expirationDays": 7,
+    "showIndicator": true
+  },
+  "fields": [...]
+}
+```
+
+### Autosave Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | boolean | false | Enable/disable autosave |
+| `intervalSeconds` | number | 30 | Periodic save interval in seconds |
+| `storage` | string | "localStorage" | Storage type: "localStorage" or "sessionStorage" |
+| `expirationDays` | number | 7 | Days until draft expires |
+| `showIndicator` | boolean | true | Show "last saved" indicator |
+| `key` | string | formDraft_{title} | Custom storage key |
+
+### How It Works
+
+1. **Auto-save on change**: Draft is saved 1 second after the last field change (debounced)
+2. **Periodic save**: Additional saves occur at specified intervals
+3. **Auto-restore**: Draft is automatically loaded when form initializes
+4. **Expiration**: Old drafts are automatically cleaned up
+5. **Clear on submit**: Draft is removed after successful submission
+
+The autosave indicator shows:
+- "Saved just now" (< 1 minute)
+- "Saved X minutes ago" (< 1 hour)
+- "Saved X hours ago" (< 1 day)
+- "Saved on [date]" (> 1 day)
+
+---
+
+## Dynamic Field Arrays (Repeaters) (Phase 3)
+
+Allow users to add/remove repeating groups of fields dynamically. Perfect for collecting multiple phone numbers, addresses, or emergency contacts.
+
+### Basic Example
+
+```json
+{
+  "type": "array",
+  "label": "Phone Number",
+  "name": "phoneNumbers",
+  "arrayConfig": {
+    "fields": [
+      {
+        "type": "select",
+        "label": "Type",
+        "name": "type",
+        "width": "third",
+        "options": [
+          { "value": "mobile", "label": "Mobile" },
+          { "value": "home", "label": "Home" },
+          { "value": "work", "label": "Work" }
+        ],
+        "validations": { "required": true }
+      },
+      {
+        "type": "text",
+        "label": "Number",
+        "name": "number",
+        "width": "half",
+        "placeholder": "+1 (555) 123-4567",
+        "validations": { "required": true }
+      }
+    ],
+    "minItems": 1,
+    "maxItems": 5,
+    "initialItems": 1,
+    "addButtonText": "+ Add Phone Number",
+    "removeButtonText": "Remove",
+    "itemLabel": "Phone {index}"
+  }
+}
+```
+
+### Array Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `fields` | Field[] | required | Template fields for each array item |
+| `minItems` | number | 0 | Minimum number of items (cannot remove below this) |
+| `maxItems` | number | unlimited | Maximum number of items (cannot add above this) |
+| `initialItems` | number | 1 | Number of items to show initially |
+| `addButtonText` | string | "+ Add {label}" | Custom text for add button |
+| `removeButtonText` | string | "Remove" | Custom text for remove button |
+| `itemLabel` | string | "{label} {index}" | Label template for each item |
+
+### Field Naming
+
+Array field values are stored with keys like `phoneNumbers[0].type` and `phoneNumbers[0].number`. The component automatically manages these keys when adding/removing items.
+
+### Features
+
+- **Add/Remove Controls**: Buttons to add new items or remove existing ones
+- **Min/Max Validation**: Enforce minimum and maximum number of items
+- **Nested Field Support**: Array items can contain any field types
+- **Field Widths**: Control layout with width utilities
+- **Auto-reindexing**: Array indices automatically update when items are removed
+
+---
+
+## Async Validators (Phase 3)
+
+Validate fields asynchronously via API calls. Perfect for checking username availability, email verification, or any server-side validation.
+
+### Basic Example
+
+```json
+{
+  "type": "text",
+  "label": "Username",
+  "name": "username",
+  "placeholder": "Choose a unique username",
+  "validations": {
+    "required": true,
+    "minLength": 3,
+    "asyncValidator": {
+      "endpoint": "/api/validate/username",
+      "method": "POST",
+      "debounceMs": 500,
+      "errorMessage": "Username is already taken",
+      "validWhen": "custom"
+    }
+  }
+}
+```
+
+### Async Validator Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `endpoint` | string | required | API endpoint for validation |
+| `method` | string | "POST" | HTTP method: "GET" or "POST" |
+| `debounceMs` | number | 300 | Debounce delay in milliseconds |
+| `errorMessage` | string | "Invalid value" | Error message to show on validation failure |
+| `validWhen` | string | "custom" | Validation condition: "exists", "notExists", or "custom" |
+
+### Validation Conditions
+
+**custom** (default): API returns `{ valid: boolean, message?: string }`
+```json
+{
+  "valid": true
+}
+// or
+{
+  "valid": false,
+  "message": "Username is already taken"
+}
+```
+
+**exists**: Field is valid if API returns `{ exists: true }`
+```json
+{
+  "exists": true  // Valid
+}
+```
+
+**notExists**: Field is valid if API returns `{ exists: false }`
+```json
+{
+  "exists": false  // Valid
+}
+```
+
+### UI States
+
+The async validator displays real-time feedback:
+- **⏳ Validating...** - While API call is in progress
+- **✓ Valid** - When validation passes
+- **Error message** - When validation fails
+
+### Features
+
+- **Debouncing**: Prevents excessive API calls as user types
+- **Loading State**: Shows validation in progress
+- **Form Blocking**: Form cannot be submitted while validation is pending
+- **Error Handling**: Gracefully handles API failures
+- **Visual Feedback**: Clear indicators for all validation states
+
+---
+
+## Accessibility Features (Phase 3)
+
+Comprehensive accessibility enhancements ensure the forms are usable by everyone, including users with disabilities.
+
+### ARIA Attributes
+
+All form elements include proper ARIA attributes:
+
+```html
+<!-- Form -->
+<form role="form" aria-label="User Registration">
+  
+  <!-- Field Group -->
+  <div role="group" aria-labelledby="label-firstName">
+    
+    <!-- Label -->
+    <label id="label-firstName" for="firstName">
+      First Name
+      <span class="required" aria-label="required">*</span>
+    </label>
+    
+    <!-- Input -->
+    <input
+      id="firstName"
+      name="firstName"
+      type="text"
+      aria-required="true"
+      aria-invalid="false"
+      aria-describedby="error-firstName"
+    />
+    
+    <!-- Error -->
+    <div id="error-firstName" role="alert" aria-live="assertive">
+      First Name is required
+    </div>
+  </div>
+</form>
+```
+
+### Keyboard Navigation
+
+- **Tab Navigation**: All interactive elements are keyboard accessible
+- **Focus Indicators**: Enhanced focus outlines (3px solid, high contrast)
+- **Error Focus**: Automatically focuses first field with error on submit attempt
+- **Smooth Scrolling**: Scrolls to focused field for better visibility
+
+### Screen Reader Support
+
+- **Form Labels**: Proper association between labels and inputs
+- **Required Fields**: Announced via `aria-required` and visual indicators
+- **Error Messages**: Live announcements via `aria-live="assertive"`
+- **Validation States**: Async validation states announced in real-time
+- **Descriptive Text**: Helper text properly associated with `aria-describedby`
+
+### Focus Management
+
+```typescript
+// Automatically implemented in component
+private focusFirstError(): void {
+  const errors = this.errors();
+  const firstErrorField = Object.keys(errors)[0];
+  
+  if (firstErrorField) {
+    const element = document.getElementById(firstErrorField);
+    if (element) {
+      element.focus();
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+```
+
+### Features
+
+- **Semantic HTML**: Proper use of form, label, input, and button elements
+- **Role Attributes**: Clear roles for screen readers
+- **Live Regions**: Dynamic content updates announced to screen readers
+- **Focus Visible**: Enhanced focus styles only for keyboard navigation
+- **Error Announcements**: Validation errors announced immediately
+- **Loading States**: Async operations announced with `aria-live="polite"`
+
+### WCAG Compliance
+
+These features help achieve WCAG 2.1 Level AA compliance:
+- Perceivable: Clear labels, error messages, and visual indicators
+- Operable: Full keyboard navigation and sufficient focus indicators
+- Understandable: Clear instructions and error messages
+- Robust: Semantic HTML and proper ARIA attributes
+

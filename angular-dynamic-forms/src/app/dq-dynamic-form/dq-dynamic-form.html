@@ -11,26 +11,47 @@
 <div class="form-container">
   <h2>{{ title() }}</h2>
 
-  <form>
+  <!-- Autosave indicator -->
+  @if (autosaveEnabled() && lastSaved()) {
+  <div class="autosave-indicator">
+    <span class="autosave-icon">💾</span>
+    <span class="autosave-text">{{ lastSavedText() }}</span>
+  </div>
+  }
+
+  <form role="form" aria-label="{{ title() }}">
     @for (field of fields(); track field.name) {
     <!-- Only show field if visibility condition is met -->
     @if (isFieldVisible(field)) {
-    <div class="form-group" [class]="'width-' + (field.width || 'full') + (field.cssClass ? ' ' + field.cssClass : '')">
+    <div class="form-group" [class]="'width-' + (field.width || 'full') + (field.cssClass ? ' ' + field.cssClass : '')" role="group" [attr.aria-labelledby]="'label-' + field.name">
       <!-- Text / Email / Password -->
       @if (field.type === 'text' || field.type === 'email' || field.type === 'password') {
-      <label class="form-label">
+      <label class="form-label" [id]="'label-' + field.name" [attr.for]="field.name">
         {{ field.label }}
         @if (field.validations?.required || field.validations?.requiredIf) {
-        <span class="required">*</span>
+        <span class="required" aria-label="required">*</span>
+        }
+        @if (field.validations?.asyncValidator) {
+        @if (asyncValidationState()[field.name] === 'validating') {
+        <span class="async-validation-indicator validating" role="status" aria-live="polite">⏳ Validating...</span>
+        }
+        @if (asyncValidationState()[field.name] === 'valid') {
+        <span class="async-validation-indicator valid" role="status" aria-live="polite">✓ Valid</span>
+        }
         }
       </label>
       <input
         [type]="field.type"
+        [id]="field.name"
+        [name]="field.name"
         class="form-control"
         [value]="formValues()[field.name]"
         [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()"
         [readonly]="field.readonly || false"
         [disabled]="field.disabled || false"
+        [attr.aria-required]="field.validations?.required || field.validations?.requiredIf || null"
+        [attr.aria-invalid]="touched()[field.name] && errors()[field.name] ? 'true' : null"
+        [attr.aria-describedby]="errors()[field.name] ? 'error-' + field.name : null"
         (input)="updateFormValue(field.name, $any($event.target).value)"
       />
       }
@@ -170,9 +191,131 @@
       </div>
       }
 
+      <!-- Dynamic Field Array (Repeater) -->
+      @if (field.type === 'array' && field.arrayConfig) {
+      <div class="array-field-container">
+        <label class="form-label">{{ field.label }}</label>
+
+        @for (index of getArrayIndices(field.name); track index) {
+        <div class="array-item">
+          <div class="array-item-header">
+            <span class="array-item-label">
+              {{ field.arrayConfig.itemLabel ? field.arrayConfig.itemLabel.replace('{label}', field.label).replace('{index}', (index + 1).toString()) : field.label + ' ' + (index + 1) }}
+            </span>
+            <button
+              type="button"
+              class="array-remove-btn"
+              [disabled]="!canRemoveArrayItem(field)"
+              (click)="removeArrayItem(field, index)"
+              title="Remove this item"
+            >
+              {{ field.arrayConfig.removeButtonText || 'Remove' }}
+            </button>
+          </div>
+
+          <div class="array-item-fields">
+            @for (subField of field.arrayConfig.fields; track subField.name) {
+            <div class="form-group" [class]="'width-' + (subField.width || 'full')">
+              <!-- Text / Email / Password -->
+              @if (subField.type === 'text' || subField.type === 'email' || subField.type === 'password') {
+              <label class="form-label">
+                {{ subField.label }}
+                @if (subField.validations?.required) {
+                <span class="required">*</span>
+                }
+              </label>
+              <input
+                [type]="subField.type"
+                class="form-control"
+                [value]="formValues()[getArrayFieldName(field.name, index, subField.name)]"
+                [placeholder]="subField.placeholder || 'Enter ' + subField.label.toLowerCase()"
+                (input)="updateFormValue(getArrayFieldName(field.name, index, subField.name), $any($event.target).value)"
+              />
+              }
+
+              <!-- Number -->
+              @if (subField.type === 'number') {
+              <label class="form-label">
+                {{ subField.label }}
+                @if (subField.validations?.required) {
+                <span class="required">*</span>
+                }
+              </label>
+              <input
+                type="number"
+                class="form-control"
+                [value]="formValues()[getArrayFieldName(field.name, index, subField.name)]"
+                [placeholder]="subField.placeholder || 'Enter ' + subField.label.toLowerCase()"
+                [min]="subField.min"
+                [max]="subField.max"
+                [step]="subField.step || 1"
+                (input)="updateFormValue(getArrayFieldName(field.name, index, subField.name), $any($event.target).valueAsNumber)"
+              />
+              }
+
+              <!-- Select -->
+              @if (subField.type === 'select') {
+              <label class="form-label">
+                {{ subField.label }}
+                @if (subField.validations?.required) {
+                <span class="required">*</span>
+                }
+              </label>
+              <select
+                class="form-select"
+                [value]="formValues()[getArrayFieldName(field.name, index, subField.name)]"
+                (change)="updateFormValue(getArrayFieldName(field.name, index, subField.name), $any($event.target).value)"
+              >
+                <option value="">Choose {{ subField.label.toLowerCase() }}</option>
+                @for (opt of normalizeOptions(subField.options || []); track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+              }
+
+              <!-- Textarea -->
+              @if (subField.type === 'textarea') {
+              <label class="form-label">
+                {{ subField.label }}
+                @if (subField.validations?.required) {
+                <span class="required">*</span>
+                }
+              </label>
+              <textarea
+                class="form-control"
+                [value]="formValues()[getArrayFieldName(field.name, index, subField.name)]"
+                [placeholder]="subField.placeholder || 'Enter ' + subField.label.toLowerCase()"
+                [rows]="subField.rows || 4"
+                (input)="updateFormValue(getArrayFieldName(field.name, index, subField.name), $any($event.target).value)"
+              ></textarea>
+              }
+
+              <!-- Error -->
+              @if (touched()[getArrayFieldName(field.name, index, subField.name)] && errors()[getArrayFieldName(field.name, index, subField.name)]) {
+              <div class="error">
+                {{ errors()[getArrayFieldName(field.name, index, subField.name)] }}
+              </div>
+              }
+            </div>
+            }
+          </div>
+        </div>
+        }
+
+        <button
+          type="button"
+          class="array-add-btn"
+          [disabled]="!canAddArrayItem(field)"
+          (click)="addArrayItem(field)"
+        >
+          {{ field.arrayConfig.addButtonText ? field.arrayConfig.addButtonText.replace('{label}', field.label) : '+ Add ' + field.label }}
+        </button>
+      </div>
+      }
+
       <!-- Error -->
       @if (touched()[field.name] && errors()[field.name]) {
-      <div class="error">
+      <div [id]="'error-' + field.name" class="error" role="alert" aria-live="assertive">
         {{ errors()[field.name] }}
       </div>
       }
@@ -182,9 +325,11 @@
 
     <button
       class="submit-btn"
-      type="button"
+      type="submit"
       [disabled]="!isValid()"
+      [attr.aria-disabled]="!isValid()"
       (click)="saveUserData()"
+      aria-label="Submit form"
     >
       Submit
     </button>

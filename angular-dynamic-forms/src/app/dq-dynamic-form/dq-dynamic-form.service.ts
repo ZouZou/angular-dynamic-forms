@@ -134,4 +134,28 @@ export class DynamicFormsService {
     this.optionsCache.delete(endpoint);
     console.log(`[Cache] Cleared cache for: ${endpoint}`);
   }
+
+  /**
+   * Validate field asynchronously via API
+   * @param endpoint - The API endpoint for validation
+   * @param data - Data to send (typically { value, fieldName })
+   * @param method - HTTP method (GET or POST)
+   * @returns Observable of validation response
+   */
+  validateFieldAsync(
+    endpoint: string,
+    data: { value: unknown; fieldName: string },
+    method: 'GET' | 'POST' = 'POST'
+  ): Observable<any> {
+    console.log(`[Async Validation] ${method} ${endpoint}`, data);
+
+    // Use mock API for validation (replace with real HTTP call in production)
+    return this.mockApi.validateField(endpoint, data, method).pipe(
+      catchError((error) => {
+        console.error(`[Async Validation Error] ${endpoint}:`, error);
+        // Return invalid state on error
+        return of({ valid: false, message: 'Validation request failed' });
+      })
+    );
+  }
 }
