@@ -219,4 +219,62 @@ export class MaskService {
 
     return pattern;
   }
+
+  /**
+   * Validate if a masked value is complete and valid
+   */
+  isValidMaskedValue(value: string, mask: FieldMask): boolean {
+    if (!value) return true; // Empty is valid (use required validation separately)
+
+    if (mask === 'currency') {
+      // Currency is valid if it has at least one digit
+      const cleaned = value.replace(/[^0-9.]/g, '');
+      return cleaned.length > 0 && !isNaN(parseFloat(cleaned));
+    }
+
+    const maskConfig = this.getMaskConfig(mask);
+    if (!maskConfig) return true;
+
+    // Get the raw value
+    const rawValue = this.getRawValue(value, mask);
+
+    // Count expected characters in pattern
+    const expectedLength = this.getExpectedPatternLength(maskConfig.pattern);
+
+    // Value is valid if raw value length matches expected length
+    return rawValue.length === expectedLength;
+  }
+
+  /**
+   * Get the expected length of raw value based on pattern
+   */
+  private getExpectedPatternLength(pattern: string): number {
+    let length = 0;
+    let i = 0;
+
+    while (i < pattern.length) {
+      const char = pattern[i];
+
+      if (char === '0' || char === 'A' || char === '*') {
+        // These are placeholder characters that expect input
+        length++;
+      } else if (char === '\\' && i + 1 < pattern.length) {
+        // Escape character - skip both the \ and the next character
+        i++;
+      }
+      // Other characters are literals and don't count toward raw value length
+
+      i++;
+    }
+
+    return length;
+  }
+
+  /**
+   * Get validation error message for a masked field
+   */
+  getMaskValidationError(mask: FieldMask): string {
+    const pattern = this.getMaskPattern(mask);
+    return `Please enter a complete value in the format: ${pattern}`;
+  }
 }

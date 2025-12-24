@@ -1177,6 +1177,13 @@ export class DqDynamicForm {
             `${field.label} format is invalid`;
         }
       }
+
+      // Mask validation - check if masked value is complete
+      if (field.mask && fieldValue && typeof fieldValue === 'string') {
+        if (!this._maskService.isValidMaskedValue(fieldValue, field.mask)) {
+          validationErrors[field.name] = this._maskService.getMaskValidationError(field.mask);
+        }
+      }
     }
 
     // Merge async validation errors
