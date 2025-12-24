@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig } from './models/field.model';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
 import { MaskService } from './mask.service';
 
@@ -13,6 +14,7 @@ import { MaskService } from './mask.service';
 export class DqDynamicForm {
   private readonly _formService = inject(DynamicFormsService);
   private readonly _maskService = inject(MaskService);
+  private readonly _http = inject(HttpClient);
   protected readonly fields = signal<Field[]>([]);
   protected readonly title = signal<string>('');
   protected readonly formValues = signal<Record<string, unknown>>({});
@@ -53,6 +55,14 @@ export class DqDynamicForm {
   protected readonly asyncErrors = signal<Record<string, string>>({});
   // Debounce timers for async validation
   private asyncValidationTimers: Record<string, any> = {};
+
+  // Form submission state
+  protected readonly submitting = signal(false);
+  protected readonly submitSuccess = signal(false);
+  protected readonly submitError = signal<string | null>(null);
+  protected readonly submitRetryCount = signal(0);
+  private submissionConfig: FormSubmission | null = null;
+  private readonly MAX_RETRY_ATTEMPTS = 3;
 
   // Computed: Check if entire form is pristine (no changes)
   protected readonly pristine = computed<boolean>(() =>
@@ -274,6 +284,11 @@ export class DqDynamicForm {
             }
           }, schema.autosave.intervalSeconds * 1000);
         }
+      }
+
+      // Store submission configuration
+      if (schema.submission) {
+        this.submissionConfig = schema.submission;
       }
 
       this.formValues.set(initialValues);
@@ -1228,14 +1243,130 @@ export class DqDynamicForm {
       return;
     }
 
-    this.submittedData.set(this.formValues());
+    // Reset submission state
+    this.submitError.set(null);
+    this.submitSuccess.set(false);
+
+    // If no submission config, just show data locally
+    if (!this.submissionConfig?.endpoint) {
+      this.submittedData.set(this.formValues());
+      this.submitted.set(true);
+      this.submitSuccess.set(true);
+      console.log('FORM VALUES (Signals):', this.formValues());
+
+      // Clear draft on successful submission
+      if (this.autosaveEnabled()) {
+        this.clearDraft();
+      }
+      return;
+    }
+
+    // Submit to API with retry logic
+    this.submitToApi(0);
+  }
+
+  /**
+   * Submit form data to API with retry logic
+   */
+  private submitToApi(attemptNumber: number): void {
+    if (!this.submissionConfig?.endpoint) return;
+
+    this.submitting.set(true);
+    this.submitRetryCount.set(attemptNumber);
+
+    const method = this.submissionConfig.method || 'POST';
+    const headers = this.submissionConfig.headers || {};
+    const formData = this.formValues();
+
+    // Make HTTP request
+    const request$ = method === 'POST'
+      ? this._http.post(this.submissionConfig.endpoint, formData, { headers })
+      : method === 'PUT'
+        ? this._http.put(this.submissionConfig.endpoint, formData, { headers })
+        : this._http.patch(this.submissionConfig.endpoint, formData, { headers });
+
+    request$.subscribe({
+      next: (response) => {
+        this.handleSubmitSuccess(response);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.handleSubmitError(error, attemptNumber);
+      }
+    });
+  }
+
+  /**
+   * Handle successful form submission
+   */
+  private handleSubmitSuccess(response: any): void {
+    this.submitting.set(false);
+    this.submitSuccess.set(true);
     this.submitted.set(true);
-    console.log('FORM VALUES (Signals):', this.formValues());
+    this.submittedData.set(response);
 
     // Clear draft on successful submission
     if (this.autosaveEnabled()) {
       this.clearDraft();
     }
+
+    console.log('Form submitted successfully:', response);
+
+    // Handle redirect if configured
+    if (this.submissionConfig?.redirectOnSuccess) {
+      setTimeout(() => {
+        window.location.href = this.submissionConfig!.redirectOnSuccess!;
+      }, 2000); // 2 second delay to show success message
+    }
+  }
+
+  /**
+   * Handle form submission error with retry logic
+   */
+  private handleSubmitError(error: HttpErrorResponse, attemptNumber: number): void {
+    console.error('Form submission error:', error);
+
+    // Check if we should retry
+    if (attemptNumber < this.MAX_RETRY_ATTEMPTS && (error.status === 0 || error.status >= 500)) {
+      // Network error or server error - retry after delay
+      const retryDelay = Math.pow(2, attemptNumber) * 1000; // Exponential backoff: 1s, 2s, 4s
+      console.log(`Retrying submission in ${retryDelay}ms (attempt ${attemptNumber + 1}/${this.MAX_RETRY_ATTEMPTS})`);
+
+      setTimeout(() => {
+        this.submitToApi(attemptNumber + 1);
+      }, retryDelay);
+    } else {
+      // Max retries reached or client error - show error
+      this.submitting.set(false);
+
+      // Extract error message
+      let errorMessage = this.submissionConfig?.errorMessage || 'Form submission failed. Please try again.';
+
+      if (error.error?.message) {
+        errorMessage = error.error.message;
+      } else if (error.error?.error) {
+        errorMessage = error.error.error;
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+
+      // Handle field-level errors from API
+      if (error.error?.errors && typeof error.error.errors === 'object') {
+        // Merge field-level errors into asyncErrors for display
+        this.asyncErrors.update(current => ({
+          ...current,
+          ...error.error.errors
+        }));
+      }
+
+      this.submitError.set(errorMessage);
+    }
+  }
+
+  /**
+   * Retry form submission (called from template)
+   */
+  retrySubmit(): void {
+    this.submitToApi(0);
   }
 
   /**

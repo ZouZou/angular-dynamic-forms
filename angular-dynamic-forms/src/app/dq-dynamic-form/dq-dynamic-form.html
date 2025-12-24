@@ -331,25 +331,47 @@
     }
     }
 
+    <!-- Submission Error Message -->
+    @if (submitError()) {
+    <div class="submission-error" role="alert" aria-live="assertive">
+      <strong>Error:</strong> {{ submitError() }}
+      @if (submitRetryCount() > 0) {
+      <p class="retry-info">Retry attempt {{ submitRetryCount() }} of {{ 3 }}</p>
+      }
+      <button type="button" class="retry-btn" (click)="retrySubmit()">
+        Retry Submission
+      </button>
+    </div>
+    }
+
+    <!-- Submit Button -->
     <button
       class="submit-btn"
       type="submit"
-      [disabled]="!isValid()"
-      [attr.aria-disabled]="!isValid()"
+      [disabled]="!isValid() || submitting()"
+      [attr.aria-disabled]="!isValid() || submitting()"
+      [attr.aria-busy]="submitting()"
       (click)="saveUserData()"
       aria-label="Submit form"
     >
+      @if (submitting()) {
+      <span class="spinner"></span>
+      Submitting{{ submitRetryCount() > 0 ? ' (Retry ' + submitRetryCount() + ')' : '' }}...
+      } @else {
       Submit
+      }
     </button>
   </form>
 </div>
 }
 
 <!-- Success / Submitted Data -->
-@if (submitted()) {
-<div class="submitted-data">
+@if (submitted() && submitSuccess()) {
+<div class="submitted-data success-message" role="status" aria-live="polite">
+  <div class="success-icon">✓</div>
   <h3>Form Submitted Successfully!</h3>
 
+  @if (submittedData()) {
   <ul>
     @for (field of fields(); track field.name) {
     <li>
@@ -358,5 +380,6 @@
     </li>
     }
   </ul>
+  }
 </div>
 }
