@@ -55,6 +55,7 @@
         [placeholder]="field.placeholder || (field.mask ? getMaskPattern(field) : 'Enter ' + field.label.toLowerCase())"
         [readonly]="field.readonly || !!field.computed || false"
         [disabled]="field.disabled || false"
+        [attr.maxlength]="field.mask ? getMaxLength(field) : null"
         [attr.aria-required]="field.validations?.required || field.validations?.requiredIf || null"
         [attr.aria-invalid]="touched()[field.name] && errors()[field.name] ? 'true' : null"
         [attr.aria-describedby]="errors()[field.name] ? 'error-' + field.name : null"

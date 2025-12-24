@@ -332,8 +332,17 @@ export class DqDynamicForm {
       return;
     }
 
+    // Get max allowed length for this mask
+    const maxLength = this._maskService.getMaxLength(field.mask);
+
+    // Truncate input if it exceeds max length (handles paste operations)
+    let truncatedValue = rawValue;
+    if (maxLength && rawValue.length > maxLength) {
+      truncatedValue = rawValue.substring(0, maxLength);
+    }
+
     // Apply mask to display value
-    const maskedValue = this._maskService.applyMask(rawValue, field.mask);
+    const maskedValue = this._maskService.applyMask(truncatedValue, field.mask);
 
     // Store masked value for display
     this.formValues.update((current) => ({
@@ -370,6 +379,14 @@ export class DqDynamicForm {
   getMaskPattern(field: Field): string {
     if (!field.mask) return '';
     return this._maskService.getMaskPattern(field.mask);
+  }
+
+  /**
+   * Get max length for masked input field
+   */
+  getMaxLength(field: Field): number | undefined {
+    if (!field.mask) return undefined;
+    return this._maskService.getMaxLength(field.mask);
   }
 
   /**

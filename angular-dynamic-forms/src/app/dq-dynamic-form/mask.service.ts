@@ -241,8 +241,34 @@ export class MaskService {
     // Count expected characters in pattern
     const expectedLength = this.getExpectedPatternLength(maskConfig.pattern);
 
-    // Value is valid if raw value length matches expected length
+    // Value is valid if raw value length matches expected length exactly
+    // This catches both too short AND too long values
     return rawValue.length === expectedLength;
+  }
+
+  /**
+   * Get the maximum input length allowed for a mask (for maxlength attribute)
+   * This includes format characters (e.g., "(123) 456-7890" = 14 chars)
+   */
+  getMaxLength(mask: FieldMask): number | undefined {
+    if (mask === 'currency') {
+      return undefined; // Currency can be variable length
+    }
+
+    const maskConfig = this.getMaskConfig(mask);
+    if (!maskConfig) return undefined;
+
+    // Calculate the full masked length (pattern + prefix + suffix)
+    let length = maskConfig.pattern.length;
+
+    if (maskConfig.prefix) {
+      length += maskConfig.prefix.length;
+    }
+    if (maskConfig.suffix) {
+      length += maskConfig.suffix.length;
+    }
+
+    return length;
   }
 
   /**
