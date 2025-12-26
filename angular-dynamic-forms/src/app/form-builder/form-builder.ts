@@ -44,8 +44,10 @@ export class FormBuilder {
   // Selected section index (for multi-step mode)
   protected readonly selectedSectionIndex = signal<number | null>(null);
 
-  // Expose Number for template (needed for numeric input conversions)
+  // Expose Number, JSON, Array for template (needed for numeric input conversions and JSON operations)
   protected readonly Number = Number;
+  protected readonly JSON = JSON;
+  protected readonly Array = Array;
 
   // Field palette templates
   protected readonly fieldTemplates: FieldTemplate[] = [
@@ -525,6 +527,18 @@ export class FormBuilder {
     const index = this.selectedFieldIndex();
     if (index === null) return;
 
+    // Special handling for dependsOn - convert comma-separated string to array if multiple values
+    if (property === 'dependsOn' && typeof value === 'string' && value.trim()) {
+      const dependencies = value.split(',').map(d => d.trim()).filter(d => d.length > 0);
+      if (dependencies.length > 1) {
+        value = dependencies;
+      } else if (dependencies.length === 1) {
+        value = dependencies[0];
+      } else {
+        value = undefined;
+      }
+    }
+
     const currentSchema = this.schema();
     const multiStep = this.multiStepMode();
 
@@ -670,9 +684,186 @@ export class FormBuilder {
     return template?.icon || '📝';
   }
 
+  // Get mask value for display
+  protected getMaskValue(field: Field): string {
+    return typeof field.mask === 'string' ? field.mask : '';
+  }
+
   // Get field types as array of entries
   protected getFieldTypesEntries(fieldTypes: Record<string, number>): Array<[string, number]> {
     return Object.entries(fieldTypes);
+  }
+
+  // Update field property with JSON parsing
+  protected updateFieldPropertyJSON(property: string, jsonValue: string): void {
+    try {
+      if (!jsonValue.trim()) {
+        this.updateFieldProperty(property, undefined);
+        return;
+      }
+      const parsedValue = JSON.parse(jsonValue);
+      this.updateFieldProperty(property, parsedValue);
+    } catch (e) {
+      // Invalid JSON - ignore for now, user might still be typing
+    }
+  }
+
+  // Update validation property
+  protected updateValidationProperty(property: string, value: any): void {
+    const index = this.selectedFieldIndex();
+    if (index === null) return;
+
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      const field = updatedFields[index];
+
+      updatedFields[index] = {
+        ...field,
+        validations: {
+          ...field.validations,
+          [property]: value
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      const field = updatedFields[index];
+
+      updatedFields[index] = {
+        ...field,
+        validations: {
+          ...field.validations,
+          [property]: value
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  // Update async validator with JSON parsing
+  protected updateAsyncValidatorJSON(jsonValue: string): void {
+    try {
+      if (!jsonValue.trim()) {
+        this.updateValidationProperty('asyncValidator', undefined);
+        return;
+      }
+      const parsedValue = JSON.parse(jsonValue);
+      this.updateValidationProperty('asyncValidator', parsedValue);
+    } catch (e) {
+      // Invalid JSON - ignore for now, user might still be typing
+    }
+  }
+
+  // Update computed field property
+  protected updateComputedProperty(property: string, value: any): void {
+    const index = this.selectedFieldIndex();
+    if (index === null) return;
+
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      const field = updatedFields[index];
+
+      // If formula is being cleared, remove entire computed config
+      if (property === 'formula' && !value) {
+        updatedFields[index] = {
+          ...field,
+          computed: undefined
+        };
+      } else {
+        updatedFields[index] = {
+          ...field,
+          computed: {
+            ...field.computed,
+            formula: field.computed?.formula || '',
+            dependencies: field.computed?.dependencies || [],
+            [property]: value
+          }
+        };
+      }
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      const field = updatedFields[index];
+
+      // If formula is being cleared, remove entire computed config
+      if (property === 'formula' && !value) {
+        updatedFields[index] = {
+          ...field,
+          computed: undefined
+        };
+      } else {
+        updatedFields[index] = {
+          ...field,
+          computed: {
+            ...field.computed,
+            formula: field.computed?.formula || '',
+            dependencies: field.computed?.dependencies || [],
+            [property]: value
+          }
+        };
+      }
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  // Update computed dependencies from comma-separated string
+  protected updateComputedDependencies(value: string): void {
+    const dependencies = value
+      .split(',')
+      .map(d => d.trim())
+      .filter(d => d.length > 0);
+
+    this.updateComputedProperty('dependencies', dependencies);
   }
 
   // Toggle required validation

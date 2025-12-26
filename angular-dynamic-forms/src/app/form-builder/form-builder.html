@@ -324,6 +324,316 @@
                 </label>
               </div>
 
+              <!-- Dependency & Visibility Section -->
+              <div class="advanced-section" style="margin-top: 1rem; border-top: 1px solid #ddd; padding-top: 1rem;">
+                <h4>🔗 Dependencies & Visibility</h4>
+
+                <div class="form-group">
+                  <label>Depends On (field name)</label>
+                  <input
+                    type="text"
+                    [value]="Array.isArray(field.dependsOn) ? field.dependsOn.join(', ') : (field.dependsOn || '')"
+                    (input)="updateFieldProperty('dependsOn', $any($event.target).value || undefined)"
+                    class="form-control"
+                    placeholder="e.g., country or country,state"
+                  >
+                  <small class="text-muted">Comma-separated for multiple dependencies</small>
+                </div>
+
+                <div class="form-group">
+                  <label>Options Endpoint URL</label>
+                  <input
+                    type="text"
+                    [value]="field.optionsEndpoint || ''"
+                    (input)="updateFieldProperty('optionsEndpoint', $any($event.target).value || undefined)"
+                    class="form-control"
+                    placeholder="https://api.example.com/options"
+                  >
+                  <small class="text-muted">API endpoint to fetch dynamic options</small>
+                </div>
+
+                @if (field.type === 'checkbox' && field.dependsOn) {
+                  <div class="form-group">
+                    <label>Dependency Type</label>
+                    <select
+                      [value]="field.dependencyType || 'same'"
+                      (change)="updateFieldProperty('dependencyType', $any($event.target).value)"
+                      class="form-control"
+                    >
+                      <option value="same">Same (both checked/unchecked)</option>
+                      <option value="opposite">Opposite (inverse)</option>
+                    </select>
+                  </div>
+                }
+
+                <div class="form-group">
+                  <label>Visible When (JSON condition)</label>
+                  <textarea
+                    [value]="field.visibleWhen ? JSON.stringify(field.visibleWhen, null, 2) : ''"
+                    (input)="updateFieldPropertyJSON('visibleWhen', $any($event.target).value)"
+                    class="form-control"
+                    rows="3"
+                    placeholder='{"field": "country", "operator": "equals", "value": "US"}'
+                  ></textarea>
+                  <small class="text-muted">Conditional visibility configuration</small>
+                </div>
+              </div>
+
+              <!-- Advanced Validations Section -->
+              <div class="advanced-section" style="margin-top: 1rem; border-top: 1px solid #ddd; padding-top: 1rem;">
+                <h4>✅ Advanced Validations</h4>
+
+                <div class="form-group">
+                  <label>Min Length</label>
+                  <input
+                    type="number"
+                    [value]="field.validations?.minLength || ''"
+                    (input)="updateValidationProperty('minLength', $any($event.target).value ? Number($any($event.target).value) : undefined)"
+                    class="form-control"
+                    min="0"
+                    placeholder="Minimum string length"
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label>Max Length</label>
+                  <input
+                    type="number"
+                    [value]="field.validations?.maxLength || ''"
+                    (input)="updateValidationProperty('maxLength', $any($event.target).value ? Number($any($event.target).value) : undefined)"
+                    class="form-control"
+                    min="1"
+                    placeholder="Maximum string length"
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label>Pattern (regex)</label>
+                  <input
+                    type="text"
+                    [value]="field.validations?.pattern || ''"
+                    (input)="updateValidationProperty('pattern', $any($event.target).value || undefined)"
+                    class="form-control"
+                    placeholder="e.g., ^[A-Z][a-z]*$"
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label>Custom Error Message</label>
+                  <input
+                    type="text"
+                    [value]="field.validations?.customMessage || ''"
+                    (input)="updateValidationProperty('customMessage', $any($event.target).value || undefined)"
+                    class="form-control"
+                    placeholder="Custom validation error message"
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label>Matches Field</label>
+                  <input
+                    type="text"
+                    [value]="field.validations?.matchesField || ''"
+                    (input)="updateValidationProperty('matchesField', $any($event.target).value || undefined)"
+                    class="form-control"
+                    placeholder="e.g., password (for confirmation)"
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label>Greater Than Field</label>
+                  <input
+                    type="text"
+                    [value]="field.validations?.greaterThanField || ''"
+                    (input)="updateValidationProperty('greaterThanField', $any($event.target).value || undefined)"
+                    class="form-control"
+                    placeholder="Field name (for date/number comparison)"
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label>Less Than Field</label>
+                  <input
+                    type="text"
+                    [value]="field.validations?.lessThanField || ''"
+                    (input)="updateValidationProperty('lessThanField', $any($event.target).value || undefined)"
+                    class="form-control"
+                    placeholder="Field name (for date/number comparison)"
+                  >
+                </div>
+
+                @if (field.type === 'checkbox') {
+                  <div class="form-group">
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="field.validations?.requiredTrue || false"
+                        (change)="updateValidationProperty('requiredTrue', $any($event.target).checked ? true : undefined)"
+                      >
+                      Required True (must be checked)
+                    </label>
+                  </div>
+                }
+
+                <div class="form-group">
+                  <label>Async Validator (JSON config)</label>
+                  <textarea
+                    [value]="field.validations?.asyncValidator ? JSON.stringify(field.validations?.asyncValidator, null, 2) : ''"
+                    (input)="updateAsyncValidatorJSON($any($event.target).value)"
+                    class="form-control"
+                    rows="4"
+                    placeholder='{"endpoint": "https://api.example.com/validate", "method": "POST"}'
+                  ></textarea>
+                  <small class="text-muted">API-based async validation</small>
+                </div>
+              </div>
+
+              <!-- Layout & Styling Section -->
+              <div class="advanced-section" style="margin-top: 1rem; border-top: 1px solid #ddd; padding-top: 1rem;">
+                <h4>🎨 Layout & Styling</h4>
+
+                <div class="form-group">
+                  <label>Field Width</label>
+                  <select
+                    [value]="field.width || 'full'"
+                    (change)="updateFieldProperty('width', $any($event.target).value)"
+                    class="form-control"
+                  >
+                    <option value="full">Full Width</option>
+                    <option value="half">Half Width</option>
+                    <option value="third">Third Width</option>
+                    <option value="quarter">Quarter Width</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Custom CSS Class</label>
+                  <input
+                    type="text"
+                    [value]="field.cssClass || ''"
+                    (input)="updateFieldProperty('cssClass', $any($event.target).value || undefined)"
+                    class="form-control"
+                    placeholder="e.g., my-custom-class"
+                  >
+                </div>
+
+                @if (field.type === 'radio') {
+                  <div class="form-group">
+                    <label>Layout</label>
+                    <select
+                      [value]="field.layout || 'vertical'"
+                      (change)="updateFieldProperty('layout', $any($event.target).value)"
+                      class="form-control"
+                    >
+                      <option value="vertical">Vertical</option>
+                      <option value="horizontal">Horizontal</option>
+                    </select>
+                  </div>
+                }
+              </div>
+
+              <!-- Input Masking Section -->
+              <div class="advanced-section" style="margin-top: 1rem; border-top: 1px solid #ddd; padding-top: 1rem;">
+                <h4>🎭 Input Masking</h4>
+
+                <div class="form-group">
+                  <label>Mask Type</label>
+                  <select
+                    [value]="getMaskValue(field)"
+                    (change)="updateFieldProperty('mask', $any($event.target).value || undefined)"
+                    class="form-control"
+                  >
+                    <option value="">None</option>
+                    <option value="phone">Phone - (123) 456-7890</option>
+                    <option value="phone-intl">Phone Intl - +1 (123) 456-7890</option>
+                    <option value="credit-card">Credit Card - 1234 5678 9012 3456</option>
+                    <option value="ssn">SSN - 123-45-6789</option>
+                    <option value="zip">ZIP - 12345</option>
+                    <option value="zip-plus4">ZIP+4 - 12345-6789</option>
+                    <option value="currency">Currency - $1,234.56</option>
+                    <option value="date-us">Date US - MM/DD/YYYY</option>
+                    <option value="time">Time - HH:MM</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Computed Field Section -->
+              <div class="advanced-section" style="margin-top: 1rem; border-top: 1px solid #ddd; padding-top: 1rem;">
+                <h4>🧮 Computed Field</h4>
+
+                <div class="form-group">
+                  <label>Formula</label>
+                  <input
+                    type="text"
+                    [value]="field.computed?.formula || ''"
+                    (input)="updateComputedProperty('formula', $any($event.target).value || undefined)"
+                    class="form-control"
+                    placeholder='e.g., price * quantity'
+                  >
+                  <small class="text-muted">Formula to auto-calculate value</small>
+                </div>
+
+                @if (field.computed?.formula) {
+                  <div class="form-group">
+                    <label>Dependencies (comma-separated)</label>
+                    <input
+                      type="text"
+                      [value]="field.computed?.dependencies?.join(', ') || ''"
+                      (input)="updateComputedDependencies($any($event.target).value)"
+                      class="form-control"
+                      placeholder="e.g., price, quantity"
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label>Format As</label>
+                    <select
+                      [value]="field.computed?.formatAs || 'number'"
+                      (change)="updateComputedProperty('formatAs', $any($event.target).value)"
+                      class="form-control"
+                    >
+                      <option value="number">Number</option>
+                      <option value="currency">Currency</option>
+                      <option value="text">Text</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Decimal Places</label>
+                    <input
+                      type="number"
+                      [value]="field.computed?.decimal || 2"
+                      (input)="updateComputedProperty('decimal', Number($any($event.target).value))"
+                      class="form-control"
+                      min="0"
+                      max="10"
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label>Prefix</label>
+                    <input
+                      type="text"
+                      [value]="field.computed?.prefix || ''"
+                      (input)="updateComputedProperty('prefix', $any($event.target).value || undefined)"
+                      class="form-control"
+                      placeholder='e.g., $, Total: '
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label>Suffix</label>
+                    <input
+                      type="text"
+                      [value]="field.computed?.suffix || ''"
+                      (input)="updateComputedProperty('suffix', $any($event.target).value || undefined)"
+                      class="form-control"
+                      placeholder='e.g., %, kg'
+                    >
+                  </div>
+                }
+              </div>
+
               <!-- Move to Section (Multi-Step Mode) -->
               @if (multiStepMode() && currentSections().length > 1) {
                 <div class="form-group">
