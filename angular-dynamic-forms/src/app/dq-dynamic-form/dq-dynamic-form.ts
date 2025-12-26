@@ -89,6 +89,14 @@ export class DqDynamicForm {
   });
 
   constructor() {
+    // Watch for changes in formSchema input (for form builder preview)
+    effect(() => {
+      const providedSchema = this.formSchema();
+      if (providedSchema) {
+        this.loadSchema(providedSchema);
+      }
+    });
+
     // Watch for changes in form values to reset dependent fields
     effect(() => {
       const values = this.formValues();
@@ -213,17 +221,14 @@ export class DqDynamicForm {
   }
 
   ngOnInit(): void {
-    // If schema is provided via input (form builder preview), use it directly
+    // Only load from service if no schema is provided via input
+    // (formSchema input changes are handled by effect in constructor)
     const providedSchema = this.formSchema();
-    if (providedSchema) {
-      this.loadSchema(providedSchema);
-      return;
+    if (!providedSchema) {
+      this._formService.getFormSchema().subscribe((schema) => {
+        this.loadSchema(schema);
+      });
     }
-
-    // Otherwise, load from service
-    this._formService.getFormSchema().subscribe((schema) => {
-      this.loadSchema(schema);
-    });
   }
 
   private loadSchema(schema: FormSchema): void {
