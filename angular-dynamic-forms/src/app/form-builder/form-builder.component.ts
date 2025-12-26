@@ -32,14 +32,20 @@ export class FormBuilderComponent {
   protected readonly availableFieldTypes: FieldTemplate[] = [
     { type: 'text', label: 'Text Input', icon: '📝', description: 'Single-line text' },
     { type: 'email', label: 'Email', icon: '📧', description: 'Email input with validation' },
+    { type: 'password', label: 'Password', icon: '🔒', description: 'Password input field' },
+    { type: 'textarea', label: 'Text Area', icon: '📃', description: 'Multi-line text input' },
+    { type: 'number', label: 'Number', icon: '🔢', description: 'Numeric input field' },
+    { type: 'date', label: 'Date', icon: '📆', description: 'Date picker' },
+    { type: 'datetime', label: 'Date & Time', icon: '📅', description: 'Date and time picker' },
     { type: 'select', label: 'Dropdown', icon: '📋', description: 'Single select dropdown' },
     { type: 'multiselect', label: 'Multi-Select', icon: '☑️', description: 'Multiple selection dropdown' },
+    { type: 'radio', label: 'Radio Buttons', icon: '🔘', description: 'Radio button group' },
     { type: 'checkbox', label: 'Checkbox', icon: '✅', description: 'Boolean checkbox' },
     { type: 'range', label: 'Range Slider', icon: '🎚️', description: 'Numeric range slider' },
     { type: 'color', label: 'Color Picker', icon: '🎨', description: 'Color selection' },
-    { type: 'datetime', label: 'Date & Time', icon: '📅', description: 'Date and time picker' },
     { type: 'file', label: 'File Upload', icon: '📎', description: 'File upload input' },
     { type: 'richtext', label: 'Rich Text', icon: '📄', description: 'WYSIWYG editor' },
+    { type: 'array', label: 'Repeater', icon: '🔁', description: 'Dynamic field array' },
   ];
 
   // Computed: Currently selected field
@@ -73,9 +79,15 @@ export class FormBuilderComponent {
       newField.min = 0;
       newField.max = 100;
       newField.step = 1;
-    } else if (fieldType === 'color') {
-      // No additional defaults needed
-    } else if (fieldType === 'select' || fieldType === 'multiselect') {
+    } else if (fieldType === 'number') {
+      newField.min = 0;
+      newField.max = 100;
+      newField.step = 1;
+    } else if (fieldType === 'date' || fieldType === 'datetime') {
+      // Date fields can optionally have min/max set later
+    } else if (fieldType === 'textarea') {
+      newField.rows = 4;
+    } else if (fieldType === 'select' || fieldType === 'multiselect' || fieldType === 'radio') {
       newField.options = [
         { value: 'option1', label: 'Option 1' },
         { value: 'option2', label: 'Option 2' },
@@ -84,6 +96,20 @@ export class FormBuilderComponent {
     } else if (fieldType === 'file') {
       newField.maxFileSize = 5242880; // 5MB
       newField.accept = '*/*';
+    } else if (fieldType === 'array') {
+      newField.arrayConfig = {
+        fields: [
+          {
+            type: 'text',
+            name: 'item',
+            label: 'Item',
+            validations: {},
+          },
+        ],
+        minItems: 1,
+        maxItems: 10,
+        initialItems: 1,
+      };
     }
 
     this.formFields.update((fields) => [...fields, newField]);
@@ -287,6 +313,32 @@ export class FormBuilderComponent {
       const options = [...(updated[index].options as FieldOption[])];
       options[optionIndex] = { ...options[optionIndex], [property]: value };
       updated[index] = { ...updated[index], options };
+      return updated;
+    });
+  }
+
+  /**
+   * Update array configuration property
+   */
+  updateArrayConfig(property: string, value: any): void {
+    const index = this.selectedFieldIndex();
+    if (index === null) return;
+
+    this.formFields.update((fields) => {
+      const updated = [...fields];
+      const currentArrayConfig = updated[index].arrayConfig || {
+        fields: [],
+        minItems: 1,
+        maxItems: 10,
+        initialItems: 1,
+      };
+      updated[index] = {
+        ...updated[index],
+        arrayConfig: {
+          ...currentArrayConfig,
+          [property]: value,
+        },
+      };
       return updated;
     });
   }
