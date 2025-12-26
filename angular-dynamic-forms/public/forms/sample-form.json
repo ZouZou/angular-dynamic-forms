@@ -1,23 +1,343 @@
 {
   "title": "User Registration",
+  "autosave": {
+    "enabled": true,
+    "intervalSeconds": 30,
+    "storage": "localStorage",
+    "expirationDays": 7,
+    "showIndicator": true
+  },
   "fields": [
+    {
+      "type": "text",
+      "label": "Username",
+      "name": "username",
+      "placeholder": "Choose a unique username",
+      "validations": {
+        "required": true,
+        "minLength": 3,
+        "asyncValidator": {
+          "endpoint": "/api/validate/username",
+          "method": "POST",
+          "debounceMs": 500,
+          "errorMessage": "Username is already taken",
+          "validWhen": "custom"
+        }
+      }
+    },
     {
       "type": "text",
       "label": "First Name",
       "name": "firstName",
+      "placeholder": "Enter your first name",
       "validations": { "required": true, "minLength": 3 }
     },
     {
       "type": "text",
       "label": "Last Name",
       "name": "lastName",
+      "placeholder": "Enter your last name",
       "validations": { "required": true }
+    },
+    {
+      "type": "text",
+      "label": "Full Name",
+      "name": "fullName",
+      "placeholder": "Auto-generated from First and Last Name",
+      "readonly": true,
+      "computed": {
+        "formula": "firstName + ' ' + lastName",
+        "dependencies": ["firstName", "lastName"],
+        "formatAs": "text"
+      }
     },
     {
       "type": "email",
       "label": "Email",
       "name": "email",
+      "placeholder": "your.email@example.com",
       "validations": { "required": true }
+    },
+    {
+      "type": "password",
+      "label": "Password",
+      "name": "password",
+      "placeholder": "Enter a strong password",
+      "width": "half",
+      "validations": { "required": true, "minLength": 8 }
+    },
+    {
+      "type": "password",
+      "label": "Confirm Password",
+      "name": "confirmPassword",
+      "placeholder": "Re-enter your password",
+      "width": "half",
+      "validations": {
+        "required": true,
+        "matchesField": "password",
+        "customMessage": "Passwords do not match"
+      }
+    },
+    {
+      "type": "date",
+      "label": "Date of Birth",
+      "name": "dateOfBirth",
+      "min": "1900-01-01",
+      "max": "2010-12-31",
+      "validations": { "required": true }
+    },
+    {
+      "type": "number",
+      "label": "Age",
+      "name": "age",
+      "min": 13,
+      "max": 120,
+      "step": 1,
+      "placeholder": "Enter your age",
+      "validations": { "required": true }
+    },
+    {
+      "type": "radio",
+      "label": "Account Type",
+      "name": "accountType",
+      "layout": "horizontal",
+      "options": [
+        { "value": "personal", "label": "Personal" },
+        { "value": "business", "label": "Business" },
+        { "value": "student", "label": "Student" }
+      ],
+      "validations": { "required": true }
+    },
+    {
+      "type": "text",
+      "label": "Company Name",
+      "name": "companyName",
+      "placeholder": "Enter your company name",
+      "visibleWhen": {
+        "field": "accountType",
+        "operator": "equals",
+        "value": "business"
+      },
+      "validations": { "required": true, "minLength": 2 }
+    },
+    {
+      "type": "text",
+      "label": "School Name",
+      "name": "schoolName",
+      "placeholder": "Enter your school name",
+      "visibleWhen": {
+        "field": "accountType",
+        "operator": "equals",
+        "value": "student"
+      },
+      "validations": { "required": true, "minLength": 2 }
+    },
+    {
+      "type": "textarea",
+      "label": "Bio",
+      "name": "bio",
+      "rows": 5,
+      "placeholder": "Tell us about yourself...",
+      "validations": { "required": false, "maxLength": 500 }
+    },
+    {
+      "type": "text",
+      "label": "Social Security Number",
+      "name": "ssn",
+      "placeholder": "Enter your SSN",
+      "width": "half",
+      "mask": "ssn",
+      "validations": { "required": false }
+    },
+    {
+      "type": "text",
+      "label": "Zip Code",
+      "name": "zipCode",
+      "placeholder": "Enter zip code",
+      "width": "half",
+      "mask": "zip",
+      "validations": { "required": false }
+    },
+    {
+      "type": "text",
+      "label": "Primary Phone Number",
+      "name": "primaryPhone",
+      "placeholder": "Enter your phone number",
+      "width": "half",
+      "mask": "phone",
+      "validations": { "required": true }
+    },
+    {
+      "type": "text",
+      "label": "Credit Card Number",
+      "name": "creditCard",
+      "placeholder": "Enter card number",
+      "width": "half",
+      "mask": "credit-card",
+      "validations": { "required": false }
+    },
+    {
+      "type": "array",
+      "label": "Phone Number",
+      "name": "phoneNumbers",
+      "arrayConfig": {
+        "fields": [
+          {
+            "type": "select",
+            "label": "Type",
+            "name": "type",
+            "width": "third",
+            "options": [
+              { "value": "mobile", "label": "Mobile" },
+              { "value": "home", "label": "Home" },
+              { "value": "work", "label": "Work" }
+            ],
+            "validations": { "required": true }
+          },
+          {
+            "type": "text",
+            "label": "Number",
+            "name": "number",
+            "width": "half",
+            "placeholder": "+1 (555) 123-4567",
+            "validations": {
+              "required": true,
+              "pattern": "^[+]?[(]?[0-9]{1,4}[)]?[-\\s.]?[(]?[0-9]{1,4}[)]?[-\\s.]?[0-9]{1,9}$",
+              "customMessage": "Please enter a valid phone number"
+            }
+          }
+        ],
+        "minItems": 1,
+        "maxItems": 5,
+        "initialItems": 1,
+        "addButtonText": "+ Add Phone Number",
+        "removeButtonText": "Remove",
+        "itemLabel": "Phone {index}"
+      }
+    },
+    {
+      "type": "array",
+      "label": "Emergency Contact",
+      "name": "emergencyContacts",
+      "arrayConfig": {
+        "fields": [
+          {
+            "type": "text",
+            "label": "Name",
+            "name": "name",
+            "width": "half",
+            "placeholder": "Contact name",
+            "validations": { "required": true, "minLength": 2 }
+          },
+          {
+            "type": "text",
+            "label": "Relationship",
+            "name": "relationship",
+            "width": "half",
+            "placeholder": "e.g., Spouse, Parent, Friend",
+            "validations": { "required": true }
+          },
+          {
+            "type": "text",
+            "label": "Phone",
+            "name": "phone",
+            "placeholder": "+1 (555) 123-4567",
+            "validations": { "required": true }
+          }
+        ],
+        "minItems": 0,
+        "maxItems": 3,
+        "initialItems": 1,
+        "addButtonText": "+ Add Emergency Contact",
+        "removeButtonText": "Remove"
+      }
+    },
+    {
+      "type": "number",
+      "label": "Product Price",
+      "name": "productPrice",
+      "placeholder": "Enter unit price",
+      "width": "third",
+      "min": 0,
+      "step": 0.01,
+      "validations": { "required": false }
+    },
+    {
+      "type": "number",
+      "label": "Quantity",
+      "name": "quantity",
+      "placeholder": "Enter quantity",
+      "width": "third",
+      "min": 1,
+      "step": 1,
+      "validations": { "required": false }
+    },
+    {
+      "type": "text",
+      "label": "Total Price",
+      "name": "totalPrice",
+      "placeholder": "Auto-calculated",
+      "width": "third",
+      "readonly": true,
+      "computed": {
+        "formula": "productPrice * quantity",
+        "dependencies": ["productPrice", "quantity"],
+        "formatAs": "currency",
+        "prefix": "$",
+        "decimal": 2
+      }
+    },
+    {
+      "type": "text",
+      "label": "Annual Salary",
+      "name": "salary",
+      "placeholder": "Enter your annual salary",
+      "mask": "currency",
+      "validations": { "required": false }
+    },
+    {
+      "type": "checkbox",
+      "label": "I plan to travel",
+      "name": "planToTravel",
+      "validations": { "required": false }
+    },
+    {
+      "type": "date",
+      "label": "Travel Start Date",
+      "name": "travelStartDate",
+      "width": "half",
+      "visibleWhen": {
+        "field": "planToTravel",
+        "operator": "equals",
+        "value": true
+      },
+      "validations": {
+        "requiredIf": {
+          "field": "planToTravel",
+          "operator": "equals",
+          "value": true
+        }
+      }
+    },
+    {
+      "type": "date",
+      "label": "Travel End Date",
+      "name": "travelEndDate",
+      "width": "half",
+      "visibleWhen": {
+        "field": "planToTravel",
+        "operator": "equals",
+        "value": true
+      },
+      "validations": {
+        "requiredIf": {
+          "field": "planToTravel",
+          "operator": "equals",
+          "value": true
+        },
+        "greaterThanField": "travelStartDate",
+        "customMessage": "End date must be after start date"
+      }
     },
     {
       "type": "select",
@@ -43,8 +363,44 @@
       "validations": { "required": false }
     },
     {
+      "type": "radio",
+      "label": "How did you hear about us?",
+      "name": "referralSource",
+      "layout": "vertical",
+      "options": [
+        { "value": "search", "label": "Search Engine" },
+        { "value": "social", "label": "Social Media" },
+        { "value": "friend", "label": "Friend or Colleague" },
+        { "value": "other", "label": "Other" }
+      ],
+      "validations": { "required": true }
+    },
+    {
+      "type": "text",
+      "label": "Please specify",
+      "name": "referralOther",
+      "placeholder": "Tell us more...",
+      "visibleWhen": {
+        "field": "referralSource",
+        "operator": "equals",
+        "value": "other"
+      },
+      "validations": { "required": true, "minLength": 3 }
+    },
+    {
       "type": "checkbox",
-      "label": "Accept Terms",
+      "label": "I am over 18 years old",
+      "name": "ageConfirmation",
+      "visibleWhen": {
+        "field": "age",
+        "operator": "greaterThanOrEqual",
+        "value": 18
+      },
+      "validations": { "requiredTrue": true }
+    },
+    {
+      "type": "checkbox",
+      "label": "Accept Terms & Conditions",
       "name": "terms",
       "validations": { "requiredTrue": true }
     },

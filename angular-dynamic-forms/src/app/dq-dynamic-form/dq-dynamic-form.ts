@@ -1,6 +1,9 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
-import { Field, FieldOption } from './models/field.model';
+import { Component, computed, effect, inject, signal, input } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission, FormSchema } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
+import { MaskService } from './mask.service';
+import { I18nService } from './i18n.service';
 
 @Component({
   selector: 'dq-dynamic-form',
@@ -10,7 +13,13 @@ import { DynamicFormsService } from './dq-dynamic-form.service';
   providers: [DynamicFormsService],
 })
 export class DqDynamicForm {
+  // Optional input for providing schema directly (used by form builder)
+  formSchema = input<FormSchema | null>(null);
+
   private readonly _formService = inject(DynamicFormsService);
+  private readonly _maskService = inject(MaskService);
+  private readonly _http = inject(HttpClient);
+  protected readonly _i18nService = inject(I18nService);
   protected readonly fields = signal<Field[]>([]);
   protected readonly title = signal<string>('');
   protected readonly formValues = signal<Record<string, unknown>>({});
@@ -35,15 +44,67 @@ export class DqDynamicForm {
   // Store file data for file uploads
   protected readonly fileData = signal<Record<string, any>>({});
 
+  // Autosave state
+  protected readonly lastSaved = signal<Date | null>(null);
+  protected readonly autosaveEnabled = signal(false);
+  private autosaveTimer: any = null;
+  private autosaveKey = '';
+  private autosaveConfig: any = null;
+
+  // Dynamic field arrays (repeaters) state
+  // Stores the count of items for each array field
+  protected readonly arrayItemCounts = signal<Record<string, number>>({});
+
+  // Async validation state
+  // Stores validation state per field: 'idle' | 'validating' | 'valid' | 'invalid'
+  protected readonly asyncValidationState = signal<Record<string, 'idle' | 'validating' | 'valid' | 'invalid'>>({});
+  // Stores async validation error messages
+  protected readonly asyncErrors = signal<Record<string, string>>({});
+  // Debounce timers for async validation
+  private asyncValidationTimers: Record<string, any> = {};
+
+  // Form submission state
+  protected readonly submitting = signal(false);
+  protected readonly submitSuccess = signal(false);
+  protected readonly submitError = signal<string | null>(null);
+  protected readonly submitRetryCount = signal(0);
+  private submissionConfig: FormSubmission | null = null;
+  private readonly MAX_RETRY_ATTEMPTS = 3;
+
+  // Store file data for file uploads
+  protected readonly fileData = signal<Record<string, any>>({});
+
+  // Expose Math for template (needed for multiselect size calculation and other calculations)
+  protected readonly Math = Math;
+
   // Computed: Check if entire form is pristine (no changes)
   protected readonly pristine = computed<boolean>(() =>
     !Object.values(this.dirty()).some(isDirty => isDirty)
   );
 
-  // Expose Math for template
-  protected readonly Math = Math;
+  // Computed: Last saved time formatted
+  protected readonly lastSavedText = computed<string>(() => {
+    const saved = this.lastSaved();
+    if (!saved) return '';
+
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - saved.getTime()) / 1000); // seconds
+
+    if (diff < 60) return 'Saved just now';
+    if (diff < 3600) return `Saved ${Math.floor(diff / 60)} minutes ago`;
+    if (diff < 86400) return `Saved ${Math.floor(diff / 3600)} hours ago`;
+    return `Saved on ${saved.toLocaleDateString()}`;
+  });
 
   constructor() {
+    // Watch for changes in formSchema input (for form builder preview)
+    effect(() => {
+      const providedSchema = this.formSchema();
+      if (providedSchema) {
+        this.loadSchema(providedSchema);
+      }
+    });
+
     // Watch for changes in form values to reset dependent fields
     effect(() => {
       const values = this.formValues();
@@ -51,7 +112,8 @@ export class DqDynamicForm {
 
       // Find all dependent fields
       fields.forEach((field) => {
-        if (field.dependsOn) {
+        if (field.dependsOn && typeof field.dependsOn === 'string') {
+          // Only handle single string dependencies here (for optionsMap)
           const parentValue = values[field.dependsOn];
           const currentValue = values[field.name];
 
@@ -85,8 +147,8 @@ export class DqDynamicForm {
           if (!field.dependsOn) {
             this.fetchOptionsForField(field);
           }
-          // For dependent fields, fetch when parent has value
-          else if (values[field.dependsOn]) {
+          // For dependent fields, fetch when ALL dependencies have values
+          else if (this.allDependenciesHaveValues(field)) {
             this.fetchOptionsForField(field, values);
           }
         }
@@ -100,10 +162,11 @@ export class DqDynamicForm {
       const updatingFields = this.isUpdatingProgrammatically();
 
       fields.forEach((field) => {
-        // Only process checkbox dependencies
+        // Only process checkbox dependencies (single dependency only)
         if (
           field.type === 'checkbox' &&
           field.dependsOn &&
+          typeof field.dependsOn === 'string' &&
           field.dependencyType
         ) {
           const currentValue = values[field.name] as boolean;
@@ -130,36 +193,148 @@ export class DqDynamicForm {
         }
       });
     });
+
+    // Autosave effect: save draft when form values change
+    effect(() => {
+      const values = this.formValues();
+      const isDirty = !this.pristine();
+
+      // Only autosave if enabled, form is dirty, and form is not submitted
+      if (this.autosaveEnabled() && isDirty && !this.submitted()) {
+        // Debounce autosave to avoid excessive writes
+        this.debouncedAutosave();
+      }
+    });
+
+    // Computed fields effect: recalculate when dependencies change
+    effect(() => {
+      const values = this.formValues();
+      const fields = this.fields();
+
+      fields.forEach(field => {
+        if (field.computed) {
+          const newValue = this.evaluateComputed(field.computed, values);
+          const currentValue = values[field.name];
+
+          // Only update if value changed to avoid infinite loops
+          if (newValue !== currentValue) {
+            this.formValues.update(current => ({
+              ...current,
+              [field.name]: newValue
+            }));
+          }
+        }
+      });
+    });
   }
 
   ngOnInit(): void {
-    this._formService.getFormSchema().subscribe((schema) => {
-      this.title.set(schema.title);
-      this.fields.set(schema.fields);
+    // Only load from service if no schema is provided via input
+    // (formSchema input changes are handled by effect in constructor)
+    const providedSchema = this.formSchema();
+    if (!providedSchema) {
+      this._formService.getFormSchema().subscribe((schema) => {
+        this.loadSchema(schema);
+      });
+    }
+  }
+
+  private loadSchema(schema: FormSchema): void {
+    this.title.set(schema.title);
+
+      // Handle both single-step and multi-step forms
+      const allFields = schema.fields || [];
+      // For multi-step forms, flatten all section fields
+      if (schema.sections) {
+        schema.sections.forEach(section => {
+          allFields.push(...section.fields);
+        });
+      }
+
+      this.fields.set(allFields);
 
       const initialValues: Record<string, unknown> = {};
       const initialTouched: Record<string, boolean> = {};
       const initialDirty: Record<string, boolean> = {};
+      const initialArrayCounts: Record<string, number> = {};
 
-      for (const field of schema.fields) {
-        // Set initial values based on field type
-        if (field.type === 'checkbox') {
-          initialValues[field.name] = false;
-        } else if (field.type === 'multiselect') {
-          initialValues[field.name] = [];
-        } else if (field.type === 'range') {
-          initialValues[field.name] = field.min || 0;
-        } else if (field.type === 'color') {
-          initialValues[field.name] = '#000000';
-        } else if (field.type === 'file') {
-          initialValues[field.name] = null;
-        } else if (field.type === 'richtext') {
-          initialValues[field.name] = '';
+      for (const field of allFields) {
+        // Handle array fields (repeaters)
+        if (field.type === 'array' && field.arrayConfig) {
+          const initialItems = field.arrayConfig.initialItems || 1;
+          initialArrayCounts[field.name] = initialItems;
+
+          // Initialize values for each initial array item
+          for (let i = 0; i < initialItems; i++) {
+            field.arrayConfig.fields.forEach(subField => {
+              const arrayFieldName = `${field.name}[${i}].${subField.name}`;
+              initialValues[arrayFieldName] = this.getInitialValueForField(subField);
+              initialTouched[arrayFieldName] = false;
+              initialDirty[arrayFieldName] = false;
+            });
+          }
         } else {
-          initialValues[field.name] = '';
+          // Set appropriate initial values based on field type
+          if (field.type === 'checkbox') {
+            initialValues[field.name] = false;
+          } else if (field.type === 'number' || field.type === 'range') {
+            initialValues[field.name] = field.min ?? 0;
+          } else if (field.type === 'multiselect') {
+            initialValues[field.name] = [];
+          } else if (field.type === 'color') {
+            initialValues[field.name] = '#000000';
+          } else if (field.type === 'file') {
+            initialValues[field.name] = null;
+          } else if (field.type === 'richtext') {
+            initialValues[field.name] = '';
+          } else {
+            initialValues[field.name] = '';
+          }
+          initialTouched[field.name] = false;
+          initialDirty[field.name] = false;
         }
-        initialTouched[field.name] = false;
-        initialDirty[field.name] = false;
+      }
+
+      // Set array counts
+      this.arrayItemCounts.set(initialArrayCounts);
+
+      // Check for autosave configuration
+      if (schema.autosave?.enabled) {
+        this.autosaveConfig = schema.autosave;
+        this.autosaveKey = schema.autosave.key || `formDraft_${schema.title.replace(/\s+/g, '_')}`;
+        this.autosaveEnabled.set(true);
+
+        // Try to restore draft from storage
+        const draft = this.loadDraft();
+        if (draft) {
+          // Merge draft values with initial values
+          Object.keys(draft.values).forEach(key => {
+            if (initialValues.hasOwnProperty(key)) {
+              initialValues[key] = draft.values[key];
+            }
+          });
+          this.lastSaved.set(new Date(draft.timestamp));
+          console.log('Draft restored from', this.autosaveConfig.storage || 'localStorage');
+        }
+
+        // Set up periodic autosave if interval is configured
+        if (schema.autosave.intervalSeconds) {
+          this.autosaveTimer = setInterval(() => {
+            if (!this.pristine() && !this.submitted()) {
+              this.saveDraft();
+            }
+          }, schema.autosave.intervalSeconds * 1000);
+        }
+      }
+
+      // Store submission configuration
+      if (schema.submission) {
+        this.submissionConfig = schema.submission;
+      }
+
+      // Initialize i18n if configured
+      if (schema.i18n) {
+        this._i18nService.initialize(schema.i18n);
       }
 
       this.formValues.set(initialValues);
@@ -168,7 +343,13 @@ export class DqDynamicForm {
       // Store initial values for comparison
       this.initialValues.set({ ...initialValues });
       this.loading.set(false);
-    });
+  }
+
+  ngOnDestroy(): void {
+    // Clear autosave timer
+    if (this.autosaveTimer) {
+      clearInterval(this.autosaveTimer);
+    }
   }
 
   updateFormValue(fieldName: string, value: unknown): void {
@@ -190,6 +371,247 @@ export class DqDynamicForm {
       ...current,
       [fieldName]: isDirty,
     }));
+
+    // Trigger async validation if configured
+    const field = this.fields().find(f => f.name === fieldName ||
+      fieldName.startsWith(f.name + '['));
+    if (field?.validations?.asyncValidator && value) {
+      this.triggerAsyncValidation(fieldName, value, field.validations.asyncValidator);
+    } else {
+      // Clear async validation if no value
+      this.clearAsyncValidation(fieldName);
+    }
+  }
+
+  /**
+   * Update form value with mask applied
+   */
+  updateMaskedFormValue(fieldName: string, rawValue: string, field: Field): void {
+    if (!field.mask) {
+      this.updateFormValue(fieldName, rawValue);
+      return;
+    }
+
+    // Get max allowed length for this mask
+    const maxLength = this._maskService.getMaxLength(field.mask);
+
+    // Truncate input if it exceeds max length (handles paste operations)
+    let truncatedValue = rawValue;
+    if (maxLength && rawValue.length > maxLength) {
+      truncatedValue = rawValue.substring(0, maxLength);
+    }
+
+    // Apply mask to display value
+    const maskedValue = this._maskService.applyMask(truncatedValue, field.mask);
+
+    // Store masked value for display
+    this.formValues.update((current) => ({
+      ...current,
+      [fieldName]: maskedValue,
+    }));
+
+    this.touched.update((current) => ({
+      ...current,
+      [fieldName]: true,
+    }));
+
+    // Track dirty state
+    const initialValue = this.initialValues()[fieldName];
+    const isDirty = maskedValue !== initialValue;
+
+    this.dirty.update((current) => ({
+      ...current,
+      [fieldName]: isDirty,
+    }));
+
+    // For validation, use raw (unmasked) value
+    const rawForValidation = this._maskService.getRawValue(maskedValue, field.mask);
+    if (field.validations?.asyncValidator && rawForValidation) {
+      this.triggerAsyncValidation(fieldName, rawForValidation, field.validations.asyncValidator);
+    } else {
+      this.clearAsyncValidation(fieldName);
+    }
+  }
+
+  /**
+   * Get mask pattern for display
+   */
+  getMaskPattern(field: Field): string {
+    if (!field.mask) return '';
+    return this._maskService.getMaskPattern(field.mask);
+  }
+
+  /**
+   * Get max length for masked input field
+   */
+  getMaxLength(field: Field): number | undefined {
+    if (!field.mask) return undefined;
+    return this._maskService.getMaxLength(field.mask);
+  }
+
+  /**
+   * Evaluate computed field formula
+   */
+  private evaluateComputed(config: ComputedFieldConfig, values: Record<string, unknown>): unknown {
+    try {
+      // Replace field names in formula with their values
+      let formula = config.formula;
+
+      // Sort dependencies by length (longest first) to avoid partial replacements
+      const sortedDeps = [...config.dependencies].sort((a, b) => b.length - a.length);
+
+      sortedDeps.forEach(dep => {
+        const value = values[dep];
+        // Handle different value types
+        if (typeof value === 'string') {
+          formula = formula.replace(new RegExp(`\\b${dep}\\b`, 'g'), `"${value}"`);
+        } else if (value === null || value === undefined || value === '') {
+          formula = formula.replace(new RegExp(`\\b${dep}\\b`, 'g'), '0');
+        } else {
+          formula = formula.replace(new RegExp(`\\b${dep}\\b`, 'g'), String(value));
+        }
+      });
+
+      // Evaluate the formula
+      // eslint-disable-next-line no-eval
+      let result = eval(formula);
+
+      // Format result based on configuration
+      if (config.formatAs === 'number' || (typeof result === 'number' && config.formatAs !== 'text')) {
+        if (typeof result === 'number') {
+          const decimal = config.decimal ?? 2;
+          result = result.toFixed(decimal);
+        }
+      }
+
+      if (config.formatAs === 'currency') {
+        if (typeof result === 'number') {
+          const decimal = config.decimal ?? 2;
+          result = result.toFixed(decimal);
+          result = result.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+      }
+
+      // Add prefix/suffix
+      if (config.prefix) {
+        result = config.prefix + result;
+      }
+      if (config.suffix) {
+        result = result + config.suffix;
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error evaluating computed field:', error, config.formula);
+      return '';
+    }
+  }
+
+  /**
+   * Trigger async validation for a field
+   */
+  private triggerAsyncValidation(fieldName: string, value: unknown, validator: AsyncValidator): void {
+    // Clear existing timer
+    if (this.asyncValidationTimers[fieldName]) {
+      clearTimeout(this.asyncValidationTimers[fieldName]);
+    }
+
+    // Set validating state
+    this.asyncValidationState.update(state => ({
+      ...state,
+      [fieldName]: 'validating'
+    }));
+
+    // Debounce the validation
+    const debounceMs = validator.debounceMs || 300;
+    this.asyncValidationTimers[fieldName] = setTimeout(() => {
+      this.performAsyncValidation(fieldName, value, validator);
+    }, debounceMs);
+  }
+
+  /**
+   * Perform async validation via API
+   */
+  private performAsyncValidation(fieldName: string, value: unknown, validator: AsyncValidator): void {
+    const method = validator.method || 'POST';
+    const validWhen = validator.validWhen || 'custom';
+
+    // Make API call
+    this._formService.validateFieldAsync(validator.endpoint, { value, fieldName }, method)
+      .subscribe({
+        next: (response: any) => {
+          let isValid = false;
+          let errorMessage = validator.errorMessage || 'Invalid value';
+
+          if (validWhen === 'exists') {
+            isValid = !!response.exists;
+          } else if (validWhen === 'notExists') {
+            isValid = !response.exists;
+          } else {
+            // 'custom' - expect { valid: boolean, message?: string }
+            isValid = response.valid === true;
+            if (response.message) {
+              errorMessage = response.message;
+            }
+          }
+
+          if (isValid) {
+            this.asyncValidationState.update(state => ({
+              ...state,
+              [fieldName]: 'valid'
+            }));
+            this.asyncErrors.update(errors => {
+              const updated = { ...errors };
+              delete updated[fieldName];
+              return updated;
+            });
+          } else {
+            this.asyncValidationState.update(state => ({
+              ...state,
+              [fieldName]: 'invalid'
+            }));
+            this.asyncErrors.update(errors => ({
+              ...errors,
+              [fieldName]: errorMessage
+            }));
+          }
+        },
+        error: (error) => {
+          console.error(`Async validation error for ${fieldName}:`, error);
+          this.asyncValidationState.update(state => ({
+            ...state,
+            [fieldName]: 'invalid'
+          }));
+          this.asyncErrors.update(errors => ({
+            ...errors,
+            [fieldName]: 'Validation failed. Please try again.'
+          }));
+        }
+      });
+  }
+
+  /**
+   * Clear async validation state for a field
+   */
+  private clearAsyncValidation(fieldName: string): void {
+    // Clear timer
+    if (this.asyncValidationTimers[fieldName]) {
+      clearTimeout(this.asyncValidationTimers[fieldName]);
+      delete this.asyncValidationTimers[fieldName];
+    }
+
+    // Reset state
+    this.asyncValidationState.update(state => {
+      const updated = { ...state };
+      delete updated[fieldName];
+      return updated;
+    });
+
+    this.asyncErrors.update(errors => {
+      const updated = { ...errors };
+      delete updated[fieldName];
+      return updated;
+    });
   }
 
   /**
@@ -242,6 +664,12 @@ export class DqDynamicForm {
   ): void {
     if (!field.optionsEndpoint) return;
 
+    // Build dependency parameters if field has dependencies
+    const dependencyParams = field.dependsOn ? this.buildDependencyParams(field, params) : {};
+
+    // Replace template variables in endpoint URL with actual values
+    const endpoint = this.replaceTemplateVariables(field.optionsEndpoint, { ...params, ...dependencyParams });
+
     // Set loading state
     this.fieldLoading.update((current) => ({
       ...current,
@@ -257,7 +685,7 @@ export class DqDynamicForm {
 
     // Fetch options from service
     this._formService
-      .fetchOptionsFromEndpoint(field.optionsEndpoint, params)
+      .fetchOptionsFromEndpoint(endpoint, dependencyParams)
       .subscribe({
         next: (options) => {
           // Store fetched options
@@ -297,8 +725,8 @@ export class DqDynamicForm {
       return this.dynamicOptions()[field.name] || [];
     }
 
-    // Priority 2: Static options with dependencies (optionsMap)
-    if (field.dependsOn && field.optionsMap) {
+    // Priority 2: Static options with dependencies (optionsMap - single dependency only)
+    if (field.dependsOn && typeof field.dependsOn === 'string' && field.optionsMap) {
       const parentValue = this.formValues()[field.dependsOn];
       return parentValue && field.optionsMap[parentValue as string]
         ? field.optionsMap[parentValue as string]
@@ -324,8 +752,8 @@ export class DqDynamicForm {
 
   // Check if a field should be disabled
   isFieldDisabled(field: Field): boolean {
-    // Disable if depends on another field that has no value
-    return !!field.dependsOn && !this.formValues()[field.dependsOn];
+    // Disable if depends on other fields and not all dependencies have values
+    return !!field.dependsOn && !this.allDependenciesHaveValues(field);
   }
 
   // Get label for a field by name
@@ -334,10 +762,329 @@ export class DqDynamicForm {
     return field?.label.toLowerCase() || fieldName;
   }
 
+  /**
+   * Get the number of items for an array field
+   */
+  getArrayItemCount(fieldName: string): number {
+    return this.arrayItemCounts()[fieldName] || 0;
+  }
+
+  /**
+   * Get array of indices for an array field
+   */
+  getArrayIndices(fieldName: string): number[] {
+    const count = this.getArrayItemCount(fieldName);
+    return Array.from({ length: count }, (_, i) => i);
+  }
+
+  /**
+   * Add a new item to an array field
+   */
+  addArrayItem(field: Field): void {
+    if (!field.arrayConfig) return;
+
+    const currentCount = this.getArrayItemCount(field.name);
+    const maxItems = field.arrayConfig.maxItems;
+
+    // Check if we can add more items
+    if (maxItems && currentCount >= maxItems) {
+      return;
+    }
+
+    // Increment count
+    this.arrayItemCounts.update(counts => ({
+      ...counts,
+      [field.name]: currentCount + 1
+    }));
+
+    // Initialize values for new array item's fields
+    const newIndex = currentCount;
+    field.arrayConfig.fields.forEach(subField => {
+      const arrayFieldName = `${field.name}[${newIndex}].${subField.name}`;
+
+      this.formValues.update(current => ({
+        ...current,
+        [arrayFieldName]: this.getInitialValueForField(subField)
+      }));
+
+      this.touched.update(current => ({
+        ...current,
+        [arrayFieldName]: false
+      }));
+
+      this.dirty.update(current => ({
+        ...current,
+        [arrayFieldName]: false
+      }));
+
+      // Store initial value
+      this.initialValues.update(current => ({
+        ...current,
+        [arrayFieldName]: this.getInitialValueForField(subField)
+      }));
+    });
+  }
+
+  /**
+   * Remove an item from an array field
+   */
+  removeArrayItem(field: Field, index: number): void {
+    if (!field.arrayConfig) return;
+
+    const currentCount = this.getArrayItemCount(field.name);
+    const minItems = field.arrayConfig.minItems || 0;
+
+    // Check if we can remove items
+    if (currentCount <= minItems) {
+      return;
+    }
+
+    // Remove values for this array item
+    field.arrayConfig.fields.forEach(subField => {
+      const arrayFieldName = `${field.name}[${index}].${subField.name}`;
+
+      this.formValues.update(current => {
+        const updated = { ...current };
+        delete updated[arrayFieldName];
+        return updated;
+      });
+
+      this.touched.update(current => {
+        const updated = { ...current };
+        delete updated[arrayFieldName];
+        return updated;
+      });
+
+      this.dirty.update(current => {
+        const updated = { ...current };
+        delete updated[arrayFieldName];
+        return updated;
+      });
+
+      this.initialValues.update(current => {
+        const updated = { ...current };
+        delete updated[arrayFieldName];
+        return updated;
+      });
+    });
+
+    // Shift all subsequent items down
+    for (let i = index + 1; i < currentCount; i++) {
+      field.arrayConfig.fields.forEach(subField => {
+        const oldKey = `${field.name}[${i}].${subField.name}`;
+        const newKey = `${field.name}[${i - 1}].${subField.name}`;
+
+        const values = this.formValues();
+        const touchedState = this.touched();
+        const dirtyState = this.dirty();
+        const initialVals = this.initialValues();
+
+        this.formValues.update(current => {
+          const updated = { ...current };
+          updated[newKey] = values[oldKey];
+          delete updated[oldKey];
+          return updated;
+        });
+
+        this.touched.update(current => {
+          const updated = { ...current };
+          updated[newKey] = touchedState[oldKey];
+          delete updated[oldKey];
+          return updated;
+        });
+
+        this.dirty.update(current => {
+          const updated = { ...current };
+          updated[newKey] = dirtyState[oldKey];
+          delete updated[oldKey];
+          return updated;
+        });
+
+        this.initialValues.update(current => {
+          const updated = { ...current };
+          updated[newKey] = initialVals[oldKey];
+          delete updated[oldKey];
+          return updated;
+        });
+      });
+    }
+
+    // Decrement count
+    this.arrayItemCounts.update(counts => ({
+      ...counts,
+      [field.name]: currentCount - 1
+    }));
+  }
+
+  /**
+   * Get initial value for a field based on its type
+   */
+  private getInitialValueForField(field: Field): unknown {
+    if (field.type === 'checkbox') {
+      return false;
+    } else if (field.type === 'number') {
+      return field.min ?? 0;
+    } else {
+      return '';
+    }
+  }
+
+  /**
+   * Get the field name for an array item's sub-field
+   */
+  getArrayFieldName(arrayFieldName: string, index: number, subFieldName: string): string {
+    return `${arrayFieldName}[${index}].${subFieldName}`;
+  }
+
+  /**
+   * Check if add button should be disabled for an array field
+   */
+  canAddArrayItem(field: Field): boolean {
+    if (!field.arrayConfig) return false;
+    const currentCount = this.getArrayItemCount(field.name);
+    const maxItems = field.arrayConfig.maxItems;
+    return !maxItems || currentCount < maxItems;
+  }
+
+  /**
+   * Check if remove button should be disabled for an array field
+   */
+  canRemoveArrayItem(field: Field): boolean {
+    if (!field.arrayConfig) return false;
+    const currentCount = this.getArrayItemCount(field.name);
+    const minItems = field.arrayConfig.minItems || 0;
+    return currentCount > minItems;
+  }
+
+  /**
+   * Check if a field should be visible based on visibility conditions
+   */
+  isFieldVisible(field: Field): boolean {
+    if (!field.visibleWhen) {
+      return true; // No visibility condition, always visible
+    }
+
+    return this.evaluateVisibilityCondition(field.visibleWhen);
+  }
+
+  /**
+   * Evaluate a visibility condition (simple or complex)
+   */
+  private evaluateVisibilityCondition(condition: VisibilityCondition): boolean {
+    // Check if it's a complex condition (has 'and' or 'or' operator)
+    if ('conditions' in condition) {
+      return this.evaluateComplexCondition(condition as ComplexVisibilityCondition);
+    }
+
+    // It's a simple condition
+    return this.evaluateSimpleCondition(condition as SimpleVisibilityCondition);
+  }
+
+  /**
+   * Evaluate a complex visibility condition with AND/OR logic
+   */
+  private evaluateComplexCondition(condition: ComplexVisibilityCondition): boolean {
+    const results = condition.conditions.map((c) =>
+      this.evaluateVisibilityCondition(c)
+    );
+
+    if (condition.operator === 'and') {
+      return results.every((r) => r === true);
+    } else {
+      // 'or'
+      return results.some((r) => r === true);
+    }
+  }
+
+  /**
+   * Evaluate a simple visibility condition
+   */
+  private evaluateSimpleCondition(condition: SimpleVisibilityCondition): boolean {
+    const fieldValue = this.formValues()[condition.field];
+    const { operator, value } = condition;
+
+    switch (operator) {
+      case 'equals':
+        return fieldValue === value;
+
+      case 'notEquals':
+        return fieldValue !== value;
+
+      case 'contains':
+        return (
+          typeof fieldValue === 'string' &&
+          typeof value === 'string' &&
+          fieldValue.includes(value)
+        );
+
+      case 'notContains':
+        return (
+          typeof fieldValue === 'string' &&
+          typeof value === 'string' &&
+          !fieldValue.includes(value)
+        );
+
+      case 'greaterThan':
+        return (
+          typeof fieldValue === 'number' &&
+          typeof value === 'number' &&
+          fieldValue > value
+        );
+
+      case 'lessThan':
+        return (
+          typeof fieldValue === 'number' &&
+          typeof value === 'number' &&
+          fieldValue < value
+        );
+
+      case 'greaterThanOrEqual':
+        return (
+          typeof fieldValue === 'number' &&
+          typeof value === 'number' &&
+          fieldValue >= value
+        );
+
+      case 'lessThanOrEqual':
+        return (
+          typeof fieldValue === 'number' &&
+          typeof value === 'number' &&
+          fieldValue <= value
+        );
+
+      case 'in':
+        return Array.isArray(value) && value.includes(fieldValue);
+
+      case 'notIn':
+        return Array.isArray(value) && !value.includes(fieldValue);
+
+      case 'isEmpty':
+        return (
+          fieldValue === '' ||
+          fieldValue === null ||
+          fieldValue === undefined ||
+          (Array.isArray(fieldValue) && fieldValue.length === 0)
+        );
+
+      case 'isNotEmpty':
+        return !(
+          fieldValue === '' ||
+          fieldValue === null ||
+          fieldValue === undefined ||
+          (Array.isArray(fieldValue) && fieldValue.length === 0)
+        );
+
+      default:
+        console.warn(`Unknown visibility operator: ${operator}`);
+        return true;
+    }
+  }
+
   readonly errors = computed<Record<string, string>>(() => {
     const validationErrors: Record<string, string> = {};
     const values = this.formValues();
     const fields = this.fields();
+    const asyncErrs = this.asyncErrors();
 
     for (const field of fields) {
       const fieldValue = values[field.name]; // meaningful name
@@ -369,6 +1116,158 @@ export class DqDynamicForm {
         }
       }
 
+      // Number validation (min/max)
+      if (field.type === 'number' && fieldValue !== '' && fieldValue !== null) {
+        const numValue = typeof fieldValue === 'number' ? fieldValue : parseFloat(fieldValue as string);
+
+        if (field.min !== undefined && numValue < field.min) {
+          validationErrors[field.name] = `${field.label} must be at least ${field.min}`;
+        }
+
+        if (field.max !== undefined && numValue > field.max) {
+          validationErrors[field.name] = `${field.label} must be at most ${field.max}`;
+        }
+      }
+
+      // Date validation (min/max)
+      if (field.type === 'date' && fieldValue && typeof fieldValue === 'string') {
+        const dateValue = new Date(fieldValue);
+
+        if (field.min && new Date(field.min) > dateValue) {
+          validationErrors[field.name] = `${field.label} must be on or after ${field.min}`;
+        }
+
+        if (field.max && new Date(field.max) < dateValue) {
+          validationErrors[field.name] = `${field.label} must be on or before ${field.max}`;
+        }
+      }
+
+      // Textarea validation (same as text - maxLength)
+      if (
+        field.type === 'textarea' &&
+        rules?.maxLength &&
+        typeof fieldValue === 'string' &&
+        fieldValue.length > rules.maxLength
+      ) {
+        validationErrors[
+          field.name
+        ] = `${field.label} must be at most ${rules.maxLength} characters`;
+      }
+
+      // Cross-field validation: matchesField (e.g., password confirmation)
+      if (rules?.matchesField) {
+        const matchFieldValue = values[rules.matchesField];
+        const matchField = fields.find(f => f.name === rules.matchesField);
+        const matchFieldLabel = matchField?.label.toLowerCase() || rules.matchesField;
+
+        if (fieldValue && matchFieldValue && fieldValue !== matchFieldValue) {
+          validationErrors[field.name] = rules.customMessage ||
+            `${field.label} must match ${matchFieldLabel}`;
+        }
+      }
+
+      // Cross-field validation: requiredIf (conditional required)
+      if (rules?.requiredIf) {
+        const conditionField = rules.requiredIf.field;
+        const conditionValue = values[conditionField];
+        const { operator, value } = rules.requiredIf;
+
+        let conditionMet = false;
+        switch (operator) {
+          case 'equals':
+            conditionMet = conditionValue === value;
+            break;
+          case 'notEquals':
+            conditionMet = conditionValue !== value;
+            break;
+          case 'greaterThan':
+            conditionMet = typeof conditionValue === 'number' && typeof value === 'number' && conditionValue > value;
+            break;
+          case 'lessThan':
+            conditionMet = typeof conditionValue === 'number' && typeof value === 'number' && conditionValue < value;
+            break;
+          case 'isEmpty':
+            conditionMet = !conditionValue || conditionValue === '';
+            break;
+          case 'isNotEmpty':
+            conditionMet = !!conditionValue && conditionValue !== '';
+            break;
+          default:
+            conditionMet = false;
+        }
+
+        if (conditionMet && !fieldValue) {
+          const condField = fields.find(f => f.name === conditionField);
+          const condFieldLabel = condField?.label.toLowerCase() || conditionField;
+          validationErrors[field.name] = rules.customMessage ||
+            `${field.label} is required when ${condFieldLabel} ${operator === 'equals' ? 'is' : operator === 'notEquals' ? 'is not' : operator} ${value}`;
+        }
+      }
+
+      // Cross-field validation: greaterThanField (for dates/numbers)
+      if (rules?.greaterThanField) {
+        const compareFieldValue = values[rules.greaterThanField];
+        const compareField = fields.find(f => f.name === rules.greaterThanField);
+        const compareFieldLabel = compareField?.label.toLowerCase() || rules.greaterThanField;
+
+        if (fieldValue && compareFieldValue) {
+          let isInvalid = false;
+
+          if (field.type === 'date' && typeof fieldValue === 'string' && typeof compareFieldValue === 'string') {
+            isInvalid = new Date(fieldValue) <= new Date(compareFieldValue);
+          } else if (field.type === 'number') {
+            const numValue = typeof fieldValue === 'number' ? fieldValue : parseFloat(fieldValue as string);
+            const compareNumValue = typeof compareFieldValue === 'number' ? compareFieldValue : parseFloat(compareFieldValue as string);
+            isInvalid = numValue <= compareNumValue;
+          }
+
+          if (isInvalid) {
+            validationErrors[field.name] = rules.customMessage ||
+              `${field.label} must be after ${compareFieldLabel}`;
+          }
+        }
+      }
+
+      // Cross-field validation: lessThanField (for dates/numbers)
+      if (rules?.lessThanField) {
+        const compareFieldValue = values[rules.lessThanField];
+        const compareField = fields.find(f => f.name === rules.lessThanField);
+        const compareFieldLabel = compareField?.label.toLowerCase() || rules.lessThanField;
+
+        if (fieldValue && compareFieldValue) {
+          let isInvalid = false;
+
+          if (field.type === 'date' && typeof fieldValue === 'string' && typeof compareFieldValue === 'string') {
+            isInvalid = new Date(fieldValue) >= new Date(compareFieldValue);
+          } else if (field.type === 'number') {
+            const numValue = typeof fieldValue === 'number' ? fieldValue : parseFloat(fieldValue as string);
+            const compareNumValue = typeof compareFieldValue === 'number' ? compareFieldValue : parseFloat(compareFieldValue as string);
+            isInvalid = numValue >= compareNumValue;
+          }
+
+          if (isInvalid) {
+            validationErrors[field.name] = rules.customMessage ||
+              `${field.label} must be before ${compareFieldLabel}`;
+          }
+        }
+      }
+
+      // Custom pattern validation
+      if (rules?.pattern && fieldValue && typeof fieldValue === 'string') {
+        const regex = typeof rules.pattern === 'string' ? new RegExp(rules.pattern) : rules.pattern;
+        if (!regex.test(fieldValue)) {
+          validationErrors[field.name] = rules.customMessage ||
+            `${field.label} format is invalid`;
+        }
+      }
+
+      // Mask validation - check if masked value is complete
+      if (field.mask && fieldValue && typeof fieldValue === 'string') {
+        if (!this._maskService.isValidMaskedValue(fieldValue, field.mask)) {
+          validationErrors[field.name] = this._maskService.getMaskValidationError(field.mask);
+        }
+      }
+
       // Multi-select validation
       if (field.type === 'multiselect' && Array.isArray(fieldValue)) {
         if (field.minSelections && fieldValue.length < field.minSelections) {
@@ -396,17 +1295,448 @@ export class DqDynamicForm {
       }
     }
 
-    return validationErrors;
+    // Merge async validation errors
+    return { ...validationErrors, ...asyncErrs };
   });
 
-  readonly isValid = computed<boolean>(
-    () => Object.keys(this.errors()).length === 0
-  );
+  readonly isValid = computed<boolean>(() => {
+    // Check if there are any validation errors
+    if (Object.keys(this.errors()).length > 0) {
+      return false;
+    }
+
+    // Check if any async validations are in progress
+    const asyncStates = Object.values(this.asyncValidationState());
+    const hasValidating = asyncStates.some(state => state === 'validating');
+
+    return !hasValidating;
+  });
 
   saveUserData(): void {
-    this.submittedData.set(this.formValues());
+    // Check if form is valid
+    if (!this.isValid()) {
+      // Focus on first field with error for better accessibility
+      this.focusFirstError();
+      return;
+    }
+
+    // Reset submission state
+    this.submitError.set(null);
+    this.submitSuccess.set(false);
+
+    // If no submission config, just show data locally
+    if (!this.submissionConfig?.endpoint) {
+      this.submittedData.set(this.formValues());
+      this.submitted.set(true);
+      this.submitSuccess.set(true);
+      console.log('FORM VALUES (Signals):', this.formValues());
+
+      // Clear draft on successful submission
+      if (this.autosaveEnabled()) {
+        this.clearDraft();
+      }
+      return;
+    }
+
+    // Submit to API with retry logic
+    this.submitToApi(0);
+  }
+
+  /**
+   * Submit form data to API with retry logic
+   */
+  private submitToApi(attemptNumber: number): void {
+    if (!this.submissionConfig?.endpoint) return;
+
+    this.submitting.set(true);
+    this.submitRetryCount.set(attemptNumber);
+
+    const method = this.submissionConfig.method || 'POST';
+    const headers = this.submissionConfig.headers || {};
+    const formData = this.formValues();
+
+    // Make HTTP request
+    const request$ = method === 'POST'
+      ? this._http.post(this.submissionConfig.endpoint, formData, { headers })
+      : method === 'PUT'
+        ? this._http.put(this.submissionConfig.endpoint, formData, { headers })
+        : this._http.patch(this.submissionConfig.endpoint, formData, { headers });
+
+    request$.subscribe({
+      next: (response) => {
+        this.handleSubmitSuccess(response);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.handleSubmitError(error, attemptNumber);
+      }
+    });
+  }
+
+  /**
+   * Handle successful form submission
+   */
+  private handleSubmitSuccess(response: any): void {
+    this.submitting.set(false);
+    this.submitSuccess.set(true);
     this.submitted.set(true);
-    console.log('FORM VALUES (Signals):', this.formValues());
+    this.submittedData.set(response);
+
+    // Clear draft on successful submission
+    if (this.autosaveEnabled()) {
+      this.clearDraft();
+    }
+
+    console.log('Form submitted successfully:', response);
+
+    // Handle redirect if configured
+    if (this.submissionConfig?.redirectOnSuccess) {
+      setTimeout(() => {
+        window.location.href = this.submissionConfig!.redirectOnSuccess!;
+      }, 2000); // 2 second delay to show success message
+    }
+  }
+
+  /**
+   * Handle form submission error with retry logic
+   */
+  private handleSubmitError(error: HttpErrorResponse, attemptNumber: number): void {
+    console.error('Form submission error:', error);
+
+    // Check if we should retry
+    if (attemptNumber < this.MAX_RETRY_ATTEMPTS && (error.status === 0 || error.status >= 500)) {
+      // Network error or server error - retry after delay
+      const retryDelay = Math.pow(2, attemptNumber) * 1000; // Exponential backoff: 1s, 2s, 4s
+      console.log(`Retrying submission in ${retryDelay}ms (attempt ${attemptNumber + 1}/${this.MAX_RETRY_ATTEMPTS})`);
+
+      setTimeout(() => {
+        this.submitToApi(attemptNumber + 1);
+      }, retryDelay);
+    } else {
+      // Max retries reached or client error - show error
+      this.submitting.set(false);
+
+      // Extract error message
+      let errorMessage = this.submissionConfig?.errorMessage || 'Form submission failed. Please try again.';
+
+      if (error.error?.message) {
+        errorMessage = error.error.message;
+      } else if (error.error?.error) {
+        errorMessage = error.error.error;
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+
+      // Handle field-level errors from API
+      if (error.error?.errors && typeof error.error.errors === 'object') {
+        // Merge field-level errors into asyncErrors for display
+        this.asyncErrors.update(current => ({
+          ...current,
+          ...error.error.errors
+        }));
+      }
+
+      this.submitError.set(errorMessage);
+    }
+  }
+
+  /**
+   * Retry form submission (called from template)
+   */
+  retrySubmit(): void {
+    this.submitToApi(0);
+  }
+
+  /**
+   * Focus on the first field with a validation error (accessibility)
+   */
+  private focusFirstError(): void {
+    const errors = this.errors();
+    const firstErrorField = Object.keys(errors)[0];
+
+    if (firstErrorField) {
+      // Use setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        const element = document.getElementById(firstErrorField);
+        if (element) {
+          element.focus();
+          // Scroll to element if needed
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }
+
+  /**
+   * Save current form state to storage
+   */
+  private saveDraft(): void {
+    if (!this.autosaveKey) return;
+
+    const draft = {
+      values: this.formValues(),
+      timestamp: new Date().toISOString(),
+      expiresAt: this.autosaveConfig?.expirationDays
+        ? new Date(Date.now() + this.autosaveConfig.expirationDays * 24 * 60 * 60 * 1000).toISOString()
+        : null
+    };
+
+    const storage = this.autosaveConfig?.storage === 'sessionStorage' ? sessionStorage : localStorage;
+    storage.setItem(this.autosaveKey, JSON.stringify(draft));
+    this.lastSaved.set(new Date());
+  }
+
+  /**
+   * Load draft from storage
+   */
+  private loadDraft(): { values: Record<string, unknown>; timestamp: string } | null {
+    if (!this.autosaveKey) return null;
+
+    const storage = this.autosaveConfig?.storage === 'sessionStorage' ? sessionStorage : localStorage;
+    const draftStr = storage.getItem(this.autosaveKey);
+
+    if (!draftStr) return null;
+
+    try {
+      const draft = JSON.parse(draftStr);
+
+      // Check if draft has expired
+      if (draft.expiresAt && new Date(draft.expiresAt) < new Date()) {
+        this.clearDraft();
+        return null;
+      }
+
+      return draft;
+    } catch (e) {
+      console.error('Failed to parse draft:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Clear draft from storage
+   */
+  private clearDraft(): void {
+    if (!this.autosaveKey) return;
+
+    const storage = this.autosaveConfig?.storage === 'sessionStorage' ? sessionStorage : localStorage;
+    storage.removeItem(this.autosaveKey);
+    this.lastSaved.set(null);
+  }
+
+  /**
+   * Debounced autosave to avoid excessive writes
+   */
+  private debounceTimer: any = null;
+  private debouncedAutosave(): void {
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+    }
+
+    this.debounceTimer = setTimeout(() => {
+      this.saveDraft();
+    }, 1000); // Wait 1 second after last change before saving
+  }
+
+  /**
+   * Get dependencies for a field as an array
+   * Normalizes both single dependency (string) and multiple dependencies (string[])
+   */
+  private getDependencies(field: Field): string[] {
+    if (!field.dependsOn) return [];
+    return Array.isArray(field.dependsOn) ? field.dependsOn : [field.dependsOn];
+  }
+
+  /**
+   * Check if all dependencies of a field have values
+   */
+  private allDependenciesHaveValues(field: Field): boolean {
+    if (!field.dependsOn) return true;
+
+    const dependencies = this.getDependencies(field);
+    const values = this.formValues();
+
+    return dependencies.every(dep => {
+      const value = values[dep];
+      return value !== null && value !== undefined && value !== '';
+    });
+  }
+
+  /**
+   * Build parameters object for API calls, replacing template variables
+   * Supports both {{fieldName}} syntax in URLs and plain parameter passing
+   */
+  private buildDependencyParams(field: Field, values: Record<string, unknown>): Record<string, unknown> {
+    const dependencies = this.getDependencies(field);
+    const params: Record<string, unknown> = {};
+
+    dependencies.forEach(dep => {
+      params[dep] = values[dep];
+    });
+
+    return params;
+  }
+
+  /**
+   * Replace template variables in endpoint URL with actual values
+   * Supports {{fieldName}} syntax
+   */
+  private replaceTemplateVariables(endpoint: string, values: Record<string, unknown>): string {
+    let result = endpoint;
+
+    // Find all {{variable}} patterns and replace with actual values
+    const matches = endpoint.match(/\{\{([^}]+)\}\}/g);
+    if (matches) {
+      matches.forEach(match => {
+        const fieldName = match.replace(/\{\{|\}\}/g, '');
+        const value = values[fieldName];
+        if (value !== undefined && value !== null) {
+          result = result.replace(match, String(value));
+        }
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Update multi-select field value
+   */
+  updateMultiSelectValue(fieldName: string, selectedOptions: any): void {
+    const values: string[] = [];
+    for (let i = 0; i < selectedOptions.length; i++) {
+      values.push(selectedOptions[i].value);
+    }
+    this.updateFormValue(fieldName, values);
+  }
+
+  /**
+   * Handle file upload
+   */
+  handleFileUpload(fieldName: string, files: FileList | null, field: Field): void {
+    if (!files || files.length === 0) {
+      this.updateFormValue(fieldName, null);
+      this.fileData.update((current) => {
+        const updated = { ...current };
+        delete updated[fieldName];
+        return updated;
+      });
+      return;
+    }
+
+    const file = files[0];
+
+    // Validate file size
+    if (field.maxFileSize && file.size > field.maxFileSize) {
+      alert(`File size exceeds maximum allowed size of ${this.formatFileSize(field.maxFileSize)}`);
+      return;
+    }
+
+    // Read file data
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      this.fileData.update((current) => ({
+        ...current,
+        [fieldName]: {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          data: e.target.result,
+        },
+      }));
+      this.updateFormValue(fieldName, file.name);
+    };
+
+    // Read as data URL for preview
+    reader.readAsDataURL(file);
+  }
+
+  /**
+   * Update rich text field value
+   */
+  updateRichTextValue(fieldName: string, html: string): void {
+    this.updateFormValue(fieldName, html);
+  }
+
+  /**
+   * Execute rich text command
+   */
+  execCommand(command: string): void {
+    document.execCommand(command, false);
+  }
+
+  /**
+   * Format file size in human-readable format
+   */
+  formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  /**
+   * Check if file is an image
+   */
+  isImage(fileName: any): boolean {
+    if (!fileName) return false;
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
+    const extension = fileName.toString().split('.').pop()?.toLowerCase();
+    return imageExtensions.includes(extension || '');
+  }
+
+  /**
+   * Get file preview URL
+   */
+  getFilePreview(fieldName: string): string {
+    const file = this.fileData()[fieldName];
+    return file?.data || '';
+  }
+
+  /**
+   * Get file name
+   */
+  getFileName(fileName: any): string {
+    return fileName?.toString() || '';
+  }
+
+  /**
+   * Get file size
+   */
+  getFileSize(fileName: string): string {
+    const file = this.fileData()[fileName];
+    return file ? this.formatFileSize(file.size) : '';
+  }
+
+  /**
+   * Get rich text length (strip HTML tags)
+   */
+  getRichTextLength(html: string | unknown): number {
+    if (!html || typeof html !== 'string') return 0;
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent?.length || 0;
+  }
+
+  /**
+   * Switch to a different locale
+   */
+  switchLocale(locale: string): void {
+    this._i18nService.setLocale(locale);
+  }
+
+  /**
+   * Get current locale
+   */
+  getCurrentLocale(): string {
+    return this._i18nService.getCurrentLocale();
+  }
+
+  /**
+   * Get text direction for current locale
+   */
+  getTextDirection(): 'ltr' | 'rtl' {
+    return this._i18nService.getDirection();
   }
 
   /**
