@@ -388,6 +388,72 @@
       "validations": { "required": true, "minLength": 3 }
     },
     {
+      "type": "multiselect",
+      "label": "Interests",
+      "name": "interests",
+      "options": [
+        { "value": "tech", "label": "Technology" },
+        { "value": "sports", "label": "Sports" },
+        { "value": "music", "label": "Music" },
+        { "value": "art", "label": "Art" },
+        { "value": "travel", "label": "Travel" },
+        { "value": "cooking", "label": "Cooking" }
+      ],
+      "minSelections": 1,
+      "maxSelections": 3,
+      "validations": { "required": true }
+    },
+    {
+      "type": "range",
+      "label": "Experience Level",
+      "name": "experienceLevel",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "validations": { "required": true }
+    },
+    {
+      "type": "color",
+      "label": "Favorite Color",
+      "name": "favoriteColor",
+      "validations": { "required": false }
+    },
+    {
+      "type": "datetime",
+      "label": "Preferred Meeting Time",
+      "name": "meetingTime",
+      "includeTime": true,
+      "timezone": "America/New_York",
+      "validations": { "required": false }
+    },
+    {
+      "type": "file",
+      "label": "Profile Picture",
+      "name": "profilePicture",
+      "accept": "image/*",
+      "maxFileSize": 5242880,
+      "multiple": false,
+      "validations": { "required": false }
+    },
+    {
+      "type": "file",
+      "label": "Documents",
+      "name": "documents",
+      "accept": ".pdf,.doc,.docx",
+      "maxFileSize": 10485760,
+      "multiple": true,
+      "validations": { "required": false }
+    },
+    {
+      "type": "richtext",
+      "label": "Cover Letter",
+      "name": "coverLetter",
+      "allowedFormats": ["bold", "italic", "underline", "link", "list"],
+      "maxCharacters": 1000,
+      "placeholder": "Write your cover letter here...",
+      "validations": { "required": false, "maxLength": 1000 }
+    },
+    {
       "type": "checkbox",
       "label": "I am over 18 years old",
       "name": "ageConfirmation",

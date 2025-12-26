@@ -147,6 +147,108 @@ export class FormBuilder {
         name: 'dateField',
         label: 'Select Date'
       }
+    },
+    {
+      type: 'array',
+      label: 'Array/Repeater',
+      icon: '🔁',
+      defaultConfig: {
+        type: 'array',
+        name: 'arrayField',
+        label: 'Repeater Field',
+        arrayConfig: {
+          fields: [
+            {
+              type: 'text',
+              name: 'item',
+              label: 'Item',
+              placeholder: 'Enter item...'
+            }
+          ],
+          initialItems: 1,
+          minItems: 0,
+          addButtonText: 'Add Item',
+          removeButtonText: 'Remove'
+        }
+      }
+    },
+    {
+      type: 'multiselect',
+      label: 'Multi-Select',
+      icon: '☑️',
+      defaultConfig: {
+        type: 'multiselect',
+        name: 'multiselectField',
+        label: 'Multi-Select',
+        options: [
+          { label: 'Option 1', value: 'option1' },
+          { label: 'Option 2', value: 'option2' },
+          { label: 'Option 3', value: 'option3' }
+        ],
+        minSelections: 1,
+        maxSelections: 3
+      }
+    },
+    {
+      type: 'range',
+      label: 'Range Slider',
+      icon: '🎚️',
+      defaultConfig: {
+        type: 'range',
+        name: 'rangeField',
+        label: 'Range Slider',
+        min: 0,
+        max: 100,
+        step: 1
+      }
+    },
+    {
+      type: 'color',
+      label: 'Color Picker',
+      icon: '🎨',
+      defaultConfig: {
+        type: 'color',
+        name: 'colorField',
+        label: 'Color Picker'
+      }
+    },
+    {
+      type: 'datetime',
+      label: 'DateTime',
+      icon: '📅',
+      defaultConfig: {
+        type: 'datetime',
+        name: 'datetimeField',
+        label: 'Date & Time',
+        includeTime: true,
+        timezone: 'America/New_York'
+      }
+    },
+    {
+      type: 'file',
+      label: 'File Upload',
+      icon: '📎',
+      defaultConfig: {
+        type: 'file',
+        name: 'fileField',
+        label: 'File Upload',
+        accept: '*/*',
+        maxFileSize: 5242880, // 5MB
+        multiple: false
+      }
+    },
+    {
+      type: 'richtext',
+      label: 'Rich Text',
+      icon: '📝',
+      defaultConfig: {
+        type: 'richtext',
+        name: 'richtextField',
+        label: 'Rich Text Editor',
+        placeholder: 'Enter text...',
+        allowedFormats: ['bold', 'italic', 'underline', 'link'],
+        maxCharacters: 1000
+      }
     }
   ];
 
@@ -417,6 +519,125 @@ export class FormBuilder {
     navigator.clipboard.writeText(tsCode).then(() => {
       alert('TypeScript interface copied to clipboard!');
     });
+  }
+
+  // Array field helpers
+  protected addArraySubField(fieldIndex: number): void {
+    const currentSchema = this.schema();
+    const currentFields = currentSchema.fields || [];
+    const field = currentFields[fieldIndex];
+
+    if (!field.arrayConfig) return;
+
+    const newSubField: Field = {
+      type: 'text',
+      name: `subField${(field.arrayConfig.fields?.length || 0) + 1}`,
+      label: 'New Field',
+      placeholder: 'Enter value...'
+    };
+
+    const updatedFields = [...currentFields];
+    updatedFields[fieldIndex] = {
+      ...field,
+      arrayConfig: {
+        ...field.arrayConfig,
+        fields: [...(field.arrayConfig.fields || []), newSubField]
+      }
+    };
+
+    this.schema.set({
+      ...currentSchema,
+      fields: updatedFields
+    });
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  protected removeArraySubField(fieldIndex: number, subFieldIndex: number): void {
+    const currentSchema = this.schema();
+    const currentFields = currentSchema.fields || [];
+    const field = currentFields[fieldIndex];
+
+    if (!field.arrayConfig) return;
+
+    const updatedSubFields = field.arrayConfig.fields?.filter((_, i) => i !== subFieldIndex) || [];
+
+    const updatedFields = [...currentFields];
+    updatedFields[fieldIndex] = {
+      ...field,
+      arrayConfig: {
+        ...field.arrayConfig,
+        fields: updatedSubFields
+      }
+    };
+
+    this.schema.set({
+      ...currentSchema,
+      fields: updatedFields
+    });
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  protected updateArraySubFieldProperty(fieldIndex: number, subFieldIndex: number, property: string, value: any): void {
+    const currentSchema = this.schema();
+    const currentFields = currentSchema.fields || [];
+    const field = currentFields[fieldIndex];
+
+    if (!field.arrayConfig) return;
+
+    const updatedSubFields = [...(field.arrayConfig.fields || [])];
+    updatedSubFields[subFieldIndex] = {
+      ...updatedSubFields[subFieldIndex],
+      [property]: value
+    };
+
+    const updatedFields = [...currentFields];
+    updatedFields[fieldIndex] = {
+      ...field,
+      arrayConfig: {
+        ...field.arrayConfig,
+        fields: updatedSubFields
+      }
+    };
+
+    this.schema.set({
+      ...currentSchema,
+      fields: updatedFields
+    });
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  protected updateArrayConfig(property: string, value: any): void {
+    const index = this.selectedFieldIndex();
+    if (index === null) return;
+
+    const currentSchema = this.schema();
+    const currentFields = currentSchema.fields || [];
+    const field = currentFields[index];
+
+    if (!field.arrayConfig) return;
+
+    const updatedFields = [...currentFields];
+    updatedFields[index] = {
+      ...field,
+      arrayConfig: {
+        ...field.arrayConfig,
+        [property]: value
+      }
+    };
+
+    this.schema.set({
+      ...currentSchema,
+      fields: updatedFields
+    });
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
   }
 
   // Clear form
