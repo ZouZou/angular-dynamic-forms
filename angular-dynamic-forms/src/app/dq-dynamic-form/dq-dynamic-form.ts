@@ -1,6 +1,6 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, input } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission } from './models/field.model';
+import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission, FormSchema } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
 import { MaskService } from './mask.service';
 import { I18nService } from './i18n.service';
@@ -13,6 +13,9 @@ import { I18nService } from './i18n.service';
   providers: [DynamicFormsService],
 })
 export class DqDynamicForm {
+  // Optional input for providing schema directly (used by form builder)
+  formSchema = input<FormSchema | null>(null);
+
   private readonly _formService = inject(DynamicFormsService);
   private readonly _maskService = inject(MaskService);
   private readonly _http = inject(HttpClient);
@@ -210,8 +213,21 @@ export class DqDynamicForm {
   }
 
   ngOnInit(): void {
+    // If schema is provided via input (form builder preview), use it directly
+    const providedSchema = this.formSchema();
+    if (providedSchema) {
+      this.loadSchema(providedSchema);
+      return;
+    }
+
+    // Otherwise, load from service
     this._formService.getFormSchema().subscribe((schema) => {
-      this.title.set(schema.title);
+      this.loadSchema(schema);
+    });
+  }
+
+  private loadSchema(schema: FormSchema): void {
+    this.title.set(schema.title);
 
       // Handle both single-step and multi-step forms
       const allFields = schema.fields || [];
@@ -306,7 +322,6 @@ export class DqDynamicForm {
       // Store initial values for comparison
       this.initialValues.set({ ...initialValues });
       this.loading.set(false);
-    });
   }
 
   ngOnDestroy(): void {
