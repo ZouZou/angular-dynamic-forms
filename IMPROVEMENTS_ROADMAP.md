@@ -473,12 +473,27 @@ Comprehensive testing coverage.
 Tools to improve developer productivity.
 
 ### Features
-- Form builder UI (visual editor)
-- Live preview of JSON configs
-- Validation preview
-- Export/Import form configs
-- TypeScript interface generation from JSON
-- JSON schema for validation
+
+#### Core Developer Tools (Completed) ✅
+- ✅ Export/Import form configs
+- ✅ TypeScript interface generation from JSON
+- ✅ JSON schema for validation (DevToolsService)
+
+#### Unified Form Builder Application (Combined Feature) 🚧
+These features work together as one integrated visual tool:
+- Form builder UI (visual editor) - Drag-and-drop interface to add/remove/configure fields
+- Live preview of JSON configs - Real-time JSON editor with bidirectional sync
+- Validation preview - Real-time validation feedback using DevToolsService
+
+Layout concept:
+```
+┌─────────────────────────────────────────────────────────┐
+│  Visual Editor   │  Live Preview    │  JSON + Validate  │
+│  (Drag & Drop)   │  (Rendered Form) │  (Code + Errors)  │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### Future Enhancements 💡
 - VS Code extension
 - Documentation site with interactive examples
 - Storybook integration
