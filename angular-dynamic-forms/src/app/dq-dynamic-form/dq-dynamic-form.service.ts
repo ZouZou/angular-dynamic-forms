@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
-import { Field, FieldOption } from './models/field.model';
+import { Field, FieldOption, FormSchema } from './models/field.model';
 import { MockApiService } from './mock-api.service';
 
 interface CacheEntry {
@@ -19,8 +19,8 @@ export class DynamicFormsService {
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
   private readonly optionsCache = new Map<string, CacheEntry>();
 
-  getFormSchema(): Observable<{ title: string; fields: Field[] }> {
-    return this.http.get<{ title: string; fields: Field[] }>(
+  getFormSchema(): Observable<FormSchema> {
+    return this.http.get<FormSchema>(
       'forms/sample-form.json'
     );
   }
@@ -133,5 +133,29 @@ export class DynamicFormsService {
   clearCacheForEndpoint(endpoint: string): void {
     this.optionsCache.delete(endpoint);
     console.log(`[Cache] Cleared cache for: ${endpoint}`);
+  }
+
+  /**
+   * Validate field asynchronously via API
+   * @param endpoint - The API endpoint for validation
+   * @param data - Data to send (typically { value, fieldName })
+   * @param method - HTTP method (GET or POST)
+   * @returns Observable of validation response
+   */
+  validateFieldAsync(
+    endpoint: string,
+    data: { value: unknown; fieldName: string },
+    method: 'GET' | 'POST' = 'POST'
+  ): Observable<any> {
+    console.log(`[Async Validation] ${method} ${endpoint}`, data);
+
+    // Use mock API for validation (replace with real HTTP call in production)
+    return this.mockApi.validateField(endpoint, data, method).pipe(
+      catchError((error) => {
+        console.error(`[Async Validation Error] ${endpoint}:`, error);
+        // Return invalid state on error
+        return of({ valid: false, message: 'Validation request failed' });
+      })
+    );
   }
 }

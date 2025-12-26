@@ -12,7 +12,10 @@ A flexible, JSON-driven dynamic form generator for Angular 21+ with support for 
 ### Key Features
 
 - **JSON-Driven Forms**: Define entire forms in JSON configuration
+- **Conditional Visibility**: Show/hide fields based on other field values with complex logic
+- **Multiple Field Types**: Text, email, textarea, number, date, radio buttons, checkboxes, and select dropdowns
 - **Dependent Dropdowns**: Cascading dropdowns where one field's options depend on another
+- **Dependent Checkboxes**: Checkboxes with same/opposite relationships
 - **API-Driven Options**: Fetch dropdown options dynamically from APIs with intelligent caching
 - **Smart Caching**: 5-minute TTL cache to reduce server load
 - **Loading States**: Per-field loading indicators for better UX
@@ -20,6 +23,227 @@ A flexible, JSON-driven dynamic form generator for Angular 21+ with support for 
 - **Angular Signals**: Reactive state management using Angular's latest signals API
 - **TypeScript**: Fully typed with interfaces for type safety
 - **Backward Compatible**: Supports static options, dependent options, and API-driven options
+
+---
+
+## Conditional Visibility
+
+Show or hide fields dynamically based on other field values. Supports both simple conditions and complex logical expressions.
+
+### Simple Conditions
+
+```json
+{
+  "type": "text",
+  "label": "Company Name",
+  "name": "companyName",
+  "visibleWhen": {
+    "field": "accountType",
+    "operator": "equals",
+    "value": "business"
+  }
+}
+```
+
+### Supported Operators
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `equals` | Field value equals specific value | Age equals 18 |
+| `notEquals` | Field value does not equal value | Status not equals "inactive" |
+| `contains` | String contains substring | Name contains "John" |
+| `notContains` | String does not contain substring | Email not contains "temp" |
+| `greaterThan` | Numeric value greater than | Age greater than 18 |
+| `lessThan` | Numeric value less than | Price less than 100 |
+| `greaterThanOrEqual` | Numeric value >= | Score >= 90 |
+| `lessThanOrEqual` | Numeric value <= | Quantity <= 10 |
+| `in` | Value in array | Color in ["red", "blue"] |
+| `notIn` | Value not in array | Size not in ["XS", "S"] |
+| `isEmpty` | Field is empty/null/undefined | Description is empty |
+| `isNotEmpty` | Field has value | Comments is not empty |
+
+### Complex Conditions (AND/OR Logic)
+
+```json
+{
+  "type": "text",
+  "label": "Student ID",
+  "name": "studentId",
+  "visibleWhen": {
+    "operator": "and",
+    "conditions": [
+      { "field": "age", "operator": "lessThan", "value": 25 },
+      { "field": "accountType", "operator": "equals", "value": "student" }
+    ]
+  }
+}
+```
+
+**Nested Conditions:**
+```json
+{
+  "visibleWhen": {
+    "operator": "or",
+    "conditions": [
+      {
+        "operator": "and",
+        "conditions": [
+          { "field": "age", "operator": "greaterThan", "value": 18 },
+          { "field": "country", "operator": "equals", "value": "USA" }
+        ]
+      },
+      { "field": "hasParentConsent", "operator": "equals", "value": true }
+    ]
+  }
+}
+```
+
+---
+
+## Cross-Field Validation
+
+Validate fields based on the values of other fields. Supports password confirmation, date ranges, conditional required fields, and custom comparisons.
+
+### Password Confirmation
+
+```json
+{
+  "type": "password",
+  "label": "Password",
+  "name": "password",
+  "validations": { "required": true, "minLength": 8 }
+},
+{
+  "type": "password",
+  "label": "Confirm Password",
+  "name": "confirmPassword",
+  "validations": {
+    "required": true,
+    "matchesField": "password",
+    "customMessage": "Passwords do not match"
+  }
+}
+```
+
+### Date Range Validation
+
+```json
+{
+  "type": "date",
+  "label": "Start Date",
+  "name": "startDate",
+  "validations": { "required": true }
+},
+{
+  "type": "date",
+  "label": "End Date",
+  "name": "endDate",
+  "validations": {
+    "required": true,
+    "greaterThanField": "startDate",
+    "customMessage": "End date must be after start date"
+  }
+}
+```
+
+### Conditional Required
+
+```json
+{
+  "type": "checkbox",
+  "label": "I have a referral code",
+  "name": "hasReferralCode"
+},
+{
+  "type": "text",
+  "label": "Referral Code",
+  "name": "referralCode",
+  "validations": {
+    "requiredIf": {
+      "field": "hasReferralCode",
+      "operator": "equals",
+      "value": true
+    }
+  }
+}
+```
+
+### Supported Cross-Field Validators
+
+| Validator | Description | Example |
+|-----------|-------------|---------|
+| `matchesField` | Value must match another field | Password confirmation |
+| `requiredIf` | Required when condition is met | Conditional required fields |
+| `greaterThanField` | Value > another field | End date > Start date |
+| `lessThanField` | Value < another field | Min budget < Max budget |
+| `pattern` | Custom regex pattern | Phone number, SSN, etc. |
+| `customMessage` | Override default error message | Any validator |
+
+---
+
+## Layout & Styling Options
+
+Control field width, appearance, and behavior with layout options.
+
+### Field Width
+
+Fields can span full width or be arranged side-by-side:
+
+```json
+{
+  "type": "text",
+  "label": "Street Address",
+  "name": "street",
+  "width": "full"
+},
+{
+  "type": "text",
+  "label": "City",
+  "name": "city",
+  "width": "half"
+},
+{
+  "type": "text",
+  "label": "ZIP Code",
+  "name": "zip",
+  "width": "half"
+}
+```
+
+**Width Options:**
+- `full` - 100% width (default)
+- `half` - 50% width (2 fields per row)
+- `third` - 33.33% width (3 fields per row)
+- `quarter` - 25% width (4 fields per row)
+
+### Read-only and Disabled Fields
+
+```json
+{
+  "type": "text",
+  "label": "User ID",
+  "name": "userId",
+  "readonly": true,
+  "value": "12345"
+},
+{
+  "type": "email",
+  "label": "Email",
+  "name": "email",
+  "disabled": true
+}
+```
+
+### Custom CSS Classes
+
+```json
+{
+  "type": "text",
+  "label": "Premium Field",
+  "name": "premium",
+  "cssClass": "highlight-field"
+}
+```
 
 ---
 
@@ -196,17 +420,36 @@ All caching, error handling, and loading states work automatically!
 
 ```typescript
 interface Field {
-  type: string;                             // 'text', 'email', 'select', 'checkbox'
+  type: string;                             // Field type (see Supported Field Types)
   label: string;                            // Display label
   name: string;                             // Unique field identifier
-  options?: string[] | FieldOption[];       // Static options (string array or objects)
+  options?: string[] | FieldOption[];       // Static options (for select/radio)
   dependsOn?: string;                       // Parent field name for dependent fields
   optionsMap?: Record<string, FieldOption[]>; // Static dependent options mapping
   optionsEndpoint?: string;                 // API endpoint for dynamic options
+  dependencyType?: 'same' | 'opposite';     // For checkbox dependencies
+  visibleWhen?: VisibilityCondition;        // Conditional visibility
+  placeholder?: string;                     // Custom placeholder text
+  rows?: number;                            // Number of rows (textarea)
+  min?: number;                             // Minimum value (number/date)
+  max?: number;                             // Maximum value (number/date)
+  step?: number;                            // Step increment (number)
+  layout?: 'horizontal' | 'vertical';       // Layout for radio buttons
+  readonly?: boolean;                       // Field is read-only
+  disabled?: boolean;                       // Field is disabled
+  cssClass?: string;                        // Custom CSS class
+  width?: 'full' | 'half' | 'third' | 'quarter'; // Field width
   validations?: {                           // Validation rules
-    required?: boolean;
-    minLength?: number;
-    requiredTrue?: boolean;  // For checkboxes
+    required?: boolean;                     // Field is required
+    minLength?: number;                     // Minimum string length
+    maxLength?: number;                     // Maximum string length
+    requiredTrue?: boolean;                 // Checkbox must be checked
+    matchesField?: string;                  // Must match another field
+    requiredIf?: {...};                     // Conditionally required
+    greaterThanField?: string;              // Must be > another field
+    lessThanField?: string;                 // Must be < another field
+    pattern?: string | RegExp;              // Custom regex pattern
+    customMessage?: string;                 // Custom error message
   };
 }
 
@@ -226,18 +469,140 @@ When multiple option sources are defined, the system uses this priority:
 
 ### Supported Field Types
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `text` | Text input | Name, address |
-| `email` | Email input with validation | user@example.com |
-| `select` | Dropdown (single select) | Country, state, category |
-| `checkbox` | Boolean checkbox | Accept terms |
+| Type | Description | Attributes | Example Use Cases |
+|------|-------------|------------|-------------------|
+| `text` | Single-line text input | `placeholder`, `minLength`, `maxLength` | Name, address, username |
+| `email` | Email input with validation | `placeholder` | Email address |
+| `password` | Password input (masked) | `placeholder`, `minLength`, `matchesField` | Password, confirm password |
+| `textarea` | Multi-line text input | `rows`, `placeholder`, `maxLength` | Bio, comments, description |
+| `number` | Numeric input with spinners | `min`, `max`, `step`, `placeholder` | Age, quantity, price |
+| `date` | Date picker | `min`, `max`, `greaterThanField`, `lessThanField` | Birth date, start date, deadline |
+| `select` | Dropdown (single select) | `options`, `optionsMap`, `optionsEndpoint` | Country, state, category |
+| `radio` | Radio buttons (mutually exclusive) | `options`, `layout` | Gender, account type, size |
+| `checkbox` | Boolean checkbox | `dependencyType` | Accept terms, preferences |
 
 ---
 
 ## Examples
 
-### Example 1: Simple Form with Static Options
+### Example 1: All Field Types Showcase
+
+```json
+{
+  "title": "Comprehensive Form",
+  "fields": [
+    {
+      "type": "text",
+      "label": "Full Name",
+      "name": "fullName",
+      "placeholder": "Enter your full name",
+      "validations": { "required": true, "minLength": 3 }
+    },
+    {
+      "type": "email",
+      "label": "Email",
+      "name": "email",
+      "placeholder": "your.email@example.com",
+      "validations": { "required": true }
+    },
+    {
+      "type": "number",
+      "label": "Age",
+      "name": "age",
+      "min": 13,
+      "max": 120,
+      "step": 1,
+      "validations": { "required": true }
+    },
+    {
+      "type": "date",
+      "label": "Birth Date",
+      "name": "birthDate",
+      "min": "1900-01-01",
+      "max": "2010-12-31",
+      "validations": { "required": true }
+    },
+    {
+      "type": "radio",
+      "label": "Gender",
+      "name": "gender",
+      "layout": "horizontal",
+      "options": [
+        { "value": "male", "label": "Male" },
+        { "value": "female", "label": "Female" },
+        { "value": "other", "label": "Other" }
+      ],
+      "validations": { "required": true }
+    },
+    {
+      "type": "textarea",
+      "label": "Bio",
+      "name": "bio",
+      "rows": 4,
+      "placeholder": "Tell us about yourself...",
+      "validations": { "maxLength": 500 }
+    },
+    {
+      "type": "checkbox",
+      "label": "Accept Terms",
+      "name": "terms",
+      "validations": { "requiredTrue": true }
+    }
+  ]
+}
+```
+
+### Example 2: Conditional Visibility
+
+```json
+{
+  "title": "User Registration",
+  "fields": [
+    {
+      "type": "radio",
+      "label": "Account Type",
+      "name": "accountType",
+      "options": [
+        { "value": "personal", "label": "Personal" },
+        { "value": "business", "label": "Business" }
+      ],
+      "validations": { "required": true }
+    },
+    {
+      "type": "text",
+      "label": "Company Name",
+      "name": "companyName",
+      "visibleWhen": {
+        "field": "accountType",
+        "operator": "equals",
+        "value": "business"
+      },
+      "validations": { "required": true }
+    },
+    {
+      "type": "number",
+      "label": "Age",
+      "name": "age",
+      "min": 13,
+      "max": 120,
+      "validations": { "required": true }
+    },
+    {
+      "type": "checkbox",
+      "label": "I am over 18 years old",
+      "name": "ageConfirmation",
+      "visibleWhen": {
+        "field": "age",
+        "operator": "greaterThanOrEqual",
+        "value": 18
+      },
+      "validations": { "requiredTrue": true }
+    }
+  ]
+}
+```
+
+### Example 3: Simple Form with Static Options
 
 ```json
 {
@@ -417,6 +782,291 @@ DynamicFormsService
 
 ---
 
+## Additional Field Types
+
+### Range Slider
+
+Numeric input with visual slider control for selecting values within a range.
+
+```json
+{
+  "type": "range",
+  "label": "Volume",
+  "name": "volume",
+  "min": 0,
+  "max": 100,
+  "step": 5,
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Min/max bounds
+- Step increments
+- Real-time value display
+- Visual feedback
+- Touch-friendly slider
+
+**Use Cases:**
+- Volume/brightness controls
+- Price ranges
+- Rating systems
+- Quantity selectors
+
+---
+
+### Color Picker
+
+Native HTML5 color input for selecting colors with hex code display.
+
+```json
+{
+  "type": "color",
+  "label": "Brand Color",
+  "name": "brandColor",
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Native color picker UI
+- Hex color code display
+- Visual color preview
+- Cross-browser support
+- Default value (#000000)
+
+**Use Cases:**
+- Theme customization
+- Design tools
+- Branding settings
+- UI preferences
+
+---
+
+### Multi-Select
+
+Dropdown that allows selecting multiple options simultaneously.
+
+```json
+{
+  "type": "multiselect",
+  "label": "Skills",
+  "name": "skills",
+  "options": [
+    { "value": "js", "label": "JavaScript" },
+    { "value": "ts", "label": "TypeScript" },
+    { "value": "py", "label": "Python" }
+  ],
+  "minSelections": 1,
+  "maxSelections": 5,
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Multiple selection support
+- Min/max selections validation
+- Visual selection feedback
+- Keyboard navigation (Ctrl/Cmd + Click)
+- Dynamic option sizing
+
+**Use Cases:**
+- Skill selection
+- Category tagging
+- Feature preferences
+- Multiple choice questions
+
+---
+
+### DateTime Picker
+
+Native HTML5 datetime input for selecting date and time together.
+
+```json
+{
+  "type": "datetime",
+  "label": "Appointment Time",
+  "name": "appointmentTime",
+  "min": "2025-01-01T00:00",
+  "max": "2025-12-31T23:59",
+  "timezone": "America/New_York",
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Combined date and time selection
+- Native datetime picker
+- Min/max constraints
+- Timezone support
+- Cross-browser compatibility
+
+**Use Cases:**
+- Appointment scheduling
+- Event registration
+- Deadline setting
+- Timestamp collection
+
+---
+
+### File Upload
+
+File input with validation, size restrictions, and image preview.
+
+```json
+{
+  "type": "file",
+  "label": "Profile Picture",
+  "name": "profilePicture",
+  "accept": "image/*",
+  "maxFileSize": 5242880,
+  "multiple": false,
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- File type restrictions (MIME types)
+- File size validation
+- Image preview for supported formats
+- Multiple file upload support
+- File information display (name, size)
+- Base64 encoding for submission
+
+**Attributes:**
+- `accept`: File types (e.g., "image/*", ".pdf,.doc")
+- `maxFileSize`: Maximum file size in bytes
+- `multiple`: Allow multiple files
+
+**Use Cases:**
+- Profile pictures
+- Document uploads
+- Resume submission
+- Image galleries
+
+---
+
+### Rich Text Editor
+
+Basic WYSIWYG editor with formatting toolbar.
+
+```json
+{
+  "type": "richtext",
+  "label": "Description",
+  "name": "description",
+  "maxCharacters": 1000,
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Basic formatting toolbar (Bold, Italic, Underline)
+- Bullet and numbered lists
+- Character count with limit
+- HTML output
+- ContentEditable-based
+- Clean, modern UI
+
+**Toolbar Commands:**
+- **B** - Bold text
+- **I** - Italic text
+- **U** - Underline text
+- **•** - Bullet list
+- **1.** - Numbered list
+
+**Use Cases:**
+- Blog post content
+- Product descriptions
+- Comments and feedback
+- Email composition
+
+**Note:** For advanced WYSIWYG features, consider integrating a third-party library like TinyMCE or Quill.
+
+---
+
+## Form Builder 🎨
+
+Visual tool for creating and configuring dynamic forms without writing JSON manually.
+
+### Features
+
+**Visual Form Creation:**
+- Drag-and-drop field ordering
+- Click-to-add field types
+- Real-time form preview
+- Field property editor
+
+**Field Management:**
+- 10 field types available
+- Configure all field properties
+- Set validations visually
+- Add/remove options for select fields
+
+**JSON Configuration:**
+- Live JSON preview
+- Copy JSON to clipboard
+- Export configuration as JSON file
+- Import existing configurations
+
+**Developer-Friendly:**
+- Clean, intuitive UI
+- Responsive design
+- Full keyboard navigation
+- Undo/redo support (coming soon)
+
+### Using the Form Builder
+
+1. **Add Fields:** Click on any field type in the left panel to add it to your form
+2. **Configure Properties:** Select a field to edit its properties in the right panel
+3. **Reorder Fields:** Drag and drop fields in the preview panel to reorder
+4. **Preview JSON:** View the generated JSON configuration in real-time
+5. **Export:** Click "Export" to download your form configuration
+6. **Import:** Click "Import" to load an existing configuration
+
+### Accessing the Form Builder
+
+Add the form builder component to your Angular app:
+
+```typescript
+import { FormBuilderComponent } from './form-builder/form-builder.component';
+
+// In your component or routes
+{
+  path: 'builder',
+  component: FormBuilderComponent
+}
+```
+
+### Example Workflow
+
+1. Open the Form Builder
+2. Add "Text Input" for name
+3. Add "Email" for email address
+4. Add "Multi-Select" for skills
+5. Configure validations (required, min length, etc.)
+6. Export JSON configuration
+7. Use the JSON with `DqDynamicForm` component
+
+---
+
+## Updated Field Types Summary
+
+| Type | Description | Key Features |
+|------|-------------|--------------|
+| `text` | Single-line text | minLength, maxLength, placeholder |
+| `email` | Email with validation | Auto email validation |
+| `select` | Single dropdown | Static/dynamic options, dependencies |
+| `multiselect` | Multiple selection | Min/max selections, Ctrl+Click |
+| `checkbox` | Boolean toggle | requiredTrue, dependencies |
+| `range` | Slider control | Min/max/step values |
+| `color` | Color picker | Hex output, visual preview |
+| `datetime` | Date & time | Min/max, timezone support |
+| `file` | File upload | Size/type validation, preview |
+| `richtext` | WYSIWYG editor | Formatting toolbar, char limit |
+
+---
+
 ## Development server
 
 To start a local development server, run:
@@ -472,3 +1122,1380 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+---
+
+## Autosave and Draft Persistence (Phase 3)
+
+Automatically save form progress to browser storage and restore it when the user returns. Perfect for long forms to prevent data loss.
+
+### Configuration
+
+Add the `autosave` object to your form schema:
+
+```json
+{
+  "title": "User Registration",
+  "autosave": {
+    "enabled": true,
+    "intervalSeconds": 30,
+    "storage": "localStorage",
+    "expirationDays": 7,
+    "showIndicator": true
+  },
+  "fields": [...]
+}
+```
+
+### Autosave Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | boolean | false | Enable/disable autosave |
+| `intervalSeconds` | number | 30 | Periodic save interval in seconds |
+| `storage` | string | "localStorage" | Storage type: "localStorage" or "sessionStorage" |
+| `expirationDays` | number | 7 | Days until draft expires |
+| `showIndicator` | boolean | true | Show "last saved" indicator |
+| `key` | string | formDraft_{title} | Custom storage key |
+
+### How It Works
+
+1. **Auto-save on change**: Draft is saved 1 second after the last field change (debounced)
+2. **Periodic save**: Additional saves occur at specified intervals
+3. **Auto-restore**: Draft is automatically loaded when form initializes
+4. **Expiration**: Old drafts are automatically cleaned up
+5. **Clear on submit**: Draft is removed after successful submission
+
+The autosave indicator shows:
+- "Saved just now" (< 1 minute)
+- "Saved X minutes ago" (< 1 hour)
+- "Saved X hours ago" (< 1 day)
+- "Saved on [date]" (> 1 day)
+
+---
+
+## Dynamic Field Arrays (Repeaters) (Phase 3)
+
+Allow users to add/remove repeating groups of fields dynamically. Perfect for collecting multiple phone numbers, addresses, or emergency contacts.
+
+### Basic Example
+
+```json
+{
+  "type": "array",
+  "label": "Phone Number",
+  "name": "phoneNumbers",
+  "arrayConfig": {
+    "fields": [
+      {
+        "type": "select",
+        "label": "Type",
+        "name": "type",
+        "width": "third",
+        "options": [
+          { "value": "mobile", "label": "Mobile" },
+          { "value": "home", "label": "Home" },
+          { "value": "work", "label": "Work" }
+        ],
+        "validations": { "required": true }
+      },
+      {
+        "type": "text",
+        "label": "Number",
+        "name": "number",
+        "width": "half",
+        "placeholder": "+1 (555) 123-4567",
+        "validations": { "required": true }
+      }
+    ],
+    "minItems": 1,
+    "maxItems": 5,
+    "initialItems": 1,
+    "addButtonText": "+ Add Phone Number",
+    "removeButtonText": "Remove",
+    "itemLabel": "Phone {index}"
+  }
+}
+```
+
+### Array Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `fields` | Field[] | required | Template fields for each array item |
+| `minItems` | number | 0 | Minimum number of items (cannot remove below this) |
+| `maxItems` | number | unlimited | Maximum number of items (cannot add above this) |
+| `initialItems` | number | 1 | Number of items to show initially |
+| `addButtonText` | string | "+ Add {label}" | Custom text for add button |
+| `removeButtonText` | string | "Remove" | Custom text for remove button |
+| `itemLabel` | string | "{label} {index}" | Label template for each item |
+
+### Field Naming
+
+Array field values are stored with keys like `phoneNumbers[0].type` and `phoneNumbers[0].number`. The component automatically manages these keys when adding/removing items.
+
+### Features
+
+- **Add/Remove Controls**: Buttons to add new items or remove existing ones
+- **Min/Max Validation**: Enforce minimum and maximum number of items
+- **Nested Field Support**: Array items can contain any field types
+- **Field Widths**: Control layout with width utilities
+- **Auto-reindexing**: Array indices automatically update when items are removed
+
+---
+
+## Async Validators (Phase 3)
+
+Validate fields asynchronously via API calls. Perfect for checking username availability, email verification, or any server-side validation.
+
+### Basic Example
+
+```json
+{
+  "type": "text",
+  "label": "Username",
+  "name": "username",
+  "placeholder": "Choose a unique username",
+  "validations": {
+    "required": true,
+    "minLength": 3,
+    "asyncValidator": {
+      "endpoint": "/api/validate/username",
+      "method": "POST",
+      "debounceMs": 500,
+      "errorMessage": "Username is already taken",
+      "validWhen": "custom"
+    }
+  }
+}
+```
+
+### Async Validator Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `endpoint` | string | required | API endpoint for validation |
+| `method` | string | "POST" | HTTP method: "GET" or "POST" |
+| `debounceMs` | number | 300 | Debounce delay in milliseconds |
+| `errorMessage` | string | "Invalid value" | Error message to show on validation failure |
+| `validWhen` | string | "custom" | Validation condition: "exists", "notExists", or "custom" |
+
+### Validation Conditions
+
+**custom** (default): API returns `{ valid: boolean, message?: string }`
+```json
+{
+  "valid": true
+}
+// or
+{
+  "valid": false,
+  "message": "Username is already taken"
+}
+```
+
+**exists**: Field is valid if API returns `{ exists: true }`
+```json
+{
+  "exists": true  // Valid
+}
+```
+
+**notExists**: Field is valid if API returns `{ exists: false }`
+```json
+{
+  "exists": false  // Valid
+}
+```
+
+### UI States
+
+The async validator displays real-time feedback:
+- **⏳ Validating...** - While API call is in progress
+- **✓ Valid** - When validation passes
+- **Error message** - When validation fails
+
+### Features
+
+- **Debouncing**: Prevents excessive API calls as user types
+- **Loading State**: Shows validation in progress
+- **Form Blocking**: Form cannot be submitted while validation is pending
+- **Error Handling**: Gracefully handles API failures
+- **Visual Feedback**: Clear indicators for all validation states
+
+---
+
+## Accessibility Features (Phase 3)
+
+Comprehensive accessibility enhancements ensure the forms are usable by everyone, including users with disabilities.
+
+### ARIA Attributes
+
+All form elements include proper ARIA attributes:
+
+```html
+<!-- Form -->
+<form role="form" aria-label="User Registration">
+  
+  <!-- Field Group -->
+  <div role="group" aria-labelledby="label-firstName">
+    
+    <!-- Label -->
+    <label id="label-firstName" for="firstName">
+      First Name
+      <span class="required" aria-label="required">*</span>
+    </label>
+    
+    <!-- Input -->
+    <input
+      id="firstName"
+      name="firstName"
+      type="text"
+      aria-required="true"
+      aria-invalid="false"
+      aria-describedby="error-firstName"
+    />
+    
+    <!-- Error -->
+    <div id="error-firstName" role="alert" aria-live="assertive">
+      First Name is required
+    </div>
+  </div>
+</form>
+```
+
+### Keyboard Navigation
+
+- **Tab Navigation**: All interactive elements are keyboard accessible
+- **Focus Indicators**: Enhanced focus outlines (3px solid, high contrast)
+- **Error Focus**: Automatically focuses first field with error on submit attempt
+- **Smooth Scrolling**: Scrolls to focused field for better visibility
+
+### Screen Reader Support
+
+- **Form Labels**: Proper association between labels and inputs
+- **Required Fields**: Announced via `aria-required` and visual indicators
+- **Error Messages**: Live announcements via `aria-live="assertive"`
+- **Validation States**: Async validation states announced in real-time
+- **Descriptive Text**: Helper text properly associated with `aria-describedby`
+
+### Focus Management
+
+```typescript
+// Automatically implemented in component
+private focusFirstError(): void {
+  const errors = this.errors();
+  const firstErrorField = Object.keys(errors)[0];
+  
+  if (firstErrorField) {
+    const element = document.getElementById(firstErrorField);
+    if (element) {
+      element.focus();
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+```
+
+### Features
+
+- **Semantic HTML**: Proper use of form, label, input, and button elements
+- **Role Attributes**: Clear roles for screen readers
+- **Live Regions**: Dynamic content updates announced to screen readers
+- **Focus Visible**: Enhanced focus styles only for keyboard navigation
+- **Error Announcements**: Validation errors announced immediately
+- **Loading States**: Async operations announced with `aria-live="polite"`
+
+### WCAG Compliance
+
+These features help achieve WCAG 2.1 Level AA compliance:
+- Perceivable: Clear labels, error messages, and visual indicators
+- Operable: Full keyboard navigation and sufficient focus indicators
+- Understandable: Clear instructions and error messages
+- Robust: Semantic HTML and proper ARIA attributes
+
+---
+
+## Field Masking & Formatting (Phase 4)
+
+Automatic formatting of user input with predefined or custom mask patterns. Prevents invalid input and provides visual guidance for expected formats.
+
+### Predefined Masks
+
+```json
+{
+  "type": "text",
+  "label": "Phone Number",
+  "name": "phone",
+  "mask": "phone"
+}
+```
+
+**Available Predefined Masks:**
+
+| Mask Type | Pattern | Example Output |
+|-----------|---------|----------------|
+| `phone` | `(000) 000-0000` | (555) 123-4567 |
+| `phone-intl` | `+1 (000) 000-0000` | +1 (555) 123-4567 |
+| `ssn` | `000-00-0000` | 123-45-6789 |
+| `credit-card` | `0000 0000 0000 0000` | 1234 5678 9012 3456 |
+| `zip` | `00000` | 12345 |
+| `zip-plus4` | `00000-0000` | 12345-6789 |
+| `date-us` | `00/00/0000` | 12/31/2025 |
+| `time` | `00:00` | 14:30 |
+| `currency` | `$0,000.00` | $1,234.56 |
+
+### Custom Mask Patterns
+
+Create your own mask patterns using these characters:
+
+- `0` = Digit (0-9)
+- `A` = Letter (a-zA-Z)
+- `*` = Alphanumeric (0-9, a-zA-Z)
+- `\` = Escape next character (literal)
+- Any other character = Literal (shown as-is)
+
+```json
+{
+  "type": "text",
+  "label": "License Plate",
+  "name": "licensePlate",
+  "mask": {
+    "type": "custom",
+    "pattern": "AAA-0000",
+    "placeholder": "ABC-1234",
+    "prefix": "",
+    "suffix": "",
+    "showMaskOnHover": true
+  }
+}
+```
+
+### Mask Features
+
+**Automatic Formatting:**
+- User types "5551234567" → Displays as "(555) 123-4567"
+- User types "123456789" → Displays as "123-45-6789" (SSN)
+- Input is formatted in real-time as user types
+
+**Validation:**
+- Incomplete values show error messages
+- Error: "Please enter a complete value in the format: (000) 000-0000"
+- Validation checks both too-short and too-long inputs
+
+**Max Length Enforcement:**
+- Browser prevents typing beyond mask length
+- Phone: max 14 characters for "(555) 123-4567"
+- Paste operations automatically truncated to max length
+
+**Visual Hints:**
+- Mask pattern shown next to label: `Phone Number ((000) 000-0000)`
+- Monospace font for better alignment
+- Placeholder shows expected format
+
+### Example Configuration
+
+```json
+{
+  "type": "text",
+  "label": "Social Security Number",
+  "name": "ssn",
+  "mask": "ssn",
+  "placeholder": "Enter your SSN",
+  "validations": {
+    "required": true
+  }
+}
+```
+
+---
+
+## Computed/Calculated Fields (Phase 4)
+
+Fields that automatically calculate their value based on other fields using formulas. Updates in real-time when dependencies change.
+
+### Basic Computation
+
+```json
+{
+  "type": "text",
+  "label": "Total Price",
+  "name": "total",
+  "readonly": true,
+  "computed": {
+    "formula": "price * quantity",
+    "dependencies": ["price", "quantity"],
+    "formatAs": "currency",
+    "prefix": "$",
+    "decimal": 2
+  }
+}
+```
+
+### String Concatenation
+
+```json
+{
+  "type": "text",
+  "label": "Full Name",
+  "name": "fullName",
+  "readonly": true,
+  "computed": {
+    "formula": "firstName + ' ' + lastName",
+    "dependencies": ["firstName", "lastName"],
+    "formatAs": "text"
+  }
+}
+```
+
+### Computed Field Configuration
+
+```typescript
+interface ComputedFieldConfig {
+  formula: string;              // JavaScript expression
+  dependencies: string[];       // Field names to watch
+  formatAs?: 'number' | 'currency' | 'text';
+  decimal?: number;            // Decimal places (default: 2)
+  prefix?: string;             // e.g., "$", "Total: "
+  suffix?: string;             // e.g., "%", " kg"
+}
+```
+
+### Supported Formula Operations
+
+**Arithmetic:**
+```javascript
+"price * quantity"           // Multiplication
+"subtotal + tax"             // Addition
+"total - discount"           // Subtraction
+"amount / count"             // Division
+"(price * quantity) * 1.08"  // Complex expressions
+```
+
+**String Operations:**
+```javascript
+"firstName + ' ' + lastName"              // Concatenation
+"'Dr. ' + lastName"                       // Prefix
+"city + ', ' + state + ' ' + zipCode"    // Multiple fields
+```
+
+**Mathematical Functions:**
+```javascript
+"Math.round(price * quantity)"           // Rounding
+"Math.max(price1, price2, price3)"       // Maximum
+"Math.min(discount1, discount2)"          // Minimum
+```
+
+### Format Options
+
+**Currency:**
+```json
+{
+  "formatAs": "currency",
+  "prefix": "$",
+  "decimal": 2
+}
+// Output: $1,234.56
+```
+
+**Number:**
+```json
+{
+  "formatAs": "number",
+  "decimal": 3,
+  "suffix": " kg"
+}
+// Output: 123.456 kg
+```
+
+**Text:**
+```json
+{
+  "formatAs": "text",
+  "prefix": "Welcome, "
+}
+// Output: Welcome, John Doe
+```
+
+### Real-Time Updates
+
+Computed fields automatically recalculate when any dependency changes:
+
+1. User enters `price = 10` → Total shows: `$0.00`
+2. User enters `quantity = 5` → Total shows: `$50.00`
+3. User changes `price = 15` → Total shows: `$75.00`
+
+### Advanced Examples
+
+**Tax Calculation:**
+```json
+{
+  "type": "text",
+  "label": "Tax Amount (8%)",
+  "name": "taxAmount",
+  "readonly": true,
+  "computed": {
+    "formula": "subtotal * 0.08",
+    "dependencies": ["subtotal"],
+    "formatAs": "currency",
+    "prefix": "$",
+    "decimal": 2
+  }
+}
+```
+
+**Grand Total:**
+```json
+{
+  "type": "text",
+  "label": "Grand Total",
+  "name": "grandTotal",
+  "readonly": true,
+  "computed": {
+    "formula": "subtotal + (subtotal * 0.08)",
+    "dependencies": ["subtotal"],
+    "formatAs": "currency",
+    "prefix": "$",
+    "decimal": 2
+  }
+}
+```
+
+**Percentage:**
+```json
+{
+  "type": "text",
+  "label": "Completion Rate",
+  "name": "completionRate",
+  "readonly": true,
+  "computed": {
+    "formula": "(completed / total) * 100",
+    "dependencies": ["completed", "total"],
+    "formatAs": "number",
+    "decimal": 1,
+    "suffix": "%"
+  }
+}
+```
+
+### Important Notes
+
+- **Read-only**: Computed fields are automatically read-only
+- **Null/Empty Handling**: Empty dependencies default to 0 in numeric formulas
+- **String Values**: Strings are automatically quoted in formulas
+- **Dependency Order**: Dependencies sorted by length to avoid partial replacements
+- **Error Handling**: Formula errors show empty value with console warning
+
+---
+
+## Additional Field Types
+
+The form system now supports 6 additional field types for enhanced functionality:
+
+### Range Slider
+
+Numeric input with visual slider control for selecting values within a range.
+
+```json
+{
+  "type": "range",
+  "label": "Volume",
+  "name": "volume",
+  "min": 0,
+  "max": 100,
+  "step": 5,
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Min/max bounds
+- Step increments
+- Real-time value display
+- Visual feedback
+- Touch-friendly slider
+
+**Use Cases:** Volume/brightness controls, price ranges, rating systems, quantity selectors
+
+---
+
+### Color Picker
+
+Native HTML5 color input for selecting colors with hex code display.
+
+```json
+{
+  "type": "color",
+  "label": "Brand Color",
+  "name": "brandColor",
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Native color picker UI
+- Hex color code display
+- Visual color preview
+- Cross-browser support
+- Default value (#000000)
+
+**Use Cases:** Theme customization, design tools, branding settings, UI preferences
+
+---
+
+### Multi-Select
+
+Dropdown that allows selecting multiple options simultaneously.
+
+```json
+{
+  "type": "multiselect",
+  "label": "Skills",
+  "name": "skills",
+  "options": [
+    { "value": "js", "label": "JavaScript" },
+    { "value": "ts", "label": "TypeScript" },
+    { "value": "py", "label": "Python" }
+  ],
+  "minSelections": 1,
+  "maxSelections": 5,
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Multiple selection support
+- Min/max selections validation
+- Visual selection feedback
+- Keyboard navigation (Ctrl/Cmd + Click)
+- Dynamic option sizing
+
+**Use Cases:** Skill selection, category tagging, feature preferences, multiple choice questions
+
+---
+
+### DateTime Picker
+
+Native HTML5 datetime input for selecting date and time together.
+
+```json
+{
+  "type": "datetime",
+  "label": "Appointment Time",
+  "name": "appointmentTime",
+  "min": "2025-01-01T00:00",
+  "max": "2025-12-31T23:59",
+  "timezone": "America/New_York",
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Combined date and time selection
+- Native datetime picker
+- Min/max constraints
+- Timezone support
+- Cross-browser compatibility
+
+**Use Cases:** Appointment scheduling, event registration, deadline setting, timestamp collection
+
+---
+
+### File Upload
+
+File input with validation, size restrictions, and image preview.
+
+```json
+{
+  "type": "file",
+  "label": "Profile Picture",
+  "name": "profilePicture",
+  "accept": "image/*",
+  "maxFileSize": 5242880,
+  "multiple": false,
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- File type restrictions (MIME types)
+- File size validation
+- Image preview for supported formats
+- Multiple file upload support
+- File information display (name, size)
+- Base64 encoding for submission
+
+**Attributes:**
+- `accept`: File types (e.g., "image/*", ".pdf,.doc")
+- `maxFileSize`: Maximum file size in bytes
+- `multiple`: Allow multiple files
+
+**Use Cases:** Profile pictures, document uploads, resume submission, image galleries
+
+---
+
+### Rich Text Editor
+
+Basic WYSIWYG editor with formatting toolbar.
+
+```json
+{
+  "type": "richtext",
+  "label": "Description",
+  "name": "description",
+  "maxCharacters": 1000,
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Basic formatting toolbar (Bold, Italic, Underline)
+- Bullet and numbered lists
+- Character count with limit
+- HTML output
+- ContentEditable-based
+- Clean, modern UI
+
+**Toolbar Commands:**
+- **B** - Bold text
+- **I** - Italic text
+- **U** - Underline text
+- **•** - Bullet list
+- **1.** - Numbered list
+
+**Use Cases:** Blog post content, product descriptions, comments and feedback, email composition
+
+**Note:** For advanced WYSIWYG features, consider integrating a third-party library like TinyMCE or Quill.
+
+---
+
+## Form Builder 🎨
+
+Visual tool for creating and configuring dynamic forms without writing JSON manually.
+
+### Features
+
+**Visual Form Creation:**
+- Drag-and-drop field ordering
+- Click-to-add field types
+- Real-time form preview
+- Field property editor
+
+**Field Management:**
+- 16 field types available (all basic + 6 new)
+- Configure all field properties
+- Set validations visually
+- Add/remove options for select fields
+
+**JSON Configuration:**
+- Live JSON preview
+- Copy JSON to clipboard
+- Export configuration as JSON file
+- Import existing configurations
+
+**Developer-Friendly:**
+- Clean, intuitive UI
+- Responsive design
+- Full keyboard navigation
+
+### Using the Form Builder
+
+1. **Add Fields:** Click on any field type in the left panel to add it to your form
+2. **Configure Properties:** Select a field to edit its properties in the right panel
+3. **Reorder Fields:** Drag and drop fields in the preview panel to reorder
+4. **Preview JSON:** View the generated JSON configuration in real-time
+5. **Export:** Click "Export" to download your form configuration
+6. **Import:** Click "Import" to load an existing configuration
+
+### Accessing the Form Builder
+
+Add the form builder component to your Angular app:
+
+```typescript
+import { FormBuilderComponent } from './form-builder/form-builder.component';
+
+// In your component or routes
+{
+  path: 'builder',
+  component: FormBuilderComponent
+}
+```
+
+### Example Workflow
+
+1. Open the Form Builder
+2. Add "Text Input" for name
+3. Add "Email" for email address
+4. Add "Multi-Select" for skills
+5. Configure validations (required, min length, etc.)
+6. Export JSON configuration
+7. Use the JSON with `DqDynamicForm` component
+
+---
+
+## Complete Field Types Summary
+
+| Type | Description | Key Features |
+|------|-------------|--------------|
+| `text` | Single-line text | minLength, maxLength, placeholder, mask |
+| `email` | Email with validation | Auto email validation |
+| `password` | Password input | Masked, matchesField validation |
+| `textarea` | Multi-line text | rows, maxLength |
+| `number` | Numeric input | min/max/step values |
+| `date` | Date picker | min/max constraints |
+| `radio` | Radio buttons | horizontal/vertical layout |
+| `select` | Single dropdown | Static/dynamic options, dependencies |
+| `checkbox` | Boolean toggle | requiredTrue, dependencies |
+| `array` | Dynamic field array | Repeatable field groups |
+| `range` | Slider control | Min/max/step values, visual feedback |
+| `color` | Color picker | Hex output, visual preview |
+| `multiselect` | Multiple selection | Min/max selections, Ctrl+Click |
+| `datetime` | Date & time | Min/max, timezone support |
+| `file` | File upload | Size/type validation, preview |
+| `richtext` | WYSIWYG editor | Formatting toolbar, char limit |
+
+---
+
+## Form Submission Enhancements (Phase 5)
+
+Real API submission with automatic retry logic, loading states, and comprehensive error handling.
+
+### Basic Submission Configuration
+
+```json
+{
+  "title": "User Registration",
+  "submission": {
+    "endpoint": "/api/forms/submit",
+    "method": "POST",
+    "successMessage": "Form submitted successfully!",
+    "errorMessage": "Submission failed. Please try again."
+  },
+  "fields": [...]
+}
+```
+
+### Advanced Submission Configuration
+
+```json
+{
+  "submission": {
+    "endpoint": "/api/users",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer {{token}}",
+      "Content-Type": "application/json"
+    },
+    "successMessage": "Registration complete!",
+    "errorMessage": "Registration failed. Please check your information.",
+    "redirectOnSuccess": "/dashboard",
+    "showDataOnSuccess": true
+  }
+}
+```
+
+### Submission Configuration Options
+
+```typescript
+interface FormSubmission {
+  endpoint?: string;              // API endpoint (if not provided, data shown locally)
+  method?: 'POST' | 'PUT' | 'PATCH';  // HTTP method (default: POST)
+  headers?: Record<string, string>;   // Custom headers
+  successMessage?: string;        // Success message to display
+  errorMessage?: string;          // Default error message
+  redirectOnSuccess?: string;     // URL to redirect after success (2s delay)
+  showDataOnSuccess?: boolean;    // Show submitted data (default: true)
+}
+```
+
+### Submission Features
+
+**Automatic Retry Logic:**
+- Up to 3 automatic retry attempts for network/server errors
+- Exponential backoff delays: 1s, 2s, 4s
+- Retries for status 0 (network errors) or 5xx (server errors)
+- No retry for 4xx client errors (invalid data)
+
+**Loading States:**
+- Animated spinner in submit button
+- Button disabled during submission
+- "Submitting..." text with retry count
+- ARIA attributes for accessibility (`aria-busy`)
+
+**Error Handling:**
+- Global error messages with shake animation
+- Field-level error mapping from API responses
+- Retry button for manual retry after max attempts
+- Error format from API: `{ errors: { fieldName: "error message" } }`
+
+**Success Handling:**
+- Animated success icon (green checkmark)
+- Configurable success message
+- Optional redirect with delay
+- Automatic draft clearing
+
+### Submission Flow
+
+1. User clicks **Submit**
+2. Form validates (shows errors if invalid)
+3. Shows loading spinner, disables button
+4. POST/PUT/PATCH to configured endpoint
+5. **On Success:**
+   - Show success message with animated icon
+   - Clear autosave draft
+   - Redirect if configured (2s delay)
+6. **On Error:**
+   - Show error message with shake animation
+   - Retry automatically if network/server error
+   - Show manual retry button after max attempts
+   - Display field-level errors inline
+
+### API Error Response Format
+
+**Field-level errors:**
+```json
+{
+  "errors": {
+    "email": "Email is already taken",
+    "username": "Username must be unique"
+  }
+}
+```
+
+**Global error:**
+```json
+{
+  "error": "Server error occurred",
+  "message": "Unable to process request"
+}
+```
+
+### Example Usage
+
+**Without submission config (local display only):**
+```json
+{
+  "title": "Contact Form",
+  "fields": [...]
+}
+```
+Data is displayed locally after validation.
+
+**With API submission:**
+```json
+{
+  "title": "Contact Form",
+  "submission": {
+    "endpoint": "https://api.example.com/contact",
+    "method": "POST"
+  },
+  "fields": [...]
+}
+```
+Data is submitted to API with automatic retry.
+
+**With authentication:**
+```json
+{
+  "submission": {
+    "endpoint": "/api/secure/endpoint",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer YOUR_TOKEN_HERE"
+    }
+  }
+}
+```
+
+---
+
+## Advanced Dependency Features (Phase 5)
+
+Enhanced field dependency capabilities supporting multiple parent dependencies and template variable replacement.
+
+### Multiple Parent Dependencies
+
+Fields can now depend on multiple parent fields. All parent fields must have values before the dependent field becomes enabled.
+
+```json
+{
+  "type": "select",
+  "label": "City",
+  "name": "city",
+  "dependsOn": ["country", "state"],
+  "optionsEndpoint": "/api/cities?country={{country}}&state={{state}}",
+  "validations": { "required": true }
+}
+```
+
+### Single Parent Dependency (Backward Compatible)
+
+```json
+{
+  "type": "select",
+  "label": "State",
+  "name": "state",
+  "dependsOn": "country",
+  "optionsEndpoint": "/api/states?country={{country}}",
+  "validations": { "required": true }
+}
+```
+
+### Template Variable Replacement
+
+Use `{{fieldName}}` syntax in endpoint URLs to automatically replace with actual field values:
+
+```json
+{
+  "optionsEndpoint": "/api/data?param1={{field1}}&param2={{field2}}"
+}
+```
+
+When `field1="value1"` and `field2="value2"`, the endpoint becomes:
+```
+/api/data?param1=value1&param2=value2
+```
+
+### Dependency Features
+
+**Automatic Parameter Building:**
+- All dependency values automatically passed as parameters
+- Works with both query parameters and URL templates
+- Supports multiple dependencies with complex URLs
+
+**Smart Enabling/Disabling:**
+- Dependent fields disabled until ALL dependencies have values
+- Clear visual feedback with helper text
+- Automatic value clearing when dependencies change
+
+**API Integration:**
+- Template variables replaced before API call
+- Dependency parameters passed to backend
+- Intelligent caching to reduce server load
+
+### Example: Three-Level Dependency Chain
+
+```json
+{
+  "fields": [
+    {
+      "type": "select",
+      "label": "Country",
+      "name": "country",
+      "optionsEndpoint": "/api/countries"
+    },
+    {
+      "type": "select",
+      "label": "State/Province",
+      "name": "state",
+      "dependsOn": "country",
+      "optionsEndpoint": "/api/states?country={{country}}"
+    },
+    {
+      "type": "select",
+      "label": "City",
+      "name": "city",
+      "dependsOn": ["country", "state"],
+      "optionsEndpoint": "/api/cities?country={{country}}&state={{state}}"
+    }
+  ]
+}
+```
+
+**User Experience:**
+1. User selects **Country**: "USA"
+   - State field becomes enabled
+   - API call: `GET /api/states?country=USA`
+2. User selects **State**: "California"
+   - City field becomes enabled
+   - API call: `GET /api/cities?country=USA&state=California`
+3. City options populate based on both parents
+
+### Complex Dependency Example
+
+```json
+{
+  "type": "select",
+  "label": "Available Products",
+  "name": "product",
+  "dependsOn": ["category", "subcategory", "priceRange"],
+  "optionsEndpoint": "/api/products?category={{category}}&subcategory={{subcategory}}&price={{priceRange}}"
+}
+```
+
+All three parent fields (category, subcategory, priceRange) must have values before the product field becomes available.
+
+### Static Dependencies (optionsMap)
+
+For single-parent static dependencies, use `optionsMap`:
+
+```json
+{
+  "type": "select",
+  "label": "State",
+  "name": "state",
+  "dependsOn": "country",
+  "optionsMap": {
+    "USA": [
+      { "value": "CA", "label": "California" },
+      { "value": "NY", "label": "New York" }
+    ],
+    "Canada": [
+      { "value": "ON", "label": "Ontario" },
+      { "value": "BC", "label": "British Columbia" }
+    ]
+  }
+}
+```
+
+**Note:** `optionsMap` only supports single-parent dependencies. For multiple dependencies, use `optionsEndpoint` with template variables.
+
+### Dependency Types
+
+**1. API-Driven Dependencies (Multiple Parents Supported):**
+```json
+{
+  "dependsOn": ["field1", "field2"],
+  "optionsEndpoint": "/api/endpoint?f1={{field1}}&f2={{field2}}"
+}
+```
+
+**2. Static Dependencies (Single Parent Only):**
+```json
+{
+  "dependsOn": "parentField",
+  "optionsMap": { "value1": [...], "value2": [...] }
+}
+```
+
+**3. Checkbox Dependencies (Single Parent Only):**
+```json
+{
+  "type": "checkbox",
+  "dependsOn": "otherCheckbox",
+  "dependencyType": "same"  // or "opposite"
+}
+```
+
+### Important Notes
+
+- **Backward Compatibility**: All existing single-dependency configurations continue to work
+- **Validation**: Dependent fields with `required: true` only validate when enabled
+- **Performance**: Intelligent caching reduces redundant API calls
+- **Error Handling**: API errors show user-friendly messages
+- **Accessibility**: Proper ARIA attributes and screen reader support
+
+---
+
+## Developer Tools (Phase 6)
+
+Comprehensive developer utilities for schema validation, debugging, and TypeScript generation.
+
+### Schema Validation
+
+The `DevToolsService` provides validation to catch configuration errors early:
+
+```typescript
+import { inject } from '@angular/core';
+import { DevToolsService } from './dq-dynamic-form/dev-tools.service';
+
+const devTools = inject(DevToolsService);
+const schema = { /* your form schema */ };
+
+const result = devTools.validateSchema(schema);
+
+if (!result.isValid) {
+  console.error('Schema Errors:', result.errors);
+  console.warn('Schema Warnings:', result.warnings);
+  console.log('Summary:', result.summary);
+}
+```
+
+### Validation Features
+
+**Error Detection:**
+- Missing required properties (title, name, label, type)
+- Duplicate field names
+- Invalid field types
+- Circular dependencies
+- Non-existent dependency references
+- Invalid regex patterns
+- Min/max constraint violations
+
+**Warning Detection:**
+- Unknown field types
+- Missing options for select/radio fields
+- Misused validations (e.g., requiredTrue on non-checkbox)
+- Computed fields without readonly
+- Potential configuration issues
+
+**Validation Result:**
+```typescript
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];        // Critical issues that must be fixed
+  warnings: string[];      // Potential issues to review
+  summary: SchemaSummary;  // Statistics and overview
+}
+
+interface SchemaSummary {
+  totalFields: number;
+  requiredFields: number;
+  optionalFields: number;
+  fieldTypes: Record<string, number>;  // Count by type
+  hasAutosave: boolean;
+  hasSubmission: boolean;
+  hasI18n: boolean;
+  errorCount: number;
+  warningCount: number;
+}
+```
+
+### TypeScript Interface Generation
+
+Generate TypeScript interfaces from form schemas:
+
+```typescript
+const devTools = inject(DevToolsService);
+
+// Generate interface with default name 'FormData'
+const tsCode = devTools.generateTypeScriptInterface(schema);
+
+// Generate interface with custom name
+const tsCode = devTools.generateTypeScriptInterface(schema, 'UserRegistration');
+
+console.log(tsCode);
+```
+
+**Example Output:**
+```typescript
+export interface UserRegistration {
+  username: string;
+  email: string;
+  password: string;
+  age?: number;
+  newsletter?: boolean;
+  accountType: 'personal' | 'business' | 'student';
+}
+```
+
+**Type Mapping:**
+- `text`, `email`, `password`, `textarea` → `string`
+- `number` → `number`
+- `date` → `string` (ISO date string)
+- `checkbox` → `boolean`
+- `select`, `radio` with static options → Union type
+- `array` → `any[]`
+
+### Export/Import Utilities
+
+**Export Schema:**
+```typescript
+const jsonString = devTools.exportSchema(schema);
+// Returns formatted JSON string (2-space indentation)
+```
+
+**Import Schema:**
+```typescript
+const result = devTools.importSchema(jsonString);
+
+if (result.schema) {
+  console.log('Valid schema imported:', result.schema);
+} else {
+  console.error('Import failed:', result.error);
+}
+```
+
+The import function automatically validates the schema and returns errors if invalid.
+
+### Example Validation Errors
+
+```typescript
+const result = devTools.validateSchema(schema);
+
+// Example errors:
+// - 'Schema is missing required "title" property'
+// - 'Field[3] "email": Missing required property "label"'
+// - 'Duplicate field name "username" found 2 times'
+// - 'Field "city" depends on non-existent field "country"'
+// - 'Field "total" has circular dependency'
+// - 'Computed field "fullName" depends on non-existent field "firstName"'
+
+// Example warnings:
+// - 'Field[5] "status": Unknown field type "status-picker"'
+// - 'Field[7] "category": Select/Radio field should have "options"'
+// - 'Field[8] "terms": "minLength" cannot be greater than "maxLength"'
+// - 'Field[9] "total": Computed fields should be readonly'
+```
+
+### Development Workflow
+
+**During Development:**
+```typescript
+// Validate schema before using it
+const validation = devTools.validateSchema(schema);
+if (!validation.isValid) {
+  throw new Error(`Invalid schema: ${validation.errors.join(', ')}`);
+}
+```
+
+**Generate Types:**
+```typescript
+// Generate TypeScript interface for type safety
+const interfaceCode = devTools.generateTypeScriptInterface(schema, 'MyFormData');
+// Copy to your types file
+```
+
+**Debug Issues:**
+```typescript
+// Get summary of schema
+const result = devTools.validateSchema(schema);
+console.log(`Total fields: ${result.summary.totalFields}`);
+console.log(`Required: ${result.summary.requiredFields}`);
+console.log(`Field types:`, result.summary.fieldTypes);
+```
+
+### Best Practices
+
+1. **Validate Early**: Run schema validation during development to catch errors
+2. **Check Warnings**: Review warnings for potential configuration issues
+3. **Generate Types**: Use TypeScript interfaces for type-safe form handling
+4. **Use in Tests**: Validate schemas in unit tests
+5. **Monitor Summary**: Check schema summary for complexity metrics
+
+### Integration Example
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { DevToolsService } from './dq-dynamic-form/dev-tools.service';
+
+@Component({
+  selector: 'app-form-config',
+  template: '...'
+})
+export class FormConfigComponent implements OnInit {
+  private devTools = inject(DevToolsService);
+
+  ngOnInit() {
+    // Load schema
+    const schema = this.loadSchema();
+
+    // Validate in development mode
+    if (!environment.production) {
+      const result = this.devTools.validateSchema(schema);
+
+      if (result.errors.length > 0) {
+        console.error('❌ Schema validation errors:', result.errors);
+      }
+
+      if (result.warnings.length > 0) {
+        console.warn('⚠️ Schema validation warnings:', result.warnings);
+      }
+
+      console.log('📊 Schema summary:', result.summary);
+    }
+  }
+}
+```
+>>>>>>> 403a05837c1afdc2adcfa81f4c3d13b553e4acfc
+

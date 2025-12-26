@@ -1,0 +1,300 @@
+<div class="form-builder">
+  <!-- Header -->
+  <div class="builder-header">
+    <h1>🎨 Dynamic Form Builder</h1>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="toggleJsonPreview()">
+        {{ showJsonPreview() ? 'Hide' : 'Show' }} JSON
+      </button>
+      <button class="btn btn-secondary" (click)="copyToClipboard()">📋 Copy JSON</button>
+      <button class="btn btn-secondary" (click)="exportConfig()">💾 Export</button>
+      <label class="btn btn-secondary">
+        📂 Import
+        <input type="file" accept=".json" (change)="importConfig($event)" style="display: none;" />
+      </label>
+      <button class="btn btn-danger" (click)="clearForm()">🗑️ Clear</button>
+    </div>
+  </div>
+
+  <div class="builder-content">
+    <!-- Left Panel: Field Types -->
+    <div class="field-types-panel">
+      <h3>Field Types</h3>
+      <p class="panel-description">Click to add a field to your form</p>
+      <div class="field-types-grid">
+        @for (fieldType of availableFieldTypes; track fieldType.type) {
+        <div class="field-type-card" (click)="addField(fieldType.type)">
+          <div class="field-type-icon">{{ fieldType.icon }}</div>
+          <div class="field-type-label">{{ fieldType.label }}</div>
+          <div class="field-type-desc">{{ fieldType.description }}</div>
+        </div>
+        }
+      </div>
+    </div>
+
+    <!-- Middle Panel: Form Preview -->
+    <div class="form-preview-panel">
+      <div class="panel-header">
+        <h3>Form Preview</h3>
+        <div class="form-title-edit">
+          <input
+            type="text"
+            [value]="formTitle()"
+            (input)="formTitle.set($any($event.target).value)"
+            placeholder="Form Title"
+            class="title-input"
+          />
+        </div>
+      </div>
+
+      @if (formFields().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <h4>No fields yet</h4>
+        <p>Add fields from the left panel to start building your form</p>
+      </div>
+      } @else {
+      <div class="fields-list">
+        @for (field of formFields(); track field.name; let i = $index) {
+        <div
+          class="field-item"
+          [class.selected]="selectedFieldIndex() === i"
+          (click)="selectField(i)"
+          draggable="true"
+          (dragstart)="onDragStart(i)"
+          (dragover)="onDragOver($event)"
+          (drop)="onDrop($event, i)"
+        >
+          <div class="field-item-header">
+            <span class="drag-handle">☰</span>
+            <span class="field-type-badge">{{ field.type }}</span>
+            <span class="field-label">{{ field.label }}</span>
+            <button class="btn-icon btn-remove" (click)="removeField(i); $event.stopPropagation()" title="Remove field">
+              ×
+            </button>
+          </div>
+          <div class="field-item-meta">
+            <small>Name: {{ field.name }}</small>
+            @if (field.validations?.required) {
+            <span class="badge badge-required">Required</span>
+            }
+          </div>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+    <!-- Right Panel: Field Properties -->
+    <div class="field-properties-panel">
+      <h3>Field Properties</h3>
+
+      @if (selectedField()) {
+      <div class="properties-form">
+        <!-- Basic Properties -->
+        <div class="property-group">
+          <h4>Basic</h4>
+
+          <label>
+            <span>Label</span>
+            <input
+              type="text"
+              [value]="selectedField()!.label"
+              (input)="updateFieldProperty('label', $any($event.target).value)"
+            />
+          </label>
+
+          <label>
+            <span>Name (Field ID)</span>
+            <input
+              type="text"
+              [value]="selectedField()!.name"
+              (input)="updateFieldProperty('name', $any($event.target).value)"
+            />
+          </label>
+
+          <label>
+            <span>Placeholder</span>
+            <input
+              type="text"
+              [value]="selectedField()!.placeholder || ''"
+              (input)="updateFieldProperty('placeholder', $any($event.target).value)"
+            />
+          </label>
+        </div>
+
+        <!-- Type-Specific Properties -->
+        @if (selectedField()!.type === 'range') {
+        <div class="property-group">
+          <h4>Range Settings</h4>
+          <label>
+            <span>Minimum</span>
+            <input
+              type="number"
+              [value]="selectedField()!.min || 0"
+              (input)="updateFieldProperty('min', Number($any($event.target).value))"
+            />
+          </label>
+          <label>
+            <span>Maximum</span>
+            <input
+              type="number"
+              [value]="selectedField()!.max || 100"
+              (input)="updateFieldProperty('max', Number($any($event.target).value))"
+            />
+          </label>
+          <label>
+            <span>Step</span>
+            <input
+              type="number"
+              [value]="selectedField()!.step || 1"
+              (input)="updateFieldProperty('step', Number($any($event.target).value))"
+            />
+          </label>
+        </div>
+        }
+
+        @if (selectedField()!.type === 'file') {
+        <div class="property-group">
+          <h4>File Upload Settings</h4>
+          <label>
+            <span>Accept Types</span>
+            <input
+              type="text"
+              [value]="selectedField()!.accept || ''"
+              (input)="updateFieldProperty('accept', $any($event.target).value)"
+              placeholder="e.g., image/*,.pdf"
+            />
+          </label>
+          <label>
+            <span>Max File Size (bytes)</span>
+            <input
+              type="number"
+              [value]="selectedField()!.maxFileSize || 5242880"
+              (input)="updateFieldProperty('maxFileSize', Number($any($event.target).value))"
+            />
+          </label>
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              [checked]="selectedField()!.multiple || false"
+              (change)="updateFieldProperty('multiple', $any($event.target).checked)"
+            />
+            <span>Allow Multiple Files</span>
+          </label>
+        </div>
+        }
+
+        @if (selectedField()!.type === 'multiselect') {
+        <div class="property-group">
+          <h4>Multi-Select Settings</h4>
+          <label>
+            <span>Min Selections</span>
+            <input
+              type="number"
+              [value]="selectedField()!.minSelections || ''"
+              (input)="updateFieldProperty('minSelections', Number($any($event.target).value))"
+            />
+          </label>
+          <label>
+            <span>Max Selections</span>
+            <input
+              type="number"
+              [value]="selectedField()!.maxSelections || ''"
+              (input)="updateFieldProperty('maxSelections', Number($any($event.target).value))"
+            />
+          </label>
+        </div>
+        }
+
+        <!-- Options (for select/multiselect) -->
+        @if (selectedField()!.type === 'select' || selectedField()!.type === 'multiselect') {
+        <div class="property-group">
+          <h4>Options</h4>
+          <div class="options-list">
+            @for (option of selectedField()!.options; track option; let i = $index) {
+            <div class="option-item">
+              <input
+                type="text"
+                [value]="$any(option).value"
+                (input)="updateOption(i, 'value', $any($event.target).value)"
+                placeholder="Value"
+              />
+              <input
+                type="text"
+                [value]="$any(option).label"
+                (input)="updateOption(i, 'label', $any($event.target).value)"
+                placeholder="Label"
+              />
+              <button class="btn-icon" (click)="removeOption(i)">×</button>
+            </div>
+            }
+          </div>
+          <button class="btn btn-secondary btn-small" (click)="addOption()">+ Add Option</button>
+        </div>
+        }
+
+        <!-- Validations -->
+        <div class="property-group">
+          <h4>Validations</h4>
+
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              [checked]="selectedField()!.validations?.required || false"
+              (change)="updateFieldValidation('required', $any($event.target).checked)"
+            />
+            <span>Required</span>
+          </label>
+
+          @if (selectedField()!.type === 'text' || selectedField()!.type === 'email') {
+          <label>
+            <span>Min Length</span>
+            <input
+              type="number"
+              [value]="selectedField()!.validations?.minLength || ''"
+              (input)="updateFieldValidation('minLength', Number($any($event.target).value))"
+            />
+          </label>
+          <label>
+            <span>Max Length</span>
+            <input
+              type="number"
+              [value]="selectedField()!.validations?.maxLength || ''"
+              (input)="updateFieldValidation('maxLength', Number($any($event.target).value))"
+            />
+          </label>
+          }
+
+          @if (selectedField()!.type === 'checkbox') {
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              [checked]="selectedField()!.validations?.requiredTrue || false"
+              (change)="updateFieldValidation('requiredTrue', $any($event.target).checked)"
+            />
+            <span>Must be checked</span>
+          </label>
+          }
+        </div>
+      </div>
+      } @else {
+      <div class="empty-state">
+        <div class="empty-icon">⚙️</div>
+        <p>Select a field to edit its properties</p>
+      </div>
+      }
+    </div>
+  </div>
+
+  <!-- JSON Preview Panel -->
+  @if (showJsonPreview()) {
+  <div class="json-preview-panel">
+    <div class="panel-header">
+      <h3>JSON Configuration</h3>
+      <button class="btn btn-small btn-secondary" (click)="copyToClipboard()">Copy</button>
+    </div>
+    <pre class="json-code">{{ formJson() }}</pre>
+  </div>
+  }
+</div>

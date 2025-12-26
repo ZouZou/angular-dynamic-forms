@@ -113,6 +113,59 @@ export class MockApiService {
   }
 
   /**
+   * Validate field asynchronously
+   * Simulates API validation (e.g., checking if username is available)
+   */
+  validateField(
+    endpoint: string,
+    data: { value: unknown; fieldName: string },
+    method: 'GET' | 'POST'
+  ): Observable<any> {
+    console.log(`[MockAPI] Validating: ${endpoint}`, data);
+
+    // Simulate network delay (300-800ms)
+    const delayMs = Math.random() * 500 + 300;
+
+    // Mock validation logic
+    let response: any;
+
+    // Example: username availability check
+    if (endpoint.includes('username') || endpoint.includes('check-availability')) {
+      const username = String(data.value).toLowerCase();
+      const takenUsernames = ['admin', 'user', 'test', 'demo', 'root'];
+      const isAvailable = !takenUsernames.includes(username);
+
+      response = {
+        valid: isAvailable,
+        message: isAvailable ? 'Username is available' : 'Username is already taken'
+      };
+    }
+    // Example: email domain validation
+    else if (endpoint.includes('email')) {
+      const email = String(data.value).toLowerCase();
+      const allowedDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'];
+      const domain = email.split('@')[1];
+      const isValidDomain = allowedDomains.includes(domain);
+
+      response = {
+        valid: isValidDomain,
+        message: isValidDomain ? 'Email domain is valid' : 'Please use a common email provider'
+      };
+    }
+    // Default: always valid
+    else {
+      response = { valid: true };
+    }
+
+    // Simulate occasional errors (3% chance)
+    if (Math.random() < 0.03) {
+      throw new Error(`Validation API error for ${endpoint}`);
+    }
+
+    return of(response).pipe(delay(delayMs));
+  }
+
+  /**
    * Parse query string into key-value pairs
    */
   private parseQueryParams(queryString?: string): Record<string, string> {
