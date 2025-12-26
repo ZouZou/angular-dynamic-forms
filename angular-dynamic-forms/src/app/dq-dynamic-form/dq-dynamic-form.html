@@ -87,6 +87,168 @@
       </div>
       }
 
+      <!-- Range Slider -->
+      @if (field.type === 'range') {
+      <label class="form-label">
+        {{ field.label }}
+        @if (field.validations?.required) {
+        <span class="required">*</span>
+        }
+        <span class="range-value">{{ formValues()[field.name] || field.min || 0 }}</span>
+      </label>
+      <input
+        type="range"
+        class="form-range"
+        [min]="field.min || 0"
+        [max]="field.max || 100"
+        [step]="field.step || 1"
+        [value]="formValues()[field.name] || field.min || 0"
+        (input)="updateFormValue(field.name, Number($any($event.target).value))"
+      />
+      <div class="range-labels">
+        <small>{{ field.min || 0 }}</small>
+        <small>{{ field.max || 100 }}</small>
+      </div>
+      }
+
+      <!-- Color Picker -->
+      @if (field.type === 'color') {
+      <label class="form-label">
+        {{ field.label }}
+        @if (field.validations?.required) {
+        <span class="required">*</span>
+        }
+      </label>
+      <div class="color-picker-wrapper">
+        <input
+          type="color"
+          class="form-color"
+          [value]="formValues()[field.name] || '#000000'"
+          (input)="updateFormValue(field.name, $any($event.target).value)"
+        />
+        <span class="color-hex">{{ formValues()[field.name] || '#000000' }}</span>
+      </div>
+      }
+
+      <!-- Multi-Select -->
+      @if (field.type === 'multiselect') {
+      <label class="form-label">
+        {{ field.label }}
+        @if (field.validations?.required) {
+        <span class="required">*</span>
+        }
+      </label>
+      <select
+        class="form-select"
+        multiple
+        [value]="formValues()[field.name]"
+        [disabled]="isFieldDisabled(field) || fieldLoading()[field.name]"
+        (change)="updateMultiSelectValue(field.name, $any($event.target).selectedOptions)"
+        [size]="Math.min(getAvailableOptions(field).length, 6)"
+      >
+        @for (opt of getAvailableOptions(field); track opt.value) {
+        <option [value]="opt.value">
+          {{ opt.label }}
+        </option>
+        }
+      </select>
+      <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
+      @if (field.minSelections || field.maxSelections) {
+      <small class="text-muted">
+        @if (field.minSelections && field.maxSelections) {
+          Select {{ field.minSelections }}-{{ field.maxSelections }} options
+        } @else if (field.minSelections) {
+          Select at least {{ field.minSelections }} options
+        } @else if (field.maxSelections) {
+          Select up to {{ field.maxSelections }} options
+        }
+      </small>
+      }
+      }
+
+      <!-- DateTime Picker -->
+      @if (field.type === 'datetime') {
+      <label class="form-label">
+        {{ field.label }}
+        @if (field.validations?.required) {
+        <span class="required">*</span>
+        }
+      </label>
+      <input
+        type="datetime-local"
+        class="form-control"
+        [value]="formValues()[field.name]"
+        [min]="field.min"
+        [max]="field.max"
+        [placeholder]="field.placeholder || 'Select date and time'"
+        (input)="updateFormValue(field.name, $any($event.target).value)"
+      />
+      @if (field.timezone) {
+      <small class="text-muted">Timezone: {{ field.timezone }}</small>
+      }
+      }
+
+      <!-- File Upload -->
+      @if (field.type === 'file') {
+      <label class="form-label">
+        {{ field.label }}
+        @if (field.validations?.required) {
+        <span class="required">*</span>
+        }
+      </label>
+      <input
+        type="file"
+        class="form-file"
+        [accept]="field.accept || ''"
+        [multiple]="field.multiple || false"
+        (change)="handleFileUpload(field.name, $any($event.target).files, field)"
+      />
+      @if (field.maxFileSize) {
+      <small class="text-muted">Max size: {{ formatFileSize(field.maxFileSize) }}</small>
+      }
+      @if (formValues()[field.name]) {
+      <div class="file-preview">
+        @if (isImage(formValues()[field.name])) {
+        <img [src]="getFilePreview(field.name)" alt="Preview" class="image-preview" />
+        } @else {
+        <div class="file-info">
+          <strong>{{ getFileName(formValues()[field.name]) }}</strong>
+          <small>{{ getFileSize(formValues()[field.name]) }}</small>
+        </div>
+        }
+      </div>
+      }
+      }
+
+      <!-- Rich Text Editor (Basic) -->
+      @if (field.type === 'richtext') {
+      <label class="form-label">
+        {{ field.label }}
+        @if (field.validations?.required) {
+        <span class="required">*</span>
+        }
+      </label>
+      <div class="richtext-toolbar">
+        <button type="button" (click)="execCommand('bold')" title="Bold">B</button>
+        <button type="button" (click)="execCommand('italic')" title="Italic">I</button>
+        <button type="button" (click)="execCommand('underline')" title="Underline">U</button>
+        <button type="button" (click)="execCommand('insertUnorderedList')" title="Bullet List">•</button>
+        <button type="button" (click)="execCommand('insertOrderedList')" title="Numbered List">1.</button>
+      </div>
+      <div
+        class="richtext-editor"
+        contenteditable="true"
+        [id]="'richtext-' + field.name"
+        (input)="updateRichTextValue(field.name, $any($event.target).innerHTML)"
+        [innerHTML]="formValues()[field.name] || ''"
+      ></div>
+      @if (field.maxCharacters) {
+      <small class="text-muted">
+        {{ getRichTextLength(formValues()[field.name]) }} / {{ field.maxCharacters }} characters
+      </small>
+      }
+      }
+
       <!-- Error -->
       @if (touched()[field.name] && errors()[field.name]) {
       <div class="error">

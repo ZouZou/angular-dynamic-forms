@@ -32,11 +32,16 @@ export class DqDynamicForm {
   private readonly initialValues = signal<Record<string, unknown>>({});
   // Track programmatic updates to prevent infinite loops in checkbox dependencies
   private readonly isUpdatingProgrammatically = signal<Set<string>>(new Set());
+  // Store file data for file uploads
+  protected readonly fileData = signal<Record<string, any>>({});
 
   // Computed: Check if entire form is pristine (no changes)
   protected readonly pristine = computed<boolean>(() =>
     !Object.values(this.dirty()).some(isDirty => isDirty)
   );
+
+  // Expose Math for template
+  protected readonly Math = Math;
 
   constructor() {
     // Watch for changes in form values to reset dependent fields
@@ -137,7 +142,22 @@ export class DqDynamicForm {
       const initialDirty: Record<string, boolean> = {};
 
       for (const field of schema.fields) {
-        initialValues[field.name] = field.type === 'checkbox' ? false : '';
+        // Set initial values based on field type
+        if (field.type === 'checkbox') {
+          initialValues[field.name] = false;
+        } else if (field.type === 'multiselect') {
+          initialValues[field.name] = [];
+        } else if (field.type === 'range') {
+          initialValues[field.name] = field.min || 0;
+        } else if (field.type === 'color') {
+          initialValues[field.name] = '#000000';
+        } else if (field.type === 'file') {
+          initialValues[field.name] = null;
+        } else if (field.type === 'richtext') {
+          initialValues[field.name] = '';
+        } else {
+          initialValues[field.name] = '';
+        }
         initialTouched[field.name] = false;
         initialDirty[field.name] = false;
       }
@@ -348,6 +368,32 @@ export class DqDynamicForm {
           validationErrors[field.name] = `${field.label} must be a valid email address`;
         }
       }
+
+      // Multi-select validation
+      if (field.type === 'multiselect' && Array.isArray(fieldValue)) {
+        if (field.minSelections && fieldValue.length < field.minSelections) {
+          validationErrors[field.name] = `Select at least ${field.minSelections} options`;
+        }
+        if (field.maxSelections && fieldValue.length > field.maxSelections) {
+          validationErrors[field.name] = `Select at most ${field.maxSelections} options`;
+        }
+      }
+
+      // File upload validation
+      if (field.type === 'file' && fieldValue) {
+        const fileInfo = this.fileData()[field.name];
+        if (fileInfo && field.maxFileSize && fileInfo.size > field.maxFileSize) {
+          validationErrors[field.name] = `File size exceeds ${this.formatFileSize(field.maxFileSize)}`;
+        }
+      }
+
+      // Rich text max characters validation
+      if (field.type === 'richtext' && field.maxCharacters && fieldValue) {
+        const length = this.getRichTextLength(fieldValue as string);
+        if (length > field.maxCharacters) {
+          validationErrors[field.name] = `Text exceeds ${field.maxCharacters} characters`;
+        }
+      }
     }
 
     return validationErrors;
@@ -361,5 +407,125 @@ export class DqDynamicForm {
     this.submittedData.set(this.formValues());
     this.submitted.set(true);
     console.log('FORM VALUES (Signals):', this.formValues());
+  }
+
+  /**
+   * Update multi-select field value
+   */
+  updateMultiSelectValue(fieldName: string, selectedOptions: any): void {
+    const values: string[] = [];
+    for (let i = 0; i < selectedOptions.length; i++) {
+      values.push(selectedOptions[i].value);
+    }
+    this.updateFormValue(fieldName, values);
+  }
+
+  /**
+   * Handle file upload
+   */
+  handleFileUpload(fieldName: string, files: FileList | null, field: Field): void {
+    if (!files || files.length === 0) {
+      this.updateFormValue(fieldName, null);
+      this.fileData.update((current) => {
+        const updated = { ...current };
+        delete updated[fieldName];
+        return updated;
+      });
+      return;
+    }
+
+    const file = files[0];
+
+    // Validate file size
+    if (field.maxFileSize && file.size > field.maxFileSize) {
+      alert(`File size exceeds maximum allowed size of ${this.formatFileSize(field.maxFileSize)}`);
+      return;
+    }
+
+    // Read file data
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      this.fileData.update((current) => ({
+        ...current,
+        [fieldName]: {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          data: e.target.result,
+        },
+      }));
+      this.updateFormValue(fieldName, file.name);
+    };
+
+    // Read as data URL for preview
+    reader.readAsDataURL(file);
+  }
+
+  /**
+   * Update rich text field value
+   */
+  updateRichTextValue(fieldName: string, html: string): void {
+    this.updateFormValue(fieldName, html);
+  }
+
+  /**
+   * Execute rich text command
+   */
+  execCommand(command: string): void {
+    document.execCommand(command, false);
+  }
+
+  /**
+   * Format file size in human-readable format
+   */
+  formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  /**
+   * Check if file is an image
+   */
+  isImage(fileName: any): boolean {
+    if (!fileName) return false;
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
+    const extension = fileName.toString().split('.').pop()?.toLowerCase();
+    return imageExtensions.includes(extension || '');
+  }
+
+  /**
+   * Get file preview URL
+   */
+  getFilePreview(fieldName: string): string {
+    const file = this.fileData()[fieldName];
+    return file?.data || '';
+  }
+
+  /**
+   * Get file name
+   */
+  getFileName(fileName: any): string {
+    return fileName?.toString() || '';
+  }
+
+  /**
+   * Get file size
+   */
+  getFileSize(fileName: string): string {
+    const file = this.fileData()[fileName];
+    return file ? this.formatFileSize(file.size) : '';
+  }
+
+  /**
+   * Get rich text length (strip HTML tags)
+   */
+  getRichTextLength(html: string | unknown): number {
+    if (!html || typeof html !== 'string') return 0;
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent?.length || 0;
   }
 }
