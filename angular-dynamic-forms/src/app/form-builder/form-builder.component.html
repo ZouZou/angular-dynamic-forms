@@ -3,8 +3,14 @@
   <div class="builder-header">
     <h1>🎨 Dynamic Form Builder</h1>
     <div class="header-actions">
+      <button class="btn btn-secondary" (click)="toggleMultiStep()">
+        {{ multiStepEnabled() ? '📄 Single-Step' : '📑 Multi-Step' }}
+      </button>
+      <button class="btn btn-secondary" (click)="toggleLivePreview()">
+        {{ showLivePreview() ? '🔍 Hide Preview' : '👁️ Show Preview' }}
+      </button>
       <button class="btn btn-secondary" (click)="toggleJsonPreview()">
-        {{ showJsonPreview() ? 'Hide' : 'Show' }} JSON
+        {{ showJsonPreview() ? 'Hide JSON' : 'Show JSON' }}
       </button>
       <button class="btn btn-secondary" (click)="copyToClipboard()">📋 Copy JSON</button>
       <button class="btn btn-secondary" (click)="exportConfig()">💾 Export</button>
@@ -32,10 +38,10 @@
       </div>
     </div>
 
-    <!-- Middle Panel: Form Preview -->
+    <!-- Middle Panel: Form Structure -->
     <div class="form-preview-panel">
       <div class="panel-header">
-        <h3>Form Preview</h3>
+        <h3>{{ multiStepEnabled() ? 'Form Sections' : 'Form Fields' }}</h3>
         <div class="form-title-edit">
           <input
             type="text"
@@ -47,47 +53,116 @@
         </div>
       </div>
 
-      @if (formFields().length === 0) {
-      <div class="empty-state">
-        <div class="empty-icon">📝</div>
-        <h4>No fields yet</h4>
-        <p>Add fields from the left panel to start building your form</p>
-      </div>
-      } @else {
-      <div class="fields-list">
-        @for (field of formFields(); track field.name; let i = $index) {
-        <div
-          class="field-item"
-          [class.selected]="selectedFieldIndex() === i"
-          (click)="selectField(i)"
-          draggable="true"
-          (dragstart)="onDragStart(i)"
-          (dragover)="onDragOver($event)"
-          (drop)="onDrop($event, i)"
-        >
-          <div class="field-item-header">
-            <span class="drag-handle">☰</span>
-            <span class="field-type-badge">{{ field.type }}</span>
-            <span class="field-label">{{ field.label }}</span>
-            <button class="btn-icon btn-remove" (click)="removeField(i); $event.stopPropagation()" title="Remove field">
-              ×
-            </button>
+      @if (multiStepEnabled()) {
+        <!-- Multi-step: Show sections and their fields -->
+        @if (sections().length === 0) {
+          <div class="empty-state">
+            <div class="empty-icon">📑</div>
+            <h4>No sections yet</h4>
+            <button class="btn btn-primary" (click)="addSection()">+ Add Section</button>
           </div>
-          <div class="field-item-meta">
-            <small>Name: {{ field.name }}</small>
-            @if (field.validations?.required) {
-            <span class="badge badge-required">Required</span>
+        } @else {
+          <div class="sections-list">
+            @for (section of sections(); track $index; let sectionIndex = $index) {
+              <div class="section-card" [class.active]="currentSection() === sectionIndex">
+                <div class="section-header" (click)="selectSection(sectionIndex)">
+                  <span class="section-number">{{ sectionIndex + 1 }}</span>
+                  <div class="section-info">
+                    <strong>{{ section.title }}</strong>
+                    <small>{{ section.fields.length }} field(s)</small>
+                  </div>
+                  @if (sections().length > 1) {
+                    <button class="btn-icon btn-remove" (click)="removeSection(sectionIndex); $event.stopPropagation()" title="Remove section">
+                      ×
+                    </button>
+                  }
+                </div>
+
+                @if (currentSection() === sectionIndex) {
+                  <div class="section-fields">
+                    @if (section.fields.length === 0) {
+                      <div class="empty-state-small">
+                        <p>No fields in this section. Add fields from the left panel.</p>
+                      </div>
+                    } @else {
+                      @for (field of section.fields; track field.name; let i = $index) {
+                        <div
+                          class="field-item"
+                          [class.selected]="selectedFieldIndex() === i"
+                          (click)="selectField(i)"
+                          draggable="true"
+                          (dragstart)="onDragStart(i)"
+                          (dragover)="onDragOver($event)"
+                          (drop)="onDrop($event, i)"
+                        >
+                          <div class="field-item-header">
+                            <span class="drag-handle">☰</span>
+                            <span class="field-type-badge">{{ field.type }}</span>
+                            <span class="field-label">{{ field.label }}</span>
+                            <button class="btn-icon btn-remove" (click)="removeField(i); $event.stopPropagation()" title="Remove field">
+                              ×
+                            </button>
+                          </div>
+                          <div class="field-item-meta">
+                            <small>Name: {{ field.name }}</small>
+                            @if (field.validations?.required) {
+                              <span class="badge badge-required">Required</span>
+                            }
+                          </div>
+                        </div>
+                      }
+                    }
+                  </div>
+                }
+              </div>
             }
           </div>
-        </div>
+          <button class="btn btn-primary btn-add-section" (click)="addSection()">+ Add Section</button>
         }
-      </div>
+      } @else {
+        <!-- Single-step: Show flat fields list -->
+        @if (formFields().length === 0) {
+          <div class="empty-state">
+            <div class="empty-icon">📝</div>
+            <h4>No fields yet</h4>
+            <p>Add fields from the left panel to start building your form</p>
+          </div>
+        } @else {
+          <div class="fields-list">
+            @for (field of formFields(); track field.name; let i = $index) {
+              <div
+                class="field-item"
+                [class.selected]="selectedFieldIndex() === i"
+                (click)="selectField(i)"
+                draggable="true"
+                (dragstart)="onDragStart(i)"
+                (dragover)="onDragOver($event)"
+                (drop)="onDrop($event, i)"
+              >
+                <div class="field-item-header">
+                  <span class="drag-handle">☰</span>
+                  <span class="field-type-badge">{{ field.type }}</span>
+                  <span class="field-label">{{ field.label }}</span>
+                  <button class="btn-icon btn-remove" (click)="removeField(i); $event.stopPropagation()" title="Remove field">
+                    ×
+                  </button>
+                </div>
+                <div class="field-item-meta">
+                  <small>Name: {{ field.name }}</small>
+                  @if (field.validations?.required) {
+                    <span class="badge badge-required">Required</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
       }
     </div>
 
     <!-- Right Panel: Field Properties -->
     <div class="field-properties-panel">
-      <h3>Field Properties</h3>
+      <h3>{{ selectedField() ? 'Field Properties' : (multiStepEnabled() ? 'Section Properties' : 'Field Properties') }}</h3>
 
       @if (selectedField()) {
       <div class="properties-form">
@@ -397,13 +472,76 @@
         </div>
       </div>
       } @else {
-      <div class="empty-state">
-        <div class="empty-icon">⚙️</div>
-        <p>Select a field to edit its properties</p>
-      </div>
+        @if (multiStepEnabled() && sections().length > 0) {
+          <!-- Show section properties editor -->
+          <div class="properties-form">
+            <div class="property-group">
+              <h4>Section Details</h4>
+
+              <label>
+                <span>Title</span>
+                <input
+                  type="text"
+                  [value]="sections()[currentSection()]?.title || ''"
+                  (input)="updateSectionProperty(currentSection(), 'title', $any($event.target).value)"
+                  placeholder="Section Title"
+                />
+              </label>
+
+              <label>
+                <span>Description</span>
+                <input
+                  type="text"
+                  [value]="sections()[currentSection()]?.description || ''"
+                  (input)="updateSectionProperty(currentSection(), 'description', $any($event.target).value)"
+                  placeholder="Section Description"
+                />
+              </label>
+
+              <label>
+                <span>Icon (emoji)</span>
+                <input
+                  type="text"
+                  [value]="sections()[currentSection()]?.icon || ''"
+                  (input)="updateSectionProperty(currentSection(), 'icon', $any($event.target).value)"
+                  placeholder="e.g., 👤 📝 ⚙️"
+                  maxlength="2"
+                />
+              </label>
+            </div>
+          </div>
+        } @else {
+          <div class="empty-state">
+            <div class="empty-icon">⚙️</div>
+            <p>Select a field to edit its properties</p>
+          </div>
+        }
       }
     </div>
   </div>
+
+  <!-- Live Preview Panel -->
+  @if (showLivePreview()) {
+  <div class="live-preview-panel">
+    <div class="panel-header">
+      <h3>🔍 Live Preview</h3>
+      <button class="btn btn-small btn-secondary" (click)="toggleLivePreview()">Close</button>
+    </div>
+    <div class="live-preview-content">
+      @if (multiStepEnabled() && sections().length === 0) {
+        <div class="preview-empty-state">
+          <p>Add sections to see the live preview</p>
+        </div>
+      } @else if (!multiStepEnabled() && formFields().length === 0) {
+        <div class="preview-empty-state">
+          <p>Add fields to see the live preview</p>
+        </div>
+      } @else {
+        <dq-dynamic-form [formSchema]="formSchema()" />
+      }
+    </div>
+  </div>
+  }
 
   <!-- JSON Preview Panel -->
   @if (showJsonPreview()) {

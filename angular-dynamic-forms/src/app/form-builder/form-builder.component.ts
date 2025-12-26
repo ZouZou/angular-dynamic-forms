@@ -1,7 +1,8 @@
 import { Component, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Field, FieldOption } from '../dq-dynamic-form/models/field.model';
+import { Field, FieldOption, FormSchema, FormSection } from '../dq-dynamic-form/models/field.model';
+import { DqDynamicForm } from '../dq-dynamic-form/dq-dynamic-form';
 
 interface FieldTemplate {
   type: string;
@@ -13,7 +14,7 @@ interface FieldTemplate {
 @Component({
   selector: 'app-form-builder',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DqDynamicForm],
   templateUrl: './form-builder.component.html',
   styleUrl: './form-builder.component.scss',
 })
@@ -22,8 +23,15 @@ export class FormBuilderComponent {
   protected readonly formTitle = signal<string>('My Dynamic Form');
   protected readonly formFields = signal<Field[]>([]);
   protected readonly selectedFieldIndex = signal<number | null>(null);
-  protected readonly showJsonPreview = signal<boolean>(true);
+  protected readonly showJsonPreview = signal<boolean>(false);
+  protected readonly showLivePreview = signal<boolean>(true);
   protected readonly draggedFieldIndex = signal<number | null>(null);
+
+  // Multi-step configuration
+  protected readonly multiStepEnabled = signal<boolean>(false);
+  protected readonly sections = signal<FormSection[]>([]);
+  protected readonly currentSection = signal<number>(0);
+  protected readonly selectedSectionIndex = signal<number | null>(null);
 
   // Expose Number for template (needed for numeric input conversions)
   protected readonly Number = Number;
@@ -51,16 +59,29 @@ export class FormBuilderComponent {
   // Computed: Currently selected field
   protected readonly selectedField = computed<Field | null>(() => {
     const index = this.selectedFieldIndex();
-    return index !== null ? this.formFields()[index] : null;
+    const fields = this.getCurrentFields();
+    return index !== null ? fields[index] : null;
+  });
+
+  // Computed: Form schema for live preview
+  protected readonly formSchema = computed<FormSchema>(() => {
+    if (this.multiStepEnabled()) {
+      return {
+        title: this.formTitle(),
+        multiStep: true,
+        sections: this.sections(),
+      };
+    } else {
+      return {
+        title: this.formTitle(),
+        fields: this.formFields(),
+      };
+    }
   });
 
   // Computed: JSON output
   protected readonly formJson = computed<string>(() => {
-    const config = {
-      title: this.formTitle(),
-      fields: this.formFields(),
-    };
-    return JSON.stringify(config, null, 2);
+    return JSON.stringify(this.formSchema(), null, 2);
   });
 
   /**
@@ -112,15 +133,43 @@ export class FormBuilderComponent {
       };
     }
 
-    this.formFields.update((fields) => [...fields, newField]);
-    this.selectedFieldIndex.set(this.formFields().length - 1);
+    if (this.multiStepEnabled()) {
+      // Add to current section
+      const sectionIndex = this.currentSection();
+      this.sections.update((sections) => {
+        const updated = [...sections];
+        updated[sectionIndex] = {
+          ...updated[sectionIndex],
+          fields: [...updated[sectionIndex].fields, newField],
+        };
+        return updated;
+      });
+      this.selectedFieldIndex.set(this.sections()[sectionIndex].fields.length - 1);
+    } else {
+      // Add to flat fields
+      this.formFields.update((fields) => [...fields, newField]);
+      this.selectedFieldIndex.set(this.formFields().length - 1);
+    }
   }
 
   /**
    * Remove a field from the form
    */
   removeField(index: number): void {
-    this.formFields.update((fields) => fields.filter((_, i) => i !== index));
+    if (this.multiStepEnabled()) {
+      const sectionIndex = this.currentSection();
+      this.sections.update((sections) => {
+        const updated = [...sections];
+        updated[sectionIndex] = {
+          ...updated[sectionIndex],
+          fields: updated[sectionIndex].fields.filter((_, i) => i !== index),
+        };
+        return updated;
+      });
+    } else {
+      this.formFields.update((fields) => fields.filter((_, i) => i !== index));
+    }
+
     if (this.selectedFieldIndex() === index) {
       this.selectedFieldIndex.set(null);
     }
@@ -140,11 +189,22 @@ export class FormBuilderComponent {
     const index = this.selectedFieldIndex();
     if (index === null) return;
 
-    this.formFields.update((fields) => {
-      const updated = [...fields];
-      updated[index] = { ...updated[index], [property]: value };
-      return updated;
-    });
+    if (this.multiStepEnabled()) {
+      const sectionIndex = this.currentSection();
+      this.sections.update((sections) => {
+        const updated = [...sections];
+        const fields = [...updated[sectionIndex].fields];
+        fields[index] = { ...fields[index], [property]: value };
+        updated[sectionIndex] = { ...updated[sectionIndex], fields };
+        return updated;
+      });
+    } else {
+      this.formFields.update((fields) => {
+        const updated = [...fields];
+        updated[index] = { ...updated[index], [property]: value };
+        return updated;
+      });
+    }
   }
 
   /**
@@ -154,17 +214,34 @@ export class FormBuilderComponent {
     const index = this.selectedFieldIndex();
     if (index === null) return;
 
-    this.formFields.update((fields) => {
-      const updated = [...fields];
-      updated[index] = {
-        ...updated[index],
-        validations: {
-          ...updated[index].validations,
-          [property]: value,
-        },
-      };
-      return updated;
-    });
+    if (this.multiStepEnabled()) {
+      const sectionIndex = this.currentSection();
+      this.sections.update((sections) => {
+        const updated = [...sections];
+        const fields = [...updated[sectionIndex].fields];
+        fields[index] = {
+          ...fields[index],
+          validations: {
+            ...fields[index].validations,
+            [property]: value,
+          },
+        };
+        updated[sectionIndex] = { ...updated[sectionIndex], fields };
+        return updated;
+      });
+    } else {
+      this.formFields.update((fields) => {
+        const updated = [...fields];
+        updated[index] = {
+          ...updated[index],
+          validations: {
+            ...updated[index].validations,
+            [property]: value,
+          },
+        };
+        return updated;
+      });
+    }
   }
 
   /**
@@ -227,8 +304,107 @@ export class FormBuilderComponent {
   clearForm(): void {
     if (confirm('Are you sure you want to clear all fields?')) {
       this.formFields.set([]);
+      this.sections.set([]);
       this.selectedFieldIndex.set(null);
+      this.selectedSectionIndex.set(null);
     }
+  }
+
+  /**
+   * Get current fields based on mode
+   */
+  getCurrentFields(): Field[] {
+    if (this.multiStepEnabled()) {
+      const sectionIndex = this.currentSection();
+      const sections = this.sections();
+      return sectionIndex < sections.length ? sections[sectionIndex].fields : [];
+    } else {
+      return this.formFields();
+    }
+  }
+
+  /**
+   * Toggle multi-step mode
+   */
+  toggleMultiStep(): void {
+    const enabled = !this.multiStepEnabled();
+    this.multiStepEnabled.set(enabled);
+
+    if (enabled) {
+      // Convert current fields to first section
+      const currentFields = this.formFields();
+      this.sections.set([
+        {
+          title: 'Step 1',
+          description: 'First step of the form',
+          fields: currentFields,
+        },
+      ]);
+      this.currentSection.set(0);
+      this.formFields.set([]);
+    } else {
+      // Convert sections back to flat fields
+      const allFields: Field[] = [];
+      this.sections().forEach((section) => allFields.push(...section.fields));
+      this.formFields.set(allFields);
+      this.sections.set([]);
+      this.currentSection.set(0);
+    }
+    this.selectedFieldIndex.set(null);
+  }
+
+  /**
+   * Add a new section
+   */
+  addSection(): void {
+    const newSection: FormSection = {
+      title: `Step ${this.sections().length + 1}`,
+      description: 'New step',
+      fields: [],
+    };
+    this.sections.update((sections) => [...sections, newSection]);
+  }
+
+  /**
+   * Remove a section
+   */
+  removeSection(index: number): void {
+    if (this.sections().length <= 1) {
+      alert('You must have at least one section in a multi-step form');
+      return;
+    }
+    if (confirm('Are you sure you want to remove this section?')) {
+      this.sections.update((sections) => sections.filter((_, i) => i !== index));
+      if (this.currentSection() >= this.sections().length) {
+        this.currentSection.set(this.sections().length - 1);
+      }
+    }
+  }
+
+  /**
+   * Update section property
+   */
+  updateSectionProperty(index: number, property: string, value: any): void {
+    this.sections.update((sections) => {
+      const updated = [...sections];
+      updated[index] = { ...updated[index], [property]: value };
+      return updated;
+    });
+  }
+
+  /**
+   * Select a section
+   */
+  selectSection(index: number): void {
+    this.currentSection.set(index);
+    this.selectedFieldIndex.set(null);
+  }
+
+  /**
+   * Toggle live preview
+   */
+  toggleLivePreview(): void {
+    this.showLivePreview.update((show) => !show);
   }
 
   /**
@@ -264,23 +440,42 @@ export class FormBuilderComponent {
     const index = this.selectedFieldIndex();
     if (index === null) return;
 
-    const field = this.formFields()[index];
+    const fields = this.getCurrentFields();
+    const field = fields[index];
     if (!field.options) {
       this.updateFieldProperty('options', []);
     }
 
-    this.formFields.update((fields) => {
-      const updated = [...fields];
-      const options = updated[index].options as FieldOption[] || [];
-      updated[index] = {
-        ...updated[index],
-        options: [
-          ...options,
-          { value: `option${options.length + 1}`, label: `Option ${options.length + 1}` },
-        ],
-      };
-      return updated;
-    });
+    if (this.multiStepEnabled()) {
+      const sectionIndex = this.currentSection();
+      this.sections.update((sections) => {
+        const updated = [...sections];
+        const sectionFields = [...updated[sectionIndex].fields];
+        const options = sectionFields[index].options as FieldOption[] || [];
+        sectionFields[index] = {
+          ...sectionFields[index],
+          options: [
+            ...options,
+            { value: `option${options.length + 1}`, label: `Option ${options.length + 1}` },
+          ],
+        };
+        updated[sectionIndex] = { ...updated[sectionIndex], fields: sectionFields };
+        return updated;
+      });
+    } else {
+      this.formFields.update((fields) => {
+        const updated = [...fields];
+        const options = updated[index].options as FieldOption[] || [];
+        updated[index] = {
+          ...updated[index],
+          options: [
+            ...options,
+            { value: `option${options.length + 1}`, label: `Option ${options.length + 1}` },
+          ],
+        };
+        return updated;
+      });
+    }
   }
 
   /**
@@ -290,15 +485,30 @@ export class FormBuilderComponent {
     const index = this.selectedFieldIndex();
     if (index === null) return;
 
-    this.formFields.update((fields) => {
-      const updated = [...fields];
-      const options = updated[index].options as FieldOption[];
-      updated[index] = {
-        ...updated[index],
-        options: options.filter((_, i) => i !== optionIndex),
-      };
-      return updated;
-    });
+    if (this.multiStepEnabled()) {
+      const sectionIndex = this.currentSection();
+      this.sections.update((sections) => {
+        const updated = [...sections];
+        const sectionFields = [...updated[sectionIndex].fields];
+        const options = sectionFields[index].options as FieldOption[];
+        sectionFields[index] = {
+          ...sectionFields[index],
+          options: options.filter((_, i) => i !== optionIndex),
+        };
+        updated[sectionIndex] = { ...updated[sectionIndex], fields: sectionFields };
+        return updated;
+      });
+    } else {
+      this.formFields.update((fields) => {
+        const updated = [...fields];
+        const options = updated[index].options as FieldOption[];
+        updated[index] = {
+          ...updated[index],
+          options: options.filter((_, i) => i !== optionIndex),
+        };
+        return updated;
+      });
+    }
   }
 
   /**
@@ -308,13 +518,26 @@ export class FormBuilderComponent {
     const index = this.selectedFieldIndex();
     if (index === null) return;
 
-    this.formFields.update((fields) => {
-      const updated = [...fields];
-      const options = [...(updated[index].options as FieldOption[])];
-      options[optionIndex] = { ...options[optionIndex], [property]: value };
-      updated[index] = { ...updated[index], options };
-      return updated;
-    });
+    if (this.multiStepEnabled()) {
+      const sectionIndex = this.currentSection();
+      this.sections.update((sections) => {
+        const updated = [...sections];
+        const sectionFields = [...updated[sectionIndex].fields];
+        const options = [...(sectionFields[index].options as FieldOption[])];
+        options[optionIndex] = { ...options[optionIndex], [property]: value };
+        sectionFields[index] = { ...sectionFields[index], options };
+        updated[sectionIndex] = { ...updated[sectionIndex], fields: sectionFields };
+        return updated;
+      });
+    } else {
+      this.formFields.update((fields) => {
+        const updated = [...fields];
+        const options = [...(updated[index].options as FieldOption[])];
+        options[optionIndex] = { ...options[optionIndex], [property]: value };
+        updated[index] = { ...updated[index], options };
+        return updated;
+      });
+    }
   }
 
   /**
@@ -324,22 +547,45 @@ export class FormBuilderComponent {
     const index = this.selectedFieldIndex();
     if (index === null) return;
 
-    this.formFields.update((fields) => {
-      const updated = [...fields];
-      const currentArrayConfig = updated[index].arrayConfig || {
-        fields: [],
-        minItems: 1,
-        maxItems: 10,
-        initialItems: 1,
-      };
-      updated[index] = {
-        ...updated[index],
-        arrayConfig: {
-          ...currentArrayConfig,
-          [property]: value,
-        },
-      };
-      return updated;
-    });
+    if (this.multiStepEnabled()) {
+      const sectionIndex = this.currentSection();
+      this.sections.update((sections) => {
+        const updated = [...sections];
+        const sectionFields = [...updated[sectionIndex].fields];
+        const currentArrayConfig = sectionFields[index].arrayConfig || {
+          fields: [],
+          minItems: 1,
+          maxItems: 10,
+          initialItems: 1,
+        };
+        sectionFields[index] = {
+          ...sectionFields[index],
+          arrayConfig: {
+            ...currentArrayConfig,
+            [property]: value,
+          },
+        };
+        updated[sectionIndex] = { ...updated[sectionIndex], fields: sectionFields };
+        return updated;
+      });
+    } else {
+      this.formFields.update((fields) => {
+        const updated = [...fields];
+        const currentArrayConfig = updated[index].arrayConfig || {
+          fields: [],
+          minItems: 1,
+          maxItems: 10,
+          initialItems: 1,
+        };
+        updated[index] = {
+          ...updated[index],
+          arrayConfig: {
+            ...currentArrayConfig,
+            [property]: value,
+          },
+        };
+        return updated;
+      });
+    }
   }
 }
