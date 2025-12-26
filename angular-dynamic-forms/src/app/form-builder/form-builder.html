@@ -645,7 +645,12 @@
 
       <div class="panel-body">
         <div class="preview-container">
-          @if (!schema().fields || schema().fields?.length === 0) {
+          @if (multiStepMode() && (!schema().sections || schema().sections?.length === 0)) {
+            <div class="empty-state">
+              <h3>No sections yet</h3>
+              <p>Add sections to see the multi-step form preview</p>
+            </div>
+          } @else if (!multiStepMode() && (!schema().fields || schema().fields?.length === 0)) {
             <div class="empty-state">
               <h3>No fields yet</h3>
               <p>Add fields from the palette to see them here</p>
