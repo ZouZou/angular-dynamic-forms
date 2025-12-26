@@ -1,0 +1,191 @@
+{
+  "title": "User Registration - Multi-Step",
+  "multiStep": true,
+  "sections": [
+    {
+      "title": "Personal Information",
+      "description": "Tell us about yourself",
+      "icon": "👤",
+      "fields": [
+        {
+          "type": "text",
+          "label": "First Name",
+          "name": "firstName",
+          "placeholder": "Enter your first name",
+          "validations": {
+            "required": true,
+            "minLength": 2
+          }
+        },
+        {
+          "type": "text",
+          "label": "Last Name",
+          "name": "lastName",
+          "placeholder": "Enter your last name",
+          "validations": {
+            "required": true,
+            "minLength": 2
+          }
+        },
+        {
+          "type": "email",
+          "label": "Email Address",
+          "name": "email",
+          "placeholder": "you@example.com",
+          "validations": {
+            "required": true
+          }
+        },
+        {
+          "type": "text",
+          "label": "Phone Number",
+          "name": "phone",
+          "mask": "phone",
+          "placeholder": "(555) 123-4567",
+          "validations": {
+            "required": true
+          }
+        },
+        {
+          "type": "date",
+          "label": "Date of Birth",
+          "name": "dateOfBirth",
+          "max": "2010-12-31",
+          "validations": {
+            "required": true
+          }
+        }
+      ]
+    },
+    {
+      "title": "Account Details",
+      "description": "Set up your account credentials",
+      "icon": "🔐",
+      "fields": [
+        {
+          "type": "text",
+          "label": "Username",
+          "name": "username",
+          "placeholder": "Choose a username",
+          "validations": {
+            "required": true,
+            "minLength": 3,
+            "maxLength": 20
+          }
+        },
+        {
+          "type": "password",
+          "label": "Password",
+          "name": "password",
+          "placeholder": "Create a strong password",
+          "validations": {
+            "required": true,
+            "minLength": 8
+          }
+        },
+        {
+          "type": "password",
+          "label": "Confirm Password",
+          "name": "confirmPassword",
+          "placeholder": "Re-enter your password",
+          "validations": {
+            "required": true,
+            "matchesField": "password",
+            "customMessage": "Passwords do not match"
+          }
+        },
+        {
+          "type": "radio",
+          "label": "Account Type",
+          "name": "accountType",
+          "layout": "horizontal",
+          "options": [
+            { "value": "personal", "label": "Personal" },
+            { "value": "business", "label": "Business" },
+            { "value": "student", "label": "Student" }
+          ],
+          "validations": {
+            "required": true
+          }
+        }
+      ]
+    },
+    {
+      "title": "Preferences",
+      "description": "Customize your experience",
+      "icon": "⚙️",
+      "fields": [
+        {
+          "type": "select",
+          "label": "Country",
+          "name": "country",
+          "options": [
+            { "value": "usa", "label": "United States" },
+            { "value": "canada", "label": "Canada" },
+            { "value": "uk", "label": "United Kingdom" },
+            { "value": "australia", "label": "Australia" }
+          ],
+          "validations": {
+            "required": true
+          }
+        },
+        {
+          "type": "select",
+          "label": "Time Zone",
+          "name": "timezone",
+          "options": [
+            { "value": "est", "label": "Eastern Time (EST)" },
+            { "value": "cst", "label": "Central Time (CST)" },
+            { "value": "mst", "label": "Mountain Time (MST)" },
+            { "value": "pst", "label": "Pacific Time (PST)" }
+          ],
+          "validations": {
+            "required": true
+          }
+        },
+        {
+          "type": "multiselect",
+          "label": "Interests",
+          "name": "interests",
+          "options": [
+            { "value": "tech", "label": "Technology" },
+            { "value": "sports", "label": "Sports" },
+            { "value": "music", "label": "Music" },
+            { "value": "travel", "label": "Travel" },
+            { "value": "food", "label": "Food & Cooking" },
+            { "value": "art", "label": "Art & Design" }
+          ],
+          "minSelections": 1,
+          "maxSelections": 4,
+          "validations": {
+            "required": true
+          }
+        },
+        {
+          "type": "checkbox",
+          "label": "Subscribe to newsletter",
+          "name": "newsletter"
+        },
+        {
+          "type": "checkbox",
+          "label": "I agree to the Terms and Conditions",
+          "name": "termsAccepted",
+          "validations": {
+            "requiredTrue": true
+          }
+        }
+      ]
+    }
+  ],
+  "autosave": {
+    "enabled": true,
+    "intervalSeconds": 30,
+    "storage": "localStorage",
+    "expirationDays": 7,
+    "showIndicator": true
+  },
+  "submission": {
+    "successMessage": "Registration completed successfully!",
+    "showDataOnSuccess": true
+  }
+}
