@@ -1,0 +1,270 @@
+<div class="form-builder">
+  <!-- Header -->
+  <header class="builder-header">
+    <h1>🛠️ Dynamic Form Builder</h1>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="clearForm()">🗑️ Clear</button>
+      <button class="btn btn-secondary" (click)="fileInput.click()">📥 Import</button>
+      <button class="btn btn-secondary" (click)="exportSchema()">📤 Export</button>
+      <button class="btn btn-primary" (click)="generateTypeScript()">⚡ Generate TS</button>
+      <input #fileInput type="file" accept=".json" (change)="importSchema($event)" style="display: none">
+    </div>
+  </header>
+
+  <!-- Three-panel layout -->
+  <div class="builder-content">
+    <!-- Panel 1: Visual Editor (Field Palette & Tree) -->
+    <div class="panel visual-editor">
+      <div class="panel-header">
+        <h2>📋 Visual Editor</h2>
+      </div>
+
+      <div class="panel-body">
+        <!-- Field Palette -->
+        <section class="palette-section">
+          <h3>Field Palette</h3>
+          <div class="field-palette">
+            @for (template of fieldTemplates; track template.type) {
+              <button
+                class="palette-item"
+                (click)="addField(template)"
+                [title]="'Add ' + template.label"
+              >
+                <span class="palette-icon">{{ template.icon }}</span>
+                <span class="palette-label">{{ template.label }}</span>
+              </button>
+            }
+          </div>
+        </section>
+
+        <!-- Field Tree -->
+        <section class="tree-section">
+          <h3>Form Fields ({{ schema().fields?.length || 0 }})</h3>
+          <div class="field-tree">
+            @if (!schema().fields || schema().fields?.length === 0) {
+              <div class="empty-state">
+                <p>👆 Click a field type above to add it to your form</p>
+              </div>
+            } @else {
+              @for (field of schema().fields!; track $index) {
+                <div
+                  class="field-item"
+                  [class.selected]="selectedFieldIndex() === $index"
+                  (click)="selectField($index)"
+                >
+                  <div class="field-item-content">
+                    <span class="field-icon">{{ getFieldIcon(field.type) }}</span>
+                    <div class="field-info">
+                      <div class="field-name">{{ field.name }}</div>
+                      <div class="field-label">{{ field.label }}</div>
+                    </div>
+                  </div>
+                  <div class="field-actions">
+                    <button
+                      class="btn-icon"
+                      (click)="moveFieldUp($index); $event.stopPropagation()"
+                      [disabled]="$index === 0"
+                      title="Move up"
+                    >
+                      ⬆️
+                    </button>
+                    <button
+                      class="btn-icon"
+                      (click)="moveFieldDown($index); $event.stopPropagation()"
+                      [disabled]="$index === (schema().fields?.length || 0) - 1"
+                      title="Move down"
+                    >
+                      ⬇️
+                    </button>
+                    <button
+                      class="btn-icon btn-danger"
+                      (click)="removeField($index); $event.stopPropagation()"
+                      title="Delete"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </section>
+
+        <!-- Field Properties Editor -->
+        @if (selectedField(); as field) {
+          <section class="properties-section">
+            <h3>⚙️ Properties</h3>
+            <div class="properties-form">
+              <div class="form-group">
+                <label>Field Name</label>
+                <input
+                  type="text"
+                  [value]="field.name"
+                  (input)="updateFieldProperty('name', $any($event.target).value)"
+                  class="form-control"
+                >
+              </div>
+
+              <div class="form-group">
+                <label>Label</label>
+                <input
+                  type="text"
+                  [value]="field.label"
+                  (input)="updateFieldProperty('label', $any($event.target).value)"
+                  class="form-control"
+                >
+              </div>
+
+              <div class="form-group">
+                <label>Placeholder</label>
+                <input
+                  type="text"
+                  [value]="field.placeholder || ''"
+                  (input)="updateFieldProperty('placeholder', $any($event.target).value)"
+                  class="form-control"
+                >
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="field.validations?.required || false"
+                    (change)="toggleRequired(field, $any($event.target).checked)"
+                  >
+                  Required
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="field.readonly || false"
+                    (change)="updateFieldProperty('readonly', $any($event.target).checked)"
+                  >
+                  Read Only
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="field.disabled || false"
+                    (change)="updateFieldProperty('disabled', $any($event.target).checked)"
+                  >
+                  Disabled
+                </label>
+              </div>
+            </div>
+          </section>
+        }
+      </div>
+    </div>
+
+    <!-- Panel 2: Live Preview -->
+    <div class="panel live-preview">
+      <div class="panel-header">
+        <h2>👁️ Live Preview</h2>
+      </div>
+
+      <div class="panel-body">
+        <div class="preview-container">
+          @if (!schema().fields || schema().fields?.length === 0) {
+            <div class="empty-state">
+              <h3>No fields yet</h3>
+              <p>Add fields from the palette to see them here</p>
+            </div>
+          } @else {
+            <dq-dynamic-form [formSchema]="schema()"></dq-dynamic-form>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 3: JSON Editor & Validation -->
+    <div class="panel json-editor">
+      <div class="panel-header">
+        <h2>💻 JSON Schema</h2>
+      </div>
+
+      <div class="panel-body">
+        <!-- JSON Editor -->
+        <section class="json-section">
+          <textarea
+            class="json-textarea"
+            [value]="jsonContent()"
+            (input)="jsonContent.set($any($event.target).value); onJsonChange()"
+            spellcheck="false"
+          ></textarea>
+        </section>
+
+        <!-- Validation Results -->
+        <section class="validation-section">
+          <h3>
+            @if (validationResult()?.isValid) {
+              ✅ Valid Schema
+            } @else {
+              ❌ Validation Issues
+            }
+          </h3>
+
+          @if (validationResult(); as result) {
+            <!-- Summary -->
+            <div class="validation-summary">
+              <div class="summary-item">
+                <strong>Total Fields:</strong> {{ result.summary.totalFields }}
+              </div>
+              <div class="summary-item">
+                <strong>Required:</strong> {{ result.summary.requiredFields }}
+              </div>
+              <div class="summary-item">
+                <strong>Errors:</strong> <span [class.error]="result.summary.errorCount > 0">{{ result.summary.errorCount }}</span>
+              </div>
+              <div class="summary-item">
+                <strong>Warnings:</strong> <span [class.warning]="result.summary.warningCount > 0">{{ result.summary.warningCount }}</span>
+              </div>
+            </div>
+
+            <!-- Errors -->
+            @if (result.errors.length > 0) {
+              <div class="validation-errors">
+                <h4>❌ Errors</h4>
+                <ul>
+                  @for (error of result.errors; track $index) {
+                    <li class="error-item">{{ error }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            <!-- Warnings -->
+            @if (result.warnings.length > 0) {
+              <div class="validation-warnings">
+                <h4>⚠️ Warnings</h4>
+                <ul>
+                  @for (warning of result.warnings; track $index) {
+                    <li class="warning-item">{{ warning }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            <!-- Field Types -->
+            @if (result.summary.fieldTypes && getFieldTypesEntries(result.summary.fieldTypes).length > 0) {
+              <div class="field-types">
+                <h4>📊 Field Types</h4>
+                <ul>
+                  @for (entry of getFieldTypesEntries(result.summary.fieldTypes); track entry[0]) {
+                    <li>{{ entry[0] }}: {{ entry[1] }}</li>
+                  }
+                </ul>
+              </div>
+            }
+          }
+        </section>
+      </div>
+    </div>
+  </div>
+</div>

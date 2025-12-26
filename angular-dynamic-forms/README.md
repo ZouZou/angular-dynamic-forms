@@ -552,3 +552,235 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+---
+
+## Form Builder (Visual Editor)
+
+A comprehensive visual form builder application with real-time preview and validation. Access it at `/builder` route.
+
+### Overview
+
+The Form Builder provides a unified interface with three synchronized panels:
+- **Visual Editor**: Drag-and-drop field palette and property editor
+- **Live Preview**: Real-time rendered form preview
+- **JSON Editor**: Live JSON schema with validation feedback
+
+### Features
+
+**Visual Editor Panel:**
+- Field palette with 9 field types (text, email, password, number, textarea, select, radio, checkbox, date)
+- Click-to-add field creation
+- Visual field tree showing all form fields
+- Reorder fields (move up/down)
+- Delete fields
+- Select field to edit properties
+- Property editor:
+  - Field name
+  - Label
+  - Placeholder
+  - Required checkbox
+  - Read-only checkbox
+  - Disabled checkbox
+
+**Live Preview Panel:**
+- Real-time rendered form using DqDynamicForm component
+- Updates instantly as you modify fields
+- Shows exact output users will see
+- Empty state when no fields added
+
+**JSON Editor & Validation Panel:**
+- Live JSON schema editor
+- Bidirectional sync: edit JSON → updates visual editor
+- Real-time validation using DevToolsService
+- Validation display:
+  - ✅ Valid/❌ Invalid indicator
+  - Summary statistics (total fields, required fields, errors, warnings)
+  - Detailed error messages
+  - Warning messages
+  - Field type breakdown
+
+### Actions
+
+**Header Actions:**
+- 🗑️ **Clear**: Clear entire form (with confirmation)
+- 📥 **Import**: Import JSON schema from file
+- 📤 **Export**: Export schema to JSON file
+- ⚡ **Generate TS**: Generate TypeScript interface and copy to clipboard
+
+### Usage
+
+#### Accessing the Form Builder
+
+Navigate to `/builder` in your application, or click "🛠️ Open Form Builder" from the demo page.
+
+```typescript
+// Routes are already configured
+// / → Demo page with sample form
+// /builder → Form builder application
+```
+
+#### Building a Form
+
+1. **Add Fields**: Click field types in the palette to add them
+2. **Configure**: Click a field to edit its properties
+3. **Reorder**: Use ⬆️⬇️ buttons to change field order
+4. **Preview**: See live preview in the center panel
+5. **Validate**: Check JSON panel for validation errors
+6. **Export**: Download JSON when ready
+
+#### Example Workflow
+
+```
+1. Click "Text Input" → Field added
+2. Select the field → Properties appear
+3. Change name to "username"
+4. Change label to "Username"
+5. Check "Required" checkbox
+6. See updates in all three panels simultaneously
+7. Click "Generate TS" → TypeScript interface copied
+8. Click "Export" → Download form-schema.json
+```
+
+### Keyboard & Mouse
+
+- **Click field** in tree → Select for editing
+- **Click field type** in palette → Add new field
+- **⬆️⬇️ buttons** → Reorder fields
+- **🗑️ button** → Delete field
+- **Edit JSON** → Type directly in JSON editor
+- **Import JSON** → Click Import and select file
+
+### Validation
+
+The form builder performs real-time validation:
+
+**Errors (must fix):**
+- Missing required properties (name, label, type)
+- Duplicate field names
+- Invalid field types
+- Circular dependencies
+- Non-existent dependency references
+
+**Warnings (review):**
+- Unknown field types
+- Missing options for select/radio
+- Misused validations
+- Computed fields without readonly
+
+### TypeScript Generation
+
+Click "⚡ Generate TS" to generate a TypeScript interface from your form schema:
+
+**Input (JSON):**
+```json
+{
+  "title": "User Form",
+  "fields": [
+    { "type": "text", "name": "username", "label": "Username", "validations": { "required": true } },
+    { "type": "email", "name": "email", "label": "Email", "validations": { "required": true } },
+    { "type": "number", "name": "age", "label": "Age" }
+  ]
+}
+```
+
+**Output (TypeScript):**
+```typescript
+export interface FormData {
+  username: string;
+  email: string;
+  age?: number;
+}
+```
+
+The interface is automatically copied to your clipboard.
+
+### Export/Import
+
+**Export:**
+- Generates formatted JSON (2-space indentation)
+- Downloads as `form-schema.json`
+- Can be imported back or used directly
+
+**Import:**
+- Select any valid JSON schema file
+- Automatic validation on import
+- Shows error if schema is invalid
+- Replaces current schema (with confirmation)
+
+### Integration
+
+The Form Builder is a standalone application built with:
+- **FormBuilder component** (`/src/app/form-builder/form-builder.ts`)
+- **DevToolsService** for validation
+- **DqDynamicForm** for live preview
+- **Angular Signals** for reactive state
+
+### Responsive Design
+
+The Form Builder adapts to different screen sizes:
+- **Desktop (>1400px)**: Full three-panel layout
+- **Laptop (1200-1400px)**: Narrower panels
+- **Tablet (<1200px)**: Stacked single-column layout
+
+### Best Practices
+
+1. **Start Small**: Begin with a few fields, test, then expand
+2. **Validate Often**: Check validation panel frequently
+3. **Use Properties**: Configure all field properties before exporting
+4. **Test Preview**: Interact with the live preview to verify behavior
+5. **Export Regularly**: Save your work by exporting JSON
+6. **Generate Types**: Create TypeScript interfaces for type safety
+
+### Advanced Tips
+
+**Bidirectional Editing:**
+- Edit visually OR in JSON - both stay synchronized
+- JSON edits trigger visual updates
+- Visual edits regenerate JSON
+
+**Field Naming:**
+- Auto-generated names: `textField1`, `emailField2`, etc.
+- Rename in properties panel for semantic names
+- Use camelCase (e.g., `firstName`, `emailAddress`)
+
+**Quick Testing:**
+- Add fields quickly with palette
+- Configure in properties panel
+- Test in live preview immediately
+- No build step needed
+
+### Limitations
+
+- No drag-and-drop reordering (use ⬆️⬇️ buttons instead)
+- Limited property editor (name, label, placeholder, required, readonly, disabled)
+- For advanced features (validations, dependencies, etc.), edit JSON directly
+- No undo/redo (export regularly to save progress)
+
+### Future Enhancements
+
+Planned improvements:
+- Drag-and-drop field reordering
+- Expanded property editor (all field options)
+- Template library (common field patterns)
+- Multi-step form builder
+- Validation rule editor
+- Dependency configuration UI
+- Section/group management
+- Collaborative editing
+
+---
+
+## Getting Started
+
+### Development Server
+
+Run `ng serve` for a dev server. Navigate to:
+- `http://localhost:4200/` for the demo
+- `http://localhost:4200/builder` for the form builder
+
+The application will automatically reload if you change any of the source files.
+
+### Building
+
+Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+

@@ -191,4 +191,15 @@ export interface FormSchema {
   multiStep?: boolean; // Enable multi-step mode
   submission?: FormSubmission; // Submission configuration
   autosave?: AutosaveConfig; // Autosave configuration
+  i18n?: I18nConfig; // Internationalization configuration
+}
+
+// Internationalization configuration
+export interface I18nConfig {
+  enabled: boolean;                    // Enable i18n support
+  defaultLocale: string;               // Default locale (e.g., 'en-US')
+  availableLocales: string[];          // List of available locales
+  translations: Record<string, any>;   // Translation objects keyed by locale
+  dateFormat?: string;                 // Date format per locale (e.g., 'MM/DD/YYYY')
+  direction?: 'ltr' | 'rtl';          // Text direction (auto-detected from locale)
 }

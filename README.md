@@ -1401,7 +1401,6 @@ Computed fields automatically recalculate when any dependency changes:
 - **Dependency Order**: Dependencies sorted by length to avoid partial replacements
 - **Error Handling**: Formula errors show empty value with console warning
 
-
 ---
 
 ## Additional Field Types
@@ -1669,4 +1668,549 @@ import { FormBuilderComponent } from './form-builder/form-builder.component';
 | `datetime` | Date & time | Min/max, timezone support |
 | `file` | File upload | Size/type validation, preview |
 | `richtext` | WYSIWYG editor | Formatting toolbar, char limit |
+
+---
+
+## Form Submission Enhancements (Phase 5)
+
+Real API submission with automatic retry logic, loading states, and comprehensive error handling.
+
+### Basic Submission Configuration
+
+```json
+{
+  "title": "User Registration",
+  "submission": {
+    "endpoint": "/api/forms/submit",
+    "method": "POST",
+    "successMessage": "Form submitted successfully!",
+    "errorMessage": "Submission failed. Please try again."
+  },
+  "fields": [...]
+}
+```
+
+### Advanced Submission Configuration
+
+```json
+{
+  "submission": {
+    "endpoint": "/api/users",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer {{token}}",
+      "Content-Type": "application/json"
+    },
+    "successMessage": "Registration complete!",
+    "errorMessage": "Registration failed. Please check your information.",
+    "redirectOnSuccess": "/dashboard",
+    "showDataOnSuccess": true
+  }
+}
+```
+
+### Submission Configuration Options
+
+```typescript
+interface FormSubmission {
+  endpoint?: string;              // API endpoint (if not provided, data shown locally)
+  method?: 'POST' | 'PUT' | 'PATCH';  // HTTP method (default: POST)
+  headers?: Record<string, string>;   // Custom headers
+  successMessage?: string;        // Success message to display
+  errorMessage?: string;          // Default error message
+  redirectOnSuccess?: string;     // URL to redirect after success (2s delay)
+  showDataOnSuccess?: boolean;    // Show submitted data (default: true)
+}
+```
+
+### Submission Features
+
+**Automatic Retry Logic:**
+- Up to 3 automatic retry attempts for network/server errors
+- Exponential backoff delays: 1s, 2s, 4s
+- Retries for status 0 (network errors) or 5xx (server errors)
+- No retry for 4xx client errors (invalid data)
+
+**Loading States:**
+- Animated spinner in submit button
+- Button disabled during submission
+- "Submitting..." text with retry count
+- ARIA attributes for accessibility (`aria-busy`)
+
+**Error Handling:**
+- Global error messages with shake animation
+- Field-level error mapping from API responses
+- Retry button for manual retry after max attempts
+- Error format from API: `{ errors: { fieldName: "error message" } }`
+
+**Success Handling:**
+- Animated success icon (green checkmark)
+- Configurable success message
+- Optional redirect with delay
+- Automatic draft clearing
+
+### Submission Flow
+
+1. User clicks **Submit**
+2. Form validates (shows errors if invalid)
+3. Shows loading spinner, disables button
+4. POST/PUT/PATCH to configured endpoint
+5. **On Success:**
+   - Show success message with animated icon
+   - Clear autosave draft
+   - Redirect if configured (2s delay)
+6. **On Error:**
+   - Show error message with shake animation
+   - Retry automatically if network/server error
+   - Show manual retry button after max attempts
+   - Display field-level errors inline
+
+### API Error Response Format
+
+**Field-level errors:**
+```json
+{
+  "errors": {
+    "email": "Email is already taken",
+    "username": "Username must be unique"
+  }
+}
+```
+
+**Global error:**
+```json
+{
+  "error": "Server error occurred",
+  "message": "Unable to process request"
+}
+```
+
+### Example Usage
+
+**Without submission config (local display only):**
+```json
+{
+  "title": "Contact Form",
+  "fields": [...]
+}
+```
+Data is displayed locally after validation.
+
+**With API submission:**
+```json
+{
+  "title": "Contact Form",
+  "submission": {
+    "endpoint": "https://api.example.com/contact",
+    "method": "POST"
+  },
+  "fields": [...]
+}
+```
+Data is submitted to API with automatic retry.
+
+**With authentication:**
+```json
+{
+  "submission": {
+    "endpoint": "/api/secure/endpoint",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer YOUR_TOKEN_HERE"
+    }
+  }
+}
+```
+
+---
+
+## Advanced Dependency Features (Phase 5)
+
+Enhanced field dependency capabilities supporting multiple parent dependencies and template variable replacement.
+
+### Multiple Parent Dependencies
+
+Fields can now depend on multiple parent fields. All parent fields must have values before the dependent field becomes enabled.
+
+```json
+{
+  "type": "select",
+  "label": "City",
+  "name": "city",
+  "dependsOn": ["country", "state"],
+  "optionsEndpoint": "/api/cities?country={{country}}&state={{state}}",
+  "validations": { "required": true }
+}
+```
+
+### Single Parent Dependency (Backward Compatible)
+
+```json
+{
+  "type": "select",
+  "label": "State",
+  "name": "state",
+  "dependsOn": "country",
+  "optionsEndpoint": "/api/states?country={{country}}",
+  "validations": { "required": true }
+}
+```
+
+### Template Variable Replacement
+
+Use `{{fieldName}}` syntax in endpoint URLs to automatically replace with actual field values:
+
+```json
+{
+  "optionsEndpoint": "/api/data?param1={{field1}}&param2={{field2}}"
+}
+```
+
+When `field1="value1"` and `field2="value2"`, the endpoint becomes:
+```
+/api/data?param1=value1&param2=value2
+```
+
+### Dependency Features
+
+**Automatic Parameter Building:**
+- All dependency values automatically passed as parameters
+- Works with both query parameters and URL templates
+- Supports multiple dependencies with complex URLs
+
+**Smart Enabling/Disabling:**
+- Dependent fields disabled until ALL dependencies have values
+- Clear visual feedback with helper text
+- Automatic value clearing when dependencies change
+
+**API Integration:**
+- Template variables replaced before API call
+- Dependency parameters passed to backend
+- Intelligent caching to reduce server load
+
+### Example: Three-Level Dependency Chain
+
+```json
+{
+  "fields": [
+    {
+      "type": "select",
+      "label": "Country",
+      "name": "country",
+      "optionsEndpoint": "/api/countries"
+    },
+    {
+      "type": "select",
+      "label": "State/Province",
+      "name": "state",
+      "dependsOn": "country",
+      "optionsEndpoint": "/api/states?country={{country}}"
+    },
+    {
+      "type": "select",
+      "label": "City",
+      "name": "city",
+      "dependsOn": ["country", "state"],
+      "optionsEndpoint": "/api/cities?country={{country}}&state={{state}}"
+    }
+  ]
+}
+```
+
+**User Experience:**
+1. User selects **Country**: "USA"
+   - State field becomes enabled
+   - API call: `GET /api/states?country=USA`
+2. User selects **State**: "California"
+   - City field becomes enabled
+   - API call: `GET /api/cities?country=USA&state=California`
+3. City options populate based on both parents
+
+### Complex Dependency Example
+
+```json
+{
+  "type": "select",
+  "label": "Available Products",
+  "name": "product",
+  "dependsOn": ["category", "subcategory", "priceRange"],
+  "optionsEndpoint": "/api/products?category={{category}}&subcategory={{subcategory}}&price={{priceRange}}"
+}
+```
+
+All three parent fields (category, subcategory, priceRange) must have values before the product field becomes available.
+
+### Static Dependencies (optionsMap)
+
+For single-parent static dependencies, use `optionsMap`:
+
+```json
+{
+  "type": "select",
+  "label": "State",
+  "name": "state",
+  "dependsOn": "country",
+  "optionsMap": {
+    "USA": [
+      { "value": "CA", "label": "California" },
+      { "value": "NY", "label": "New York" }
+    ],
+    "Canada": [
+      { "value": "ON", "label": "Ontario" },
+      { "value": "BC", "label": "British Columbia" }
+    ]
+  }
+}
+```
+
+**Note:** `optionsMap` only supports single-parent dependencies. For multiple dependencies, use `optionsEndpoint` with template variables.
+
+### Dependency Types
+
+**1. API-Driven Dependencies (Multiple Parents Supported):**
+```json
+{
+  "dependsOn": ["field1", "field2"],
+  "optionsEndpoint": "/api/endpoint?f1={{field1}}&f2={{field2}}"
+}
+```
+
+**2. Static Dependencies (Single Parent Only):**
+```json
+{
+  "dependsOn": "parentField",
+  "optionsMap": { "value1": [...], "value2": [...] }
+}
+```
+
+**3. Checkbox Dependencies (Single Parent Only):**
+```json
+{
+  "type": "checkbox",
+  "dependsOn": "otherCheckbox",
+  "dependencyType": "same"  // or "opposite"
+}
+```
+
+### Important Notes
+
+- **Backward Compatibility**: All existing single-dependency configurations continue to work
+- **Validation**: Dependent fields with `required: true` only validate when enabled
+- **Performance**: Intelligent caching reduces redundant API calls
+- **Error Handling**: API errors show user-friendly messages
+- **Accessibility**: Proper ARIA attributes and screen reader support
+
+---
+
+## Developer Tools (Phase 6)
+
+Comprehensive developer utilities for schema validation, debugging, and TypeScript generation.
+
+### Schema Validation
+
+The `DevToolsService` provides validation to catch configuration errors early:
+
+```typescript
+import { inject } from '@angular/core';
+import { DevToolsService } from './dq-dynamic-form/dev-tools.service';
+
+const devTools = inject(DevToolsService);
+const schema = { /* your form schema */ };
+
+const result = devTools.validateSchema(schema);
+
+if (!result.isValid) {
+  console.error('Schema Errors:', result.errors);
+  console.warn('Schema Warnings:', result.warnings);
+  console.log('Summary:', result.summary);
+}
+```
+
+### Validation Features
+
+**Error Detection:**
+- Missing required properties (title, name, label, type)
+- Duplicate field names
+- Invalid field types
+- Circular dependencies
+- Non-existent dependency references
+- Invalid regex patterns
+- Min/max constraint violations
+
+**Warning Detection:**
+- Unknown field types
+- Missing options for select/radio fields
+- Misused validations (e.g., requiredTrue on non-checkbox)
+- Computed fields without readonly
+- Potential configuration issues
+
+**Validation Result:**
+```typescript
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];        // Critical issues that must be fixed
+  warnings: string[];      // Potential issues to review
+  summary: SchemaSummary;  // Statistics and overview
+}
+
+interface SchemaSummary {
+  totalFields: number;
+  requiredFields: number;
+  optionalFields: number;
+  fieldTypes: Record<string, number>;  // Count by type
+  hasAutosave: boolean;
+  hasSubmission: boolean;
+  hasI18n: boolean;
+  errorCount: number;
+  warningCount: number;
+}
+```
+
+### TypeScript Interface Generation
+
+Generate TypeScript interfaces from form schemas:
+
+```typescript
+const devTools = inject(DevToolsService);
+
+// Generate interface with default name 'FormData'
+const tsCode = devTools.generateTypeScriptInterface(schema);
+
+// Generate interface with custom name
+const tsCode = devTools.generateTypeScriptInterface(schema, 'UserRegistration');
+
+console.log(tsCode);
+```
+
+**Example Output:**
+```typescript
+export interface UserRegistration {
+  username: string;
+  email: string;
+  password: string;
+  age?: number;
+  newsletter?: boolean;
+  accountType: 'personal' | 'business' | 'student';
+}
+```
+
+**Type Mapping:**
+- `text`, `email`, `password`, `textarea` → `string`
+- `number` → `number`
+- `date` → `string` (ISO date string)
+- `checkbox` → `boolean`
+- `select`, `radio` with static options → Union type
+- `array` → `any[]`
+
+### Export/Import Utilities
+
+**Export Schema:**
+```typescript
+const jsonString = devTools.exportSchema(schema);
+// Returns formatted JSON string (2-space indentation)
+```
+
+**Import Schema:**
+```typescript
+const result = devTools.importSchema(jsonString);
+
+if (result.schema) {
+  console.log('Valid schema imported:', result.schema);
+} else {
+  console.error('Import failed:', result.error);
+}
+```
+
+The import function automatically validates the schema and returns errors if invalid.
+
+### Example Validation Errors
+
+```typescript
+const result = devTools.validateSchema(schema);
+
+// Example errors:
+// - 'Schema is missing required "title" property'
+// - 'Field[3] "email": Missing required property "label"'
+// - 'Duplicate field name "username" found 2 times'
+// - 'Field "city" depends on non-existent field "country"'
+// - 'Field "total" has circular dependency'
+// - 'Computed field "fullName" depends on non-existent field "firstName"'
+
+// Example warnings:
+// - 'Field[5] "status": Unknown field type "status-picker"'
+// - 'Field[7] "category": Select/Radio field should have "options"'
+// - 'Field[8] "terms": "minLength" cannot be greater than "maxLength"'
+// - 'Field[9] "total": Computed fields should be readonly'
+```
+
+### Development Workflow
+
+**During Development:**
+```typescript
+// Validate schema before using it
+const validation = devTools.validateSchema(schema);
+if (!validation.isValid) {
+  throw new Error(`Invalid schema: ${validation.errors.join(', ')}`);
+}
+```
+
+**Generate Types:**
+```typescript
+// Generate TypeScript interface for type safety
+const interfaceCode = devTools.generateTypeScriptInterface(schema, 'MyFormData');
+// Copy to your types file
+```
+
+**Debug Issues:**
+```typescript
+// Get summary of schema
+const result = devTools.validateSchema(schema);
+console.log(`Total fields: ${result.summary.totalFields}`);
+console.log(`Required: ${result.summary.requiredFields}`);
+console.log(`Field types:`, result.summary.fieldTypes);
+```
+
+### Best Practices
+
+1. **Validate Early**: Run schema validation during development to catch errors
+2. **Check Warnings**: Review warnings for potential configuration issues
+3. **Generate Types**: Use TypeScript interfaces for type-safe form handling
+4. **Use in Tests**: Validate schemas in unit tests
+5. **Monitor Summary**: Check schema summary for complexity metrics
+
+### Integration Example
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { DevToolsService } from './dq-dynamic-form/dev-tools.service';
+
+@Component({
+  selector: 'app-form-config',
+  template: '...'
+})
+export class FormConfigComponent implements OnInit {
+  private devTools = inject(DevToolsService);
+
+  ngOnInit() {
+    // Load schema
+    const schema = this.loadSchema();
+
+    // Validate in development mode
+    if (!environment.production) {
+      const result = this.devTools.validateSchema(schema);
+
+      if (result.errors.length > 0) {
+        console.error('❌ Schema validation errors:', result.errors);
+      }
+
+      if (result.warnings.length > 0) {
+        console.warn('⚠️ Schema validation warnings:', result.warnings);
+      }
+
+      console.log('📊 Schema summary:', result.summary);
+    }
+  }
+}
+```
+>>>>>>> 403a05837c1afdc2adcfa81f4c3d13b553e4acfc
 

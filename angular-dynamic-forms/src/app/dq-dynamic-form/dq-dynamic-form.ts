@@ -1,8 +1,9 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, input } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission } from './models/field.model';
+import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission, FormSchema } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
 import { MaskService } from './mask.service';
+import { I18nService } from './i18n.service';
 
 @Component({
   selector: 'dq-dynamic-form',
@@ -12,9 +13,13 @@ import { MaskService } from './mask.service';
   providers: [DynamicFormsService],
 })
 export class DqDynamicForm {
+  // Optional input for providing schema directly (used by form builder)
+  formSchema = input<FormSchema | null>(null);
+
   private readonly _formService = inject(DynamicFormsService);
   private readonly _maskService = inject(MaskService);
   private readonly _http = inject(HttpClient);
+  protected readonly _i18nService = inject(I18nService);
   protected readonly fields = signal<Field[]>([]);
   protected readonly title = signal<string>('');
   protected readonly formValues = signal<Record<string, unknown>>({});
@@ -90,6 +95,14 @@ export class DqDynamicForm {
   });
 
   constructor() {
+    // Watch for changes in formSchema input (for form builder preview)
+    effect(() => {
+      const providedSchema = this.formSchema();
+      if (providedSchema) {
+        this.loadSchema(providedSchema);
+      }
+    });
+
     // Watch for changes in form values to reset dependent fields
     effect(() => {
       const values = this.formValues();
@@ -214,8 +227,18 @@ export class DqDynamicForm {
   }
 
   ngOnInit(): void {
-    this._formService.getFormSchema().subscribe((schema) => {
-      this.title.set(schema.title);
+    // Only load from service if no schema is provided via input
+    // (formSchema input changes are handled by effect in constructor)
+    const providedSchema = this.formSchema();
+    if (!providedSchema) {
+      this._formService.getFormSchema().subscribe((schema) => {
+        this.loadSchema(schema);
+      });
+    }
+  }
+
+  private loadSchema(schema: FormSchema): void {
+    this.title.set(schema.title);
 
       // Handle both single-step and multi-step forms
       const allFields = schema.fields || [];
@@ -307,13 +330,17 @@ export class DqDynamicForm {
         this.submissionConfig = schema.submission;
       }
 
+      // Initialize i18n if configured
+      if (schema.i18n) {
+        this._i18nService.initialize(schema.i18n);
+      }
+
       this.formValues.set(initialValues);
       this.touched.set(initialTouched);
       this.dirty.set(initialDirty);
       // Store initial values for comparison
       this.initialValues.set({ ...initialValues });
       this.loading.set(false);
-    });
   }
 
   ngOnDestroy(): void {
@@ -1687,5 +1714,26 @@ export class DqDynamicForm {
     const div = document.createElement('div');
     div.innerHTML = html;
     return div.textContent?.length || 0;
+  }
+
+  /**
+   * Switch to a different locale
+   */
+  switchLocale(locale: string): void {
+    this._i18nService.setLocale(locale);
+  }
+
+  /**
+   * Get current locale
+   */
+  getCurrentLocale(): string {
+    return this._i18nService.getCurrentLocale();
+  }
+
+  /**
+   * Get text direction for current locale
+   */
+  getTextDirection(): 'ltr' | 'rtl' {
+    return this._i18nService.getDirection();
   }
 }
