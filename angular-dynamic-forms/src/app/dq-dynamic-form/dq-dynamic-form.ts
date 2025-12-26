@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
 import { MaskService } from './mask.service';
+import { I18nService } from './i18n.service';
 
 @Component({
   selector: 'dq-dynamic-form',
@@ -15,6 +16,7 @@ export class DqDynamicForm {
   private readonly _formService = inject(DynamicFormsService);
   private readonly _maskService = inject(MaskService);
   private readonly _http = inject(HttpClient);
+  protected readonly _i18nService = inject(I18nService);
   protected readonly fields = signal<Field[]>([]);
   protected readonly title = signal<string>('');
   protected readonly formValues = signal<Record<string, unknown>>({});
@@ -291,6 +293,11 @@ export class DqDynamicForm {
       // Store submission configuration
       if (schema.submission) {
         this.submissionConfig = schema.submission;
+      }
+
+      // Initialize i18n if configured
+      if (schema.i18n) {
+        this._i18nService.initialize(schema.i18n);
       }
 
       this.formValues.set(initialValues);
@@ -1527,5 +1534,26 @@ export class DqDynamicForm {
     }
 
     return result;
+  }
+
+  /**
+   * Switch to a different locale
+   */
+  switchLocale(locale: string): void {
+    this._i18nService.setLocale(locale);
+  }
+
+  /**
+   * Get current locale
+   */
+  getCurrentLocale(): string {
+    return this._i18nService.getCurrentLocale();
+  }
+
+  /**
+   * Get text direction for current locale
+   */
+  getTextDirection(): 'ltr' | 'rtl' {
+    return this._i18nService.getDirection();
   }
 }
