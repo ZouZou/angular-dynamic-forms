@@ -1732,3 +1732,216 @@ For single-parent static dependencies, use `optionsMap`:
 - **Error Handling**: API errors show user-friendly messages
 - **Accessibility**: Proper ARIA attributes and screen reader support
 
+---
+
+## Developer Tools (Phase 6)
+
+Comprehensive developer utilities for schema validation, debugging, and TypeScript generation.
+
+### Schema Validation
+
+The `DevToolsService` provides validation to catch configuration errors early:
+
+```typescript
+import { inject } from '@angular/core';
+import { DevToolsService } from './dq-dynamic-form/dev-tools.service';
+
+const devTools = inject(DevToolsService);
+const schema = { /* your form schema */ };
+
+const result = devTools.validateSchema(schema);
+
+if (!result.isValid) {
+  console.error('Schema Errors:', result.errors);
+  console.warn('Schema Warnings:', result.warnings);
+  console.log('Summary:', result.summary);
+}
+```
+
+### Validation Features
+
+**Error Detection:**
+- Missing required properties (title, name, label, type)
+- Duplicate field names
+- Invalid field types
+- Circular dependencies
+- Non-existent dependency references
+- Invalid regex patterns
+- Min/max constraint violations
+
+**Warning Detection:**
+- Unknown field types
+- Missing options for select/radio fields
+- Misused validations (e.g., requiredTrue on non-checkbox)
+- Computed fields without readonly
+- Potential configuration issues
+
+**Validation Result:**
+```typescript
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];        // Critical issues that must be fixed
+  warnings: string[];      // Potential issues to review
+  summary: SchemaSummary;  // Statistics and overview
+}
+
+interface SchemaSummary {
+  totalFields: number;
+  requiredFields: number;
+  optionalFields: number;
+  fieldTypes: Record<string, number>;  // Count by type
+  hasAutosave: boolean;
+  hasSubmission: boolean;
+  hasI18n: boolean;
+  errorCount: number;
+  warningCount: number;
+}
+```
+
+### TypeScript Interface Generation
+
+Generate TypeScript interfaces from form schemas:
+
+```typescript
+const devTools = inject(DevToolsService);
+
+// Generate interface with default name 'FormData'
+const tsCode = devTools.generateTypeScriptInterface(schema);
+
+// Generate interface with custom name
+const tsCode = devTools.generateTypeScriptInterface(schema, 'UserRegistration');
+
+console.log(tsCode);
+```
+
+**Example Output:**
+```typescript
+export interface UserRegistration {
+  username: string;
+  email: string;
+  password: string;
+  age?: number;
+  newsletter?: boolean;
+  accountType: 'personal' | 'business' | 'student';
+}
+```
+
+**Type Mapping:**
+- `text`, `email`, `password`, `textarea` → `string`
+- `number` → `number`
+- `date` → `string` (ISO date string)
+- `checkbox` → `boolean`
+- `select`, `radio` with static options → Union type
+- `array` → `any[]`
+
+### Export/Import Utilities
+
+**Export Schema:**
+```typescript
+const jsonString = devTools.exportSchema(schema);
+// Returns formatted JSON string (2-space indentation)
+```
+
+**Import Schema:**
+```typescript
+const result = devTools.importSchema(jsonString);
+
+if (result.schema) {
+  console.log('Valid schema imported:', result.schema);
+} else {
+  console.error('Import failed:', result.error);
+}
+```
+
+The import function automatically validates the schema and returns errors if invalid.
+
+### Example Validation Errors
+
+```typescript
+const result = devTools.validateSchema(schema);
+
+// Example errors:
+// - 'Schema is missing required "title" property'
+// - 'Field[3] "email": Missing required property "label"'
+// - 'Duplicate field name "username" found 2 times'
+// - 'Field "city" depends on non-existent field "country"'
+// - 'Field "total" has circular dependency'
+// - 'Computed field "fullName" depends on non-existent field "firstName"'
+
+// Example warnings:
+// - 'Field[5] "status": Unknown field type "status-picker"'
+// - 'Field[7] "category": Select/Radio field should have "options"'
+// - 'Field[8] "terms": "minLength" cannot be greater than "maxLength"'
+// - 'Field[9] "total": Computed fields should be readonly'
+```
+
+### Development Workflow
+
+**During Development:**
+```typescript
+// Validate schema before using it
+const validation = devTools.validateSchema(schema);
+if (!validation.isValid) {
+  throw new Error(`Invalid schema: ${validation.errors.join(', ')}`);
+}
+```
+
+**Generate Types:**
+```typescript
+// Generate TypeScript interface for type safety
+const interfaceCode = devTools.generateTypeScriptInterface(schema, 'MyFormData');
+// Copy to your types file
+```
+
+**Debug Issues:**
+```typescript
+// Get summary of schema
+const result = devTools.validateSchema(schema);
+console.log(`Total fields: ${result.summary.totalFields}`);
+console.log(`Required: ${result.summary.requiredFields}`);
+console.log(`Field types:`, result.summary.fieldTypes);
+```
+
+### Best Practices
+
+1. **Validate Early**: Run schema validation during development to catch errors
+2. **Check Warnings**: Review warnings for potential configuration issues
+3. **Generate Types**: Use TypeScript interfaces for type-safe form handling
+4. **Use in Tests**: Validate schemas in unit tests
+5. **Monitor Summary**: Check schema summary for complexity metrics
+
+### Integration Example
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { DevToolsService } from './dq-dynamic-form/dev-tools.service';
+
+@Component({
+  selector: 'app-form-config',
+  template: '...'
+})
+export class FormConfigComponent implements OnInit {
+  private devTools = inject(DevToolsService);
+
+  ngOnInit() {
+    // Load schema
+    const schema = this.loadSchema();
+
+    // Validate in development mode
+    if (!environment.production) {
+      const result = this.devTools.validateSchema(schema);
+
+      if (result.errors.length > 0) {
+        console.error('❌ Schema validation errors:', result.errors);
+      }
+
+      if (result.warnings.length > 0) {
+        console.warn('⚠️ Schema validation warnings:', result.warnings);
+      }
+
+      console.log('📊 Schema summary:', result.summary);
+    }
+  }
+}
+```
+
