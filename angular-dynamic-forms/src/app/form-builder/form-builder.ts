@@ -38,6 +38,9 @@ export class FormBuilder {
   // Selected field for editing
   protected readonly selectedFieldIndex = signal<number | null>(null);
 
+  // Expose Number for template (needed for numeric input conversions)
+  protected readonly Number = Number;
+
   // Field palette templates
   protected readonly fieldTemplates: FieldTemplate[] = [
     {

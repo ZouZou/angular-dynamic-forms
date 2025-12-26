@@ -25,6 +25,9 @@ export class FormBuilderComponent {
   protected readonly showJsonPreview = signal<boolean>(true);
   protected readonly draggedFieldIndex = signal<number | null>(null);
 
+  // Expose Number for template (needed for numeric input conversions)
+  protected readonly Number = Number;
+
   // Available field types
   protected readonly availableFieldTypes: FieldTemplate[] = [
     { type: 'text', label: 'Text Input', icon: '📝', description: 'Single-line text' },

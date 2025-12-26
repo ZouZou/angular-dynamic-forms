@@ -216,13 +216,13 @@
             <div class="option-item">
               <input
                 type="text"
-                [value]="option.value"
+                [value]="$any(option).value"
                 (input)="updateOption(i, 'value', $any($event.target).value)"
                 placeholder="Value"
               />
               <input
                 type="text"
-                [value]="option.label"
+                [value]="$any(option).label"
                 (input)="updateOption(i, 'label', $any($event.target).value)"
                 placeholder="Label"
               />

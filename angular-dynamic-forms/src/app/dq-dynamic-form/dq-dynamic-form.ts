@@ -71,11 +71,11 @@ export class DqDynamicForm {
   private submissionConfig: FormSubmission | null = null;
   private readonly MAX_RETRY_ATTEMPTS = 3;
 
-  // Store file data for file uploads
-  protected readonly fileData = signal<Record<string, any>>({});
-
   // Expose Math for template (needed for multiselect size calculation and other calculations)
   protected readonly Math = Math;
+
+  // Expose Number for template (needed for numeric input conversions)
+  protected readonly Number = Number;
 
   // Computed: Check if entire form is pristine (no changes)
   protected readonly pristine = computed<boolean>(() =>
@@ -1737,125 +1737,5 @@ export class DqDynamicForm {
    */
   getTextDirection(): 'ltr' | 'rtl' {
     return this._i18nService.getDirection();
-  }
-
-  /**
-   * Update multi-select field value
-   */
-  updateMultiSelectValue(fieldName: string, selectedOptions: any): void {
-    const values: string[] = [];
-    for (let i = 0; i < selectedOptions.length; i++) {
-      values.push(selectedOptions[i].value);
-    }
-    this.updateFormValue(fieldName, values);
-  }
-
-  /**
-   * Handle file upload
-   */
-  handleFileUpload(fieldName: string, files: FileList | null, field: Field): void {
-    if (!files || files.length === 0) {
-      this.updateFormValue(fieldName, null);
-      this.fileData.update((current) => {
-        const updated = { ...current };
-        delete updated[fieldName];
-        return updated;
-      });
-      return;
-    }
-
-    const file = files[0];
-
-    // Validate file size
-    if (field.maxFileSize && file.size > field.maxFileSize) {
-      alert(`File size exceeds maximum allowed size of ${this.formatFileSize(field.maxFileSize)}`);
-      return;
-    }
-
-    // Read file data
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      this.fileData.update((current) => ({
-        ...current,
-        [fieldName]: {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          data: e.target.result,
-        },
-      }));
-      this.updateFormValue(fieldName, file.name);
-    };
-
-    // Read as data URL for preview
-    reader.readAsDataURL(file);
-  }
-
-  /**
-   * Update rich text field value
-   */
-  updateRichTextValue(fieldName: string, html: string): void {
-    this.updateFormValue(fieldName, html);
-  }
-
-  /**
-   * Execute rich text command
-   */
-  execCommand(command: string): void {
-    document.execCommand(command, false);
-  }
-
-  /**
-   * Format file size in human-readable format
-   */
-  formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-  }
-
-  /**
-   * Check if file is an image
-   */
-  isImage(fileName: any): boolean {
-    if (!fileName) return false;
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
-    const extension = fileName.toString().split('.').pop()?.toLowerCase();
-    return imageExtensions.includes(extension || '');
-  }
-
-  /**
-   * Get file preview URL
-   */
-  getFilePreview(fieldName: string): string {
-    const file = this.fileData()[fieldName];
-    return file?.data || '';
-  }
-
-  /**
-   * Get file name
-   */
-  getFileName(fileName: any): string {
-    return fileName?.toString() || '';
-  }
-
-  /**
-   * Get file size
-   */
-  getFileSize(fileName: string): string {
-    const file = this.fileData()[fileName];
-    return file ? this.formatFileSize(file.size) : '';
-  }
-
-  /**
-   * Get rich text length (strip HTML tags)
-   */
-  getRichTextLength(html: string | unknown): number {
-    if (!html || typeof html !== 'string') return 0;
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return div.textContent?.length || 0;
   }
 }
