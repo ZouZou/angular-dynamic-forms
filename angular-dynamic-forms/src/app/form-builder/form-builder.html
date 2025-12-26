@@ -157,6 +157,139 @@
                   Disabled
                 </label>
               </div>
+
+              <!-- Array Field Configuration -->
+              @if (field.type === 'array' && field.arrayConfig) {
+                <div class="array-config-section">
+                  <h4 style="margin-top: 1rem; border-top: 1px solid #ddd; padding-top: 1rem;">🔁 Array Configuration</h4>
+
+                  <div class="form-group">
+                    <label>Minimum Items</label>
+                    <input
+                      type="number"
+                      [value]="field.arrayConfig.minItems || 0"
+                      (input)="updateArrayConfig('minItems', Number($any($event.target).value))"
+                      class="form-control"
+                      min="0"
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label>Maximum Items</label>
+                    <input
+                      type="number"
+                      [value]="field.arrayConfig.maxItems || ''"
+                      (input)="updateArrayConfig('maxItems', $any($event.target).value ? Number($any($event.target).value) : undefined)"
+                      class="form-control"
+                      min="1"
+                      placeholder="Unlimited"
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label>Initial Items</label>
+                    <input
+                      type="number"
+                      [value]="field.arrayConfig.initialItems || 1"
+                      (input)="updateArrayConfig('initialItems', Number($any($event.target).value))"
+                      class="form-control"
+                      min="0"
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label>Add Button Text</label>
+                    <input
+                      type="text"
+                      [value]="field.arrayConfig.addButtonText || ''"
+                      (input)="updateArrayConfig('addButtonText', $any($event.target).value)"
+                      class="form-control"
+                      placeholder="Add Item"
+                    >
+                  </div>
+
+                  <div class="form-group">
+                    <label>Remove Button Text</label>
+                    <input
+                      type="text"
+                      [value]="field.arrayConfig.removeButtonText || ''"
+                      (input)="updateArrayConfig('removeButtonText', $any($event.target).value)"
+                      class="form-control"
+                      placeholder="Remove"
+                    >
+                  </div>
+
+                  <h4 style="margin-top: 1rem;">Sub-Fields</h4>
+                  <div class="array-subfields">
+                    @for (subField of field.arrayConfig.fields || []; track $index) {
+                      <div class="subfield-item" style="border: 1px solid #ddd; padding: 0.5rem; margin-bottom: 0.5rem; border-radius: 4px;">
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                          <label style="font-size: 0.9em;">Type</label>
+                          <select
+                            [value]="subField.type"
+                            (change)="updateArraySubFieldProperty(selectedFieldIndex()!, $index, 'type', $any($event.target).value)"
+                            class="form-control"
+                          >
+                            <option value="text">Text</option>
+                            <option value="email">Email</option>
+                            <option value="password">Password</option>
+                            <option value="number">Number</option>
+                            <option value="textarea">Textarea</option>
+                            <option value="select">Select</option>
+                            <option value="date">Date</option>
+                          </select>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                          <label style="font-size: 0.9em;">Name</label>
+                          <input
+                            type="text"
+                            [value]="subField.name"
+                            (input)="updateArraySubFieldProperty(selectedFieldIndex()!, $index, 'name', $any($event.target).value)"
+                            class="form-control"
+                          >
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                          <label style="font-size: 0.9em;">Label</label>
+                          <input
+                            type="text"
+                            [value]="subField.label"
+                            (input)="updateArraySubFieldProperty(selectedFieldIndex()!, $index, 'label', $any($event.target).value)"
+                            class="form-control"
+                          >
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                          <label style="font-size: 0.9em;">Placeholder</label>
+                          <input
+                            type="text"
+                            [value]="subField.placeholder || ''"
+                            (input)="updateArraySubFieldProperty(selectedFieldIndex()!, $index, 'placeholder', $any($event.target).value)"
+                            class="form-control"
+                          >
+                        </div>
+
+                        <button
+                          class="btn btn-danger btn-sm"
+                          (click)="removeArraySubField(selectedFieldIndex()!, $index)"
+                          style="width: 100%; margin-top: 0.5rem;"
+                        >
+                          🗑️ Remove Sub-Field
+                        </button>
+                      </div>
+                    }
+
+                    <button
+                      class="btn btn-primary"
+                      (click)="addArraySubField(selectedFieldIndex()!)"
+                      style="width: 100%; margin-top: 0.5rem;"
+                    >
+                      ➕ Add Sub-Field
+                    </button>
+                  </div>
+                </div>
+              }
             </div>
           </section>
         }
