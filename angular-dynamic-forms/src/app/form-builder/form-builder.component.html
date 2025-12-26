@@ -124,9 +124,25 @@
         </div>
 
         <!-- Type-Specific Properties -->
-        @if (selectedField()!.type === 'range') {
+        @if (selectedField()!.type === 'textarea') {
         <div class="property-group">
-          <h4>Range Settings</h4>
+          <h4>Text Area Settings</h4>
+          <label>
+            <span>Rows</span>
+            <input
+              type="number"
+              [value]="selectedField()!.rows || 4"
+              (input)="updateFieldProperty('rows', Number($any($event.target).value))"
+              min="1"
+              max="20"
+            />
+          </label>
+        </div>
+        }
+
+        @if (selectedField()!.type === 'number' || selectedField()!.type === 'range') {
+        <div class="property-group">
+          <h4>{{ selectedField()!.type === 'number' ? 'Number' : 'Range' }} Settings</h4>
           <label>
             <span>Minimum</span>
             <input
@@ -149,6 +165,28 @@
               type="number"
               [value]="selectedField()!.step || 1"
               (input)="updateFieldProperty('step', Number($any($event.target).value))"
+            />
+          </label>
+        </div>
+        }
+
+        @if (selectedField()!.type === 'date' || selectedField()!.type === 'datetime') {
+        <div class="property-group">
+          <h4>Date Settings</h4>
+          <label>
+            <span>Minimum Date</span>
+            <input
+              type="{{ selectedField()!.type === 'datetime' ? 'datetime-local' : 'date' }}"
+              [value]="selectedField()!.min || ''"
+              (input)="updateFieldProperty('min', $any($event.target).value)"
+            />
+          </label>
+          <label>
+            <span>Maximum Date</span>
+            <input
+              type="{{ selectedField()!.type === 'datetime' ? 'datetime-local' : 'date' }}"
+              [value]="selectedField()!.max || ''"
+              (input)="updateFieldProperty('max', $any($event.target).value)"
             />
           </label>
         </div>
@@ -207,8 +245,26 @@
         </div>
         }
 
-        <!-- Options (for select/multiselect) -->
-        @if (selectedField()!.type === 'select' || selectedField()!.type === 'multiselect') {
+        <!-- Radio Layout -->
+        @if (selectedField()!.type === 'radio') {
+        <div class="property-group">
+          <h4>Radio Settings</h4>
+          <label>
+            <span>Layout</span>
+            <select
+              class="form-select"
+              [value]="selectedField()!.layout || 'vertical'"
+              (change)="updateFieldProperty('layout', $any($event.target).value)"
+            >
+              <option value="vertical">Vertical</option>
+              <option value="horizontal">Horizontal</option>
+            </select>
+          </label>
+        </div>
+        }
+
+        <!-- Options (for select/multiselect/radio) -->
+        @if (selectedField()!.type === 'select' || selectedField()!.type === 'multiselect' || selectedField()!.type === 'radio') {
         <div class="property-group">
           <h4>Options</h4>
           <div class="options-list">
@@ -234,6 +290,68 @@
         </div>
         }
 
+        <!-- Array (Repeater) Settings -->
+        @if (selectedField()!.type === 'array') {
+        <div class="property-group">
+          <h4>Repeater Settings</h4>
+          <label>
+            <span>Min Items</span>
+            <input
+              type="number"
+              [value]="selectedField()!.arrayConfig?.minItems || 1"
+              (input)="updateArrayConfig('minItems', Number($any($event.target).value))"
+              min="0"
+            />
+          </label>
+          <label>
+            <span>Max Items</span>
+            <input
+              type="number"
+              [value]="selectedField()!.arrayConfig?.maxItems || 10"
+              (input)="updateArrayConfig('maxItems', Number($any($event.target).value))"
+              min="1"
+            />
+          </label>
+          <label>
+            <span>Initial Items</span>
+            <input
+              type="number"
+              [value]="selectedField()!.arrayConfig?.initialItems || 1"
+              (input)="updateArrayConfig('initialItems', Number($any($event.target).value))"
+              min="1"
+            />
+          </label>
+          <label>
+            <span>Item Label</span>
+            <input
+              type="text"
+              [value]="selectedField()!.arrayConfig?.itemLabel || ''"
+              (input)="updateArrayConfig('itemLabel', $any($event.target).value)"
+              placeholder="e.g., {label} {index}"
+            />
+          </label>
+          <label>
+            <span>Add Button Text</span>
+            <input
+              type="text"
+              [value]="selectedField()!.arrayConfig?.addButtonText || ''"
+              (input)="updateArrayConfig('addButtonText', $any($event.target).value)"
+              placeholder="e.g., + Add {label}"
+            />
+          </label>
+          <label>
+            <span>Remove Button Text</span>
+            <input
+              type="text"
+              [value]="selectedField()!.arrayConfig?.removeButtonText || ''"
+              (input)="updateArrayConfig('removeButtonText', $any($event.target).value)"
+              placeholder="e.g., Remove"
+            />
+          </label>
+          <small class="text-muted">Note: Array field configuration requires advanced setup. Edit the JSON directly for complex nested fields.</small>
+        </div>
+        }
+
         <!-- Validations -->
         <div class="property-group">
           <h4>Validations</h4>
@@ -247,7 +365,7 @@
             <span>Required</span>
           </label>
 
-          @if (selectedField()!.type === 'text' || selectedField()!.type === 'email') {
+          @if (selectedField()!.type === 'text' || selectedField()!.type === 'email' || selectedField()!.type === 'password' || selectedField()!.type === 'textarea') {
           <label>
             <span>Min Length</span>
             <input
