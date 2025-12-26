@@ -171,6 +171,84 @@ export class FormBuilder {
           removeButtonText: 'Remove'
         }
       }
+    },
+    {
+      type: 'multiselect',
+      label: 'Multi-Select',
+      icon: '☑️',
+      defaultConfig: {
+        type: 'multiselect',
+        name: 'multiselectField',
+        label: 'Multi-Select',
+        options: [
+          { label: 'Option 1', value: 'option1' },
+          { label: 'Option 2', value: 'option2' },
+          { label: 'Option 3', value: 'option3' }
+        ],
+        minSelections: 1,
+        maxSelections: 3
+      }
+    },
+    {
+      type: 'range',
+      label: 'Range Slider',
+      icon: '🎚️',
+      defaultConfig: {
+        type: 'range',
+        name: 'rangeField',
+        label: 'Range Slider',
+        min: 0,
+        max: 100,
+        step: 1
+      }
+    },
+    {
+      type: 'color',
+      label: 'Color Picker',
+      icon: '🎨',
+      defaultConfig: {
+        type: 'color',
+        name: 'colorField',
+        label: 'Color Picker'
+      }
+    },
+    {
+      type: 'datetime',
+      label: 'DateTime',
+      icon: '📅',
+      defaultConfig: {
+        type: 'datetime',
+        name: 'datetimeField',
+        label: 'Date & Time',
+        includeTime: true,
+        timezone: 'America/New_York'
+      }
+    },
+    {
+      type: 'file',
+      label: 'File Upload',
+      icon: '📎',
+      defaultConfig: {
+        type: 'file',
+        name: 'fileField',
+        label: 'File Upload',
+        accept: '*/*',
+        maxFileSize: 5242880, // 5MB
+        multiple: false
+      }
+    },
+    {
+      type: 'richtext',
+      label: 'Rich Text',
+      icon: '📝',
+      defaultConfig: {
+        type: 'richtext',
+        name: 'richtextField',
+        label: 'Rich Text Editor',
+        placeholder: 'Enter text...',
+        allowedFormats: ['bold', 'italic', 'underline', 'link'],
+        maxCharacters: 1000
+      }
     }
   ];
 
