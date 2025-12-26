@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, signal, input } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission, FormSchema } from './models/field.model';
+import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission, FormSchema, FormSection } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
 import { MaskService } from './mask.service';
 import { I18nService } from './i18n.service';
@@ -70,6 +70,12 @@ export class DqDynamicForm {
   protected readonly submitRetryCount = signal(0);
   private submissionConfig: FormSubmission | null = null;
   private readonly MAX_RETRY_ATTEMPTS = 3;
+
+  // Multi-step form state
+  protected readonly sections = signal<FormSection[]>([]);
+  protected readonly multiStepEnabled = signal(false);
+  protected readonly currentStep = signal(0);
+  protected readonly completedSteps = signal<Set<number>>(new Set());
 
   // Expose Math for template (needed for multiselect size calculation and other calculations)
   protected readonly Math = Math;
@@ -243,12 +249,24 @@ export class DqDynamicForm {
     this.title.set(schema.title);
 
       // Handle both single-step and multi-step forms
-      const allFields = schema.fields || [];
-      // For multi-step forms, flatten all section fields
-      if (schema.sections) {
+      let allFields: Field[] = [];
+
+      if (schema.multiStep && schema.sections && schema.sections.length > 0) {
+        // Multi-step form: store sections and initialize step navigation
+        this.multiStepEnabled.set(true);
+        this.sections.set(schema.sections);
+        this.currentStep.set(0);
+        this.completedSteps.set(new Set());
+
+        // Collect all fields from all sections for initialization
         schema.sections.forEach(section => {
           allFields.push(...section.fields);
         });
+      } else {
+        // Single-step form: use fields directly
+        this.multiStepEnabled.set(false);
+        this.sections.set([]);
+        allFields = schema.fields || [];
       }
 
       this.fields.set(allFields);
@@ -1737,5 +1755,216 @@ export class DqDynamicForm {
    */
   getTextDirection(): 'ltr' | 'rtl' {
     return this._i18nService.getDirection();
+  }
+
+  // ===== Multi-Step Form Methods =====
+
+  /**
+   * Get fields for the current step
+   */
+  protected readonly currentStepFields = computed<Field[]>(() => {
+    if (!this.multiStepEnabled()) {
+      return this.fields();
+    }
+
+    const sections = this.sections();
+    const stepIndex = this.currentStep();
+
+    if (stepIndex < 0 || stepIndex >= sections.length) {
+      return [];
+    }
+
+    return sections[stepIndex].fields;
+  });
+
+  /**
+   * Validate all fields in the current step
+   */
+  validateCurrentStep(): boolean {
+    const stepFields = this.currentStepFields();
+    const values = this.formValues();
+    const errors = this.errors();
+
+    // Check if any field in current step has errors
+    for (const field of stepFields) {
+      // Check for array fields
+      if (field.type === 'array' && field.arrayConfig) {
+        const arrayCount = this.arrayItemCounts()[field.name] || 0;
+        const arrayFields: Field[] = field.arrayConfig.fields;
+        for (let i = 0; i < arrayCount; i++) {
+          for (const subField of arrayFields) {
+            const arrayFieldName = `${field.name}[${i}].${subField.name}`;
+            if (errors[arrayFieldName]) {
+              return false;
+            }
+          }
+        }
+      } else {
+        // Regular field
+        if (errors[field.name]) {
+          return false;
+        }
+
+        // Check if field is visible before validating
+        if (!this.isFieldVisible(field)) {
+          continue;
+        }
+
+        // Check if field is disabled
+        if (this.isFieldDisabled(field)) {
+          continue;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Check if a specific step is complete (has no errors)
+   */
+  isStepComplete(stepIndex: number): boolean {
+    const sections = this.sections();
+    if (stepIndex < 0 || stepIndex >= sections.length) {
+      return false;
+    }
+
+    return this.completedSteps().has(stepIndex);
+  }
+
+  /**
+   * Go to the next step
+   */
+  goToNextStep(): void {
+    if (!this.multiStepEnabled()) return;
+
+    const sections = this.sections();
+    const current = this.currentStep();
+
+    // Validate current step before proceeding
+    if (!this.validateCurrentStep()) {
+      // Mark fields as touched to show errors
+      const stepFields = this.currentStepFields();
+      const touchedUpdate: Record<string, boolean> = {};
+
+      stepFields.forEach(field => {
+        if (field.type === 'array' && field.arrayConfig) {
+          const arrayCount = this.arrayItemCounts()[field.name] || 0;
+          for (let i = 0; i < arrayCount; i++) {
+            (field.arrayConfig.fields as Field[]).forEach((subField: Field) => {
+              touchedUpdate[`${field.name}[${i}].${subField.name}`] = true;
+            });
+          }
+        } else {
+          touchedUpdate[field.name] = true;
+        }
+      });
+
+      this.touched.update(current => ({ ...current, ...touchedUpdate }));
+
+      // Focus first error field
+      this.focusFirstError();
+      return;
+    }
+
+    // Mark current step as completed
+    this.completedSteps.update(completed => {
+      const newSet = new Set(completed);
+      newSet.add(current);
+      return newSet;
+    });
+
+    // Move to next step
+    if (current < sections.length - 1) {
+      this.currentStep.set(current + 1);
+      this.scrollToTop();
+    }
+  }
+
+  /**
+   * Go to the previous step
+   */
+  goToPreviousStep(): void {
+    if (!this.multiStepEnabled()) return;
+
+    const current = this.currentStep();
+    if (current > 0) {
+      this.currentStep.set(current - 1);
+      this.scrollToTop();
+    }
+  }
+
+  /**
+   * Go to a specific step
+   */
+  goToStep(stepIndex: number): void {
+    if (!this.multiStepEnabled()) return;
+
+    const sections = this.sections();
+    if (stepIndex < 0 || stepIndex >= sections.length) {
+      return;
+    }
+
+    // Can only jump to a step if all previous steps are completed
+    for (let i = 0; i < stepIndex; i++) {
+      if (!this.isStepComplete(i)) {
+        console.warn(`Cannot jump to step ${stepIndex}. Complete previous steps first.`);
+        return;
+      }
+    }
+
+    this.currentStep.set(stepIndex);
+    this.scrollToTop();
+  }
+
+  /**
+   * Check if we can proceed to next step
+   */
+  canGoToNextStep(): boolean {
+    if (!this.multiStepEnabled()) return false;
+
+    const sections = this.sections();
+    const current = this.currentStep();
+
+    return current < sections.length - 1;
+  }
+
+  /**
+   * Check if we can go back to previous step
+   */
+  canGoToPreviousStep(): boolean {
+    if (!this.multiStepEnabled()) return false;
+    return this.currentStep() > 0;
+  }
+
+  /**
+   * Check if we're on the last step
+   */
+  isLastStep(): boolean {
+    if (!this.multiStepEnabled()) return true;
+
+    const sections = this.sections();
+    const current = this.currentStep();
+
+    return current === sections.length - 1;
+  }
+
+  /**
+   * Get progress percentage
+   */
+  getProgressPercentage(): number {
+    if (!this.multiStepEnabled()) return 100;
+
+    const sections = this.sections();
+    if (sections.length === 0) return 0;
+
+    return Math.round(((this.currentStep() + 1) / sections.length) * 100);
+  }
+
+  /**
+   * Scroll to top of form
+   */
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

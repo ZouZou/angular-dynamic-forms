@@ -21,7 +21,7 @@ export class DynamicFormsService {
 
   getFormSchema(): Observable<FormSchema> {
     return this.http.get<FormSchema>(
-      'forms/sample-form.json'
+      'forms/multi-step-registration.json'
     );
   }
 

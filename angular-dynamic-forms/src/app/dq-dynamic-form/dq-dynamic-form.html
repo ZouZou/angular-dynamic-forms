@@ -19,8 +19,47 @@
   </div>
   }
 
+  <!-- Multi-step progress indicator -->
+  @if (multiStepEnabled()) {
+  <div class="multi-step-progress">
+    <div class="progress-bar">
+      <div class="progress-fill" [style.width.%]="getProgressPercentage()"></div>
+    </div>
+    <div class="step-indicators">
+      @for (section of sections(); track $index) {
+      <div class="step-indicator"
+           [class.active]="$index === currentStep()"
+           [class.completed]="isStepComplete($index)"
+           (click)="goToStep($index)">
+        <div class="step-number">
+          @if (isStepComplete($index)) {
+            <span class="checkmark">✓</span>
+          } @else {
+            {{ $index + 1 }}
+          }
+        </div>
+        <div class="step-label">{{ section.title }}</div>
+      </div>
+      }
+    </div>
+  </div>
+
+  <!-- Current step info -->
+  <div class="current-step-header">
+    <h3 class="step-title">
+      @if (sections()[currentStep()]?.icon) {
+        <span class="step-icon">{{ sections()[currentStep()].icon }}</span>
+      }
+      {{ sections()[currentStep()]?.title }}
+    </h3>
+    @if (sections()[currentStep()]?.description) {
+      <p class="step-description">{{ sections()[currentStep()].description }}</p>
+    }
+  </div>
+  }
+
   <form role="form" aria-label="{{ title() }}">
-    @for (field of fields(); track field.name) {
+    @for (field of currentStepFields(); track field.name) {
     <!-- Only show field if visibility condition is met -->
     @if (isFieldVisible(field)) {
     <div class="form-group" [class]="'width-' + (field.width || 'full') + (field.cssClass ? ' ' + field.cssClass : '')" role="group" [attr.aria-labelledby]="'label-' + field.name">
@@ -506,23 +545,72 @@
     </div>
     }
 
-    <!-- Submit Button -->
-    <button
-      class="submit-btn"
-      type="submit"
-      [disabled]="!isValid() || submitting()"
-      [attr.aria-disabled]="!isValid() || submitting()"
-      [attr.aria-busy]="submitting()"
-      (click)="saveUserData()"
-      aria-label="Submit form"
-    >
-      @if (submitting()) {
-      <span class="spinner"></span>
-      Submitting{{ submitRetryCount() > 0 ? ' (Retry ' + submitRetryCount() + ')' : '' }}...
-      } @else {
-      Submit
-      }
-    </button>
+    <!-- Navigation Buttons -->
+    @if (multiStepEnabled()) {
+      <div class="multi-step-navigation">
+        <!-- Previous Button -->
+        @if (canGoToPreviousStep()) {
+        <button
+          type="button"
+          class="nav-btn prev-btn"
+          (click)="goToPreviousStep()"
+          aria-label="Go to previous step"
+        >
+          ← Previous
+        </button>
+        }
+
+        <!-- Next Button (shown on all steps except last) -->
+        @if (canGoToNextStep()) {
+        <button
+          type="button"
+          class="nav-btn next-btn"
+          (click)="goToNextStep()"
+          aria-label="Go to next step"
+        >
+          Next →
+        </button>
+        }
+
+        <!-- Submit Button (shown only on last step) -->
+        @if (isLastStep()) {
+        <button
+          class="submit-btn"
+          type="submit"
+          [disabled]="!isValid() || submitting()"
+          [attr.aria-disabled]="!isValid() || submitting()"
+          [attr.aria-busy]="submitting()"
+          (click)="saveUserData()"
+          aria-label="Submit form"
+        >
+          @if (submitting()) {
+          <span class="spinner"></span>
+          Submitting{{ submitRetryCount() > 0 ? ' (Retry ' + submitRetryCount() + ')' : '' }}...
+          } @else {
+          Submit
+          }
+        </button>
+        }
+      </div>
+    } @else {
+      <!-- Single-step Submit Button -->
+      <button
+        class="submit-btn"
+        type="submit"
+        [disabled]="!isValid() || submitting()"
+        [attr.aria-disabled]="!isValid() || submitting()"
+        [attr.aria-busy]="submitting()"
+        (click)="saveUserData()"
+        aria-label="Submit form"
+      >
+        @if (submitting()) {
+        <span class="spinner"></span>
+        Submitting{{ submitRetryCount() > 0 ? ' (Retry ' + submitRetryCount() + ')' : '' }}...
+        } @else {
+        Submit
+        }
+      </button>
+    }
   </form>
 </div>
 }
