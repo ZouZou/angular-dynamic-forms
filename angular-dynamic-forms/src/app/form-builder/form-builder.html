@@ -3,6 +3,14 @@
   <header class="builder-header">
     <h1>🛠️ Dynamic Form Builder</h1>
     <div class="header-actions">
+      <label class="toggle-label">
+        <input
+          type="checkbox"
+          [checked]="multiStepMode()"
+          (change)="toggleMultiStepMode()"
+        >
+        <span>📋 Multi-Step Mode</span>
+      </label>
       <button class="btn btn-secondary" (click)="clearForm()">🗑️ Clear</button>
       <button class="btn btn-secondary" (click)="fileInput.click()">📥 Import</button>
       <button class="btn btn-secondary" (click)="exportSchema()">📤 Export</button>
@@ -37,63 +45,221 @@
           </div>
         </section>
 
-        <!-- Field Tree -->
-        <section class="tree-section">
-          <h3>Form Fields ({{ schema().fields?.length || 0 }})</h3>
-          <div class="field-tree">
-            @if (!schema().fields || schema().fields?.length === 0) {
-              <div class="empty-state">
-                <p>👆 Click a field type above to add it to your form</p>
-              </div>
-            } @else {
-              @for (field of schema().fields!; track $index) {
-                <div
-                  class="field-item"
-                  [class.selected]="selectedFieldIndex() === $index"
-                  (click)="selectField($index)"
-                >
-                  <div class="field-item-content">
-                    <span class="field-icon">{{ getFieldIcon(field.type) }}</span>
-                    <div class="field-info">
-                      <div class="field-name">{{ field.name }}</div>
-                      <div class="field-label">{{ field.label }}</div>
+        <!-- Multi-Step Mode: Sections -->
+        @if (multiStepMode()) {
+          <section class="tree-section">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h3>Form Sections ({{ currentSections().length }})</h3>
+              <button class="btn btn-sm btn-primary" (click)="addSection()" title="Add Section">
+                ➕ Add Section
+              </button>
+            </div>
+
+            <div class="sections-tree">
+              @if (currentSections().length === 0) {
+                <div class="empty-state">
+                  <p>No sections yet. Click "Add Section" to create one.</p>
+                </div>
+              } @else {
+                @for (section of currentSections(); track $index) {
+                  <div class="section-item" [class.selected]="selectedSectionIndex() === $index">
+                    <div
+                      class="section-header"
+                      (click)="selectSection($index)"
+                    >
+                      <div class="section-info">
+                        <span class="section-icon">{{ section.icon || '📋' }}</span>
+                        <div class="section-details">
+                          <div class="section-title">{{ section.title }}</div>
+                          <div class="section-meta">{{ section.fields.length }} fields</div>
+                        </div>
+                      </div>
+                      <div class="section-actions">
+                        <button
+                          class="btn-icon"
+                          (click)="moveSectionUp($index); $event.stopPropagation()"
+                          [disabled]="$index === 0"
+                          title="Move up"
+                        >
+                          ⬆️
+                        </button>
+                        <button
+                          class="btn-icon"
+                          (click)="moveSectionDown($index); $event.stopPropagation()"
+                          [disabled]="$index === currentSections().length - 1"
+                          title="Move down"
+                        >
+                          ⬇️
+                        </button>
+                        <button
+                          class="btn-icon btn-danger"
+                          (click)="removeSection($index); $event.stopPropagation()"
+                          title="Delete"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Fields in this section -->
+                    @if (selectedSectionIndex() === $index) {
+                      <div class="section-fields">
+                        <div class="section-fields-header">
+                          <h4>Fields in this section</h4>
+                        </div>
+
+                        @if (section.fields.length === 0) {
+                          <div class="empty-state-small">
+                            <p>No fields yet. Add fields from the palette above.</p>
+                          </div>
+                        } @else {
+                          @for (field of section.fields; track $index) {
+                            <div
+                              class="field-item"
+                              [class.selected]="selectedFieldIndex() === $index"
+                              (click)="selectField($index)"
+                            >
+                              <div class="field-item-content">
+                                <span class="field-icon">{{ getFieldIcon(field.type) }}</span>
+                                <div class="field-info">
+                                  <div class="field-name">{{ field.name }}</div>
+                                  <div class="field-label">{{ field.label }}</div>
+                                </div>
+                              </div>
+                              <div class="field-actions">
+                                <button
+                                  class="btn-icon"
+                                  (click)="moveFieldUp($index); $event.stopPropagation()"
+                                  [disabled]="$index === 0"
+                                  title="Move up"
+                                >
+                                  ⬆️
+                                </button>
+                                <button
+                                  class="btn-icon"
+                                  (click)="moveFieldDown($index); $event.stopPropagation()"
+                                  [disabled]="$index === section.fields.length - 1"
+                                  title="Move down"
+                                >
+                                  ⬇️
+                                </button>
+                                <button
+                                  class="btn-icon btn-danger"
+                                  (click)="removeField($index); $event.stopPropagation()"
+                                  title="Delete"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </div>
+                          }
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              }
+            </div>
+          </section>
+        } @else {
+          <!-- Single-Step Mode: Fields -->
+          <section class="tree-section">
+            <h3>Form Fields ({{ currentFields().length }})</h3>
+            <div class="field-tree">
+              @if (currentFields().length === 0) {
+                <div class="empty-state">
+                  <p>👆 Click a field type above to add it to your form</p>
+                </div>
+              } @else {
+                @for (field of currentFields(); track $index) {
+                  <div
+                    class="field-item"
+                    [class.selected]="selectedFieldIndex() === $index"
+                    (click)="selectField($index)"
+                  >
+                    <div class="field-item-content">
+                      <span class="field-icon">{{ getFieldIcon(field.type) }}</span>
+                      <div class="field-info">
+                        <div class="field-name">{{ field.name }}</div>
+                        <div class="field-label">{{ field.label }}</div>
+                      </div>
+                    </div>
+                    <div class="field-actions">
+                      <button
+                        class="btn-icon"
+                        (click)="moveFieldUp($index); $event.stopPropagation()"
+                        [disabled]="$index === 0"
+                        title="Move up"
+                      >
+                        ⬆️
+                      </button>
+                      <button
+                        class="btn-icon"
+                        (click)="moveFieldDown($index); $event.stopPropagation()"
+                        [disabled]="$index === currentFields().length - 1"
+                        title="Move down"
+                      >
+                        ⬇️
+                      </button>
+                      <button
+                        class="btn-icon btn-danger"
+                        (click)="removeField($index); $event.stopPropagation()"
+                        title="Delete"
+                      >
+                        🗑️
+                      </button>
                     </div>
                   </div>
-                  <div class="field-actions">
-                    <button
-                      class="btn-icon"
-                      (click)="moveFieldUp($index); $event.stopPropagation()"
-                      [disabled]="$index === 0"
-                      title="Move up"
-                    >
-                      ⬆️
-                    </button>
-                    <button
-                      class="btn-icon"
-                      (click)="moveFieldDown($index); $event.stopPropagation()"
-                      [disabled]="$index === (schema().fields?.length || 0) - 1"
-                      title="Move down"
-                    >
-                      ⬇️
-                    </button>
-                    <button
-                      class="btn-icon btn-danger"
-                      (click)="removeField($index); $event.stopPropagation()"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
+                }
               }
-            }
-          </div>
-        </section>
+            </div>
+          </section>
+        }
+
+        <!-- Section Properties Editor (Multi-Step Mode) -->
+        @if (multiStepMode() && selectedSection(); as section) {
+          <section class="properties-section">
+            <h3>📋 Section Properties</h3>
+            <div class="properties-form">
+              <div class="form-group">
+                <label>Section Title</label>
+                <input
+                  type="text"
+                  [value]="section.title"
+                  (input)="updateSectionProperty('title', $any($event.target).value)"
+                  class="form-control"
+                >
+              </div>
+
+              <div class="form-group">
+                <label>Description</label>
+                <textarea
+                  [value]="section.description || ''"
+                  (input)="updateSectionProperty('description', $any($event.target).value)"
+                  class="form-control"
+                  rows="2"
+                  placeholder="Optional description for this step"
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label>Icon (emoji or text)</label>
+                <input
+                  type="text"
+                  [value]="section.icon || ''"
+                  (input)="updateSectionProperty('icon', $any($event.target).value)"
+                  class="form-control"
+                  placeholder="e.g., 📋, 👤, 🔐"
+                >
+              </div>
+            </div>
+          </section>
+        }
 
         <!-- Field Properties Editor -->
         @if (selectedField(); as field) {
           <section class="properties-section">
-            <h3>⚙️ Properties</h3>
+            <h3>⚙️ Field Properties</h3>
             <div class="properties-form">
               <div class="form-group">
                 <label>Field Name</label>
@@ -157,6 +323,24 @@
                   Disabled
                 </label>
               </div>
+
+              <!-- Move to Section (Multi-Step Mode) -->
+              @if (multiStepMode() && currentSections().length > 1) {
+                <div class="form-group">
+                  <label>Move to Section</label>
+                  <select
+                    class="form-control"
+                    (change)="moveFieldToSection(selectedFieldIndex()!, Number($any($event.target).value))"
+                  >
+                    <option value="" disabled selected>-- Select Section --</option>
+                    @for (section of currentSections(); track $index) {
+                      @if ($index !== selectedSectionIndex()) {
+                        <option [value]="$index">{{ section.title }}</option>
+                      }
+                    }
+                  </select>
+                </div>
+              }
 
               <!-- Array Field Configuration -->
               @if (field.type === 'array' && field.arrayConfig) {

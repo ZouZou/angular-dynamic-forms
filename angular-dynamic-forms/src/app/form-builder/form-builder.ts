@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DqDynamicForm } from '../dq-dynamic-form/dq-dynamic-form';
 import { DevToolsService, ValidationResult } from '../dq-dynamic-form/dev-tools.service';
-import { FormSchema, Field } from '../dq-dynamic-form/models/field.model';
+import { FormSchema, Field, FormSection } from '../dq-dynamic-form/models/field.model';
 
 interface FieldTemplate {
   type: string;
@@ -37,6 +37,12 @@ export class FormBuilder {
 
   // Selected field for editing
   protected readonly selectedFieldIndex = signal<number | null>(null);
+
+  // Multi-step mode
+  protected readonly multiStepMode = signal<boolean>(false);
+
+  // Selected section index (for multi-step mode)
+  protected readonly selectedSectionIndex = signal<number | null>(null);
 
   // Expose Number for template (needed for numeric input conversions)
   protected readonly Number = Number;
@@ -252,12 +258,43 @@ export class FormBuilder {
     }
   ];
 
+  // Computed: current sections (for multi-step mode)
+  protected readonly currentSections = computed(() => {
+    const schema = this.schema();
+    return schema.sections || [];
+  });
+
+  // Computed: current fields (based on mode)
+  protected readonly currentFields = computed(() => {
+    const schema = this.schema();
+    const multiStep = this.multiStepMode();
+    const sectionIndex = this.selectedSectionIndex();
+
+    if (multiStep && sectionIndex !== null) {
+      // In multi-step mode with a section selected, return fields from that section
+      const sections = schema.sections || [];
+      return sections[sectionIndex]?.fields || [];
+    } else if (!multiStep) {
+      // In single-step mode, return all fields
+      return schema.fields || [];
+    }
+    return [];
+  });
+
   // Computed: selected field
   protected readonly selectedField = computed(() => {
     const index = this.selectedFieldIndex();
     if (index === null) return null;
-    const fields = this.schema().fields || [];
+    const fields = this.currentFields();
     return fields[index];
+  });
+
+  // Computed: selected section
+  protected readonly selectedSection = computed(() => {
+    const index = this.selectedSectionIndex();
+    if (index === null) return null;
+    const sections = this.currentSections();
+    return sections[index];
   });
 
   // Computed: formatted JSON with syntax highlighting
@@ -271,44 +308,110 @@ export class FormBuilder {
     this.updateJsonFromSchema();
     // Initial validation
     this.validateSchema();
+    // Check if schema is multi-step
+    const schema = this.schema();
+    if (schema.multiStep && schema.sections && schema.sections.length > 0) {
+      this.multiStepMode.set(true);
+      this.selectedSectionIndex.set(0);
+    }
   }
 
   // Add field from palette
   protected addField(template: FieldTemplate): void {
     const currentSchema = this.schema();
-    const currentFields = currentSchema.fields || [];
-    const fieldCount = currentFields.length;
+    const multiStep = this.multiStepMode();
 
-    // Create unique field name
-    const newField: Field = {
-      ...template.defaultConfig as Field,
-      name: `${template.type}Field${fieldCount + 1}`
-    };
+    if (multiStep) {
+      // Multi-step mode: add to selected section
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) {
+        alert('Please select a section first');
+        return;
+      }
 
-    // Add field to schema
-    const updatedSchema = {
-      ...currentSchema,
-      fields: [...currentFields, newField]
-    };
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const fieldCount = currentFields.length;
 
-    this.schema.set(updatedSchema);
+      // Create unique field name
+      const newField: Field = {
+        ...template.defaultConfig as Field,
+        name: `${template.type}Field${fieldCount + 1}`
+      };
+
+      // Update section with new field
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: [...currentFields, newField]
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+
+      // Select the newly added field
+      this.selectedFieldIndex.set(currentFields.length);
+    } else {
+      // Single-step mode: add to fields array
+      const currentFields = currentSchema.fields || [];
+      const fieldCount = currentFields.length;
+
+      // Create unique field name
+      const newField: Field = {
+        ...template.defaultConfig as Field,
+        name: `${template.type}Field${fieldCount + 1}`
+      };
+
+      // Add field to schema
+      const updatedSchema = {
+        ...currentSchema,
+        fields: [...currentFields, newField]
+      };
+
+      this.schema.set(updatedSchema);
+
+      // Select the newly added field
+      this.selectedFieldIndex.set(currentFields.length);
+    }
+
     this.updateJsonFromSchema();
     this.validateSchema();
-
-    // Select the newly added field
-    this.selectedFieldIndex.set(currentFields.length);
   }
 
   // Remove field
   protected removeField(index: number): void {
     const currentSchema = this.schema();
-    const currentFields = currentSchema.fields || [];
-    const updatedFields = currentFields.filter((_, i) => i !== index);
+    const multiStep = this.multiStepMode();
 
-    this.schema.set({
-      ...currentSchema,
-      fields: updatedFields
-    });
+    if (multiStep) {
+      // Multi-step mode: remove from selected section
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = currentFields.filter((_, i) => i !== index);
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      // Single-step mode: remove from fields array
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = currentFields.filter((_, i) => i !== index);
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
 
     this.updateJsonFromSchema();
     this.validateSchema();
@@ -324,14 +427,37 @@ export class FormBuilder {
     if (index === 0) return;
 
     const currentSchema = this.schema();
-    const currentFields = currentSchema.fields || [];
-    const fields = [...currentFields];
-    [fields[index - 1], fields[index]] = [fields[index], fields[index - 1]];
+    const multiStep = this.multiStepMode();
 
-    this.schema.set({
-      ...currentSchema,
-      fields
-    });
+    if (multiStep) {
+      // Multi-step mode: move within selected section
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const fields = [...sections[sectionIndex].fields];
+      [fields[index - 1], fields[index]] = [fields[index], fields[index - 1]];
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      // Single-step mode: move in fields array
+      const currentFields = currentSchema.fields || [];
+      const fields = [...currentFields];
+      [fields[index - 1], fields[index]] = [fields[index], fields[index - 1]];
+
+      this.schema.set({
+        ...currentSchema,
+        fields
+      });
+    }
 
     this.updateJsonFromSchema();
 
@@ -344,16 +470,42 @@ export class FormBuilder {
   // Move field down
   protected moveFieldDown(index: number): void {
     const currentSchema = this.schema();
-    const currentFields = currentSchema.fields || [];
-    if (index === currentFields.length - 1) return;
+    const multiStep = this.multiStepMode();
 
-    const fields = [...currentFields];
-    [fields[index], fields[index + 1]] = [fields[index + 1], fields[index]];
+    if (multiStep) {
+      // Multi-step mode: move within selected section
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
 
-    this.schema.set({
-      ...currentSchema,
-      fields
-    });
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      if (index === currentFields.length - 1) return;
+
+      const fields = [...currentFields];
+      [fields[index], fields[index + 1]] = [fields[index + 1], fields[index]];
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      // Single-step mode: move in fields array
+      const currentFields = currentSchema.fields || [];
+      if (index === currentFields.length - 1) return;
+
+      const fields = [...currentFields];
+      [fields[index], fields[index + 1]] = [fields[index + 1], fields[index]];
+
+      this.schema.set({
+        ...currentSchema,
+        fields
+      });
+    }
 
     this.updateJsonFromSchema();
 
@@ -374,17 +526,44 @@ export class FormBuilder {
     if (index === null) return;
 
     const currentSchema = this.schema();
-    const currentFields = currentSchema.fields || [];
-    const updatedFields = [...currentFields];
-    updatedFields[index] = {
-      ...updatedFields[index],
-      [property]: value
-    };
+    const multiStep = this.multiStepMode();
 
-    this.schema.set({
-      ...currentSchema,
-      fields: updatedFields
-    });
+    if (multiStep) {
+      // Multi-step mode: update field in selected section
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...updatedFields[index],
+        [property]: value
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      // Single-step mode: update field in fields array
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...updatedFields[index],
+        [property]: value
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
 
     this.updateJsonFromSchema();
     this.validateSchema();
@@ -465,6 +644,16 @@ export class FormBuilder {
 
       if (importResult.schema) {
         this.schema.set(importResult.schema);
+
+        // Check if imported schema is multi-step
+        if (importResult.schema.multiStep && importResult.schema.sections && importResult.schema.sections.length > 0) {
+          this.multiStepMode.set(true);
+          this.selectedSectionIndex.set(0);
+        } else {
+          this.multiStepMode.set(false);
+          this.selectedSectionIndex.set(null);
+        }
+
         this.updateJsonFromSchema();
         this.validateSchema();
         this.selectedFieldIndex.set(null);
@@ -492,20 +681,50 @@ export class FormBuilder {
     if (index === null) return;
 
     const currentSchema = this.schema();
-    const currentFields = currentSchema.fields || [];
-    const updatedFields = [...currentFields];
-    updatedFields[index] = {
-      ...updatedFields[index],
-      validations: {
-        ...field.validations,
-        required
-      }
-    };
+    const multiStep = this.multiStepMode();
 
-    this.schema.set({
-      ...currentSchema,
-      fields: updatedFields
-    });
+    if (multiStep) {
+      // Multi-step mode: update field in selected section
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...updatedFields[index],
+        validations: {
+          ...field.validations,
+          required
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      // Single-step mode: update field in fields array
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...updatedFields[index],
+        validations: {
+          ...field.validations,
+          required
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
 
     this.updateJsonFromSchema();
     this.validateSchema();
@@ -524,8 +743,18 @@ export class FormBuilder {
   // Array field helpers
   protected addArraySubField(fieldIndex: number): void {
     const currentSchema = this.schema();
-    const currentFields = currentSchema.fields || [];
-    const field = currentFields[fieldIndex];
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
 
     if (!field.arrayConfig) return;
 
@@ -536,19 +765,46 @@ export class FormBuilder {
       placeholder: 'Enter value...'
     };
 
-    const updatedFields = [...currentFields];
-    updatedFields[fieldIndex] = {
-      ...field,
-      arrayConfig: {
-        ...field.arrayConfig,
-        fields: [...(field.arrayConfig.fields || []), newSubField]
-      }
-    };
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
 
-    this.schema.set({
-      ...currentSchema,
-      fields: updatedFields
-    });
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        arrayConfig: {
+          ...field.arrayConfig,
+          fields: [...(field.arrayConfig.fields || []), newSubField]
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        arrayConfig: {
+          ...field.arrayConfig,
+          fields: [...(field.arrayConfig.fields || []), newSubField]
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
 
     this.updateJsonFromSchema();
     this.validateSchema();
@@ -556,26 +812,63 @@ export class FormBuilder {
 
   protected removeArraySubField(fieldIndex: number, subFieldIndex: number): void {
     const currentSchema = this.schema();
-    const currentFields = currentSchema.fields || [];
-    const field = currentFields[fieldIndex];
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
 
     if (!field.arrayConfig) return;
 
     const updatedSubFields = field.arrayConfig.fields?.filter((_, i) => i !== subFieldIndex) || [];
 
-    const updatedFields = [...currentFields];
-    updatedFields[fieldIndex] = {
-      ...field,
-      arrayConfig: {
-        ...field.arrayConfig,
-        fields: updatedSubFields
-      }
-    };
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
 
-    this.schema.set({
-      ...currentSchema,
-      fields: updatedFields
-    });
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        arrayConfig: {
+          ...field.arrayConfig,
+          fields: updatedSubFields
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        arrayConfig: {
+          ...field.arrayConfig,
+          fields: updatedSubFields
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
 
     this.updateJsonFromSchema();
     this.validateSchema();
@@ -583,8 +876,18 @@ export class FormBuilder {
 
   protected updateArraySubFieldProperty(fieldIndex: number, subFieldIndex: number, property: string, value: any): void {
     const currentSchema = this.schema();
-    const currentFields = currentSchema.fields || [];
-    const field = currentFields[fieldIndex];
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
 
     if (!field.arrayConfig) return;
 
@@ -594,19 +897,46 @@ export class FormBuilder {
       [property]: value
     };
 
-    const updatedFields = [...currentFields];
-    updatedFields[fieldIndex] = {
-      ...field,
-      arrayConfig: {
-        ...field.arrayConfig,
-        fields: updatedSubFields
-      }
-    };
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
 
-    this.schema.set({
-      ...currentSchema,
-      fields: updatedFields
-    });
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        arrayConfig: {
+          ...field.arrayConfig,
+          fields: updatedSubFields
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        arrayConfig: {
+          ...field.arrayConfig,
+          fields: updatedSubFields
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
 
     this.updateJsonFromSchema();
     this.validateSchema();
@@ -617,24 +947,61 @@ export class FormBuilder {
     if (index === null) return;
 
     const currentSchema = this.schema();
-    const currentFields = currentSchema.fields || [];
-    const field = currentFields[index];
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[index];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[index];
+    }
 
     if (!field.arrayConfig) return;
 
-    const updatedFields = [...currentFields];
-    updatedFields[index] = {
-      ...field,
-      arrayConfig: {
-        ...field.arrayConfig,
-        [property]: value
-      }
-    };
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
 
-    this.schema.set({
-      ...currentSchema,
-      fields: updatedFields
-    });
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        arrayConfig: {
+          ...field.arrayConfig,
+          [property]: value
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        arrayConfig: {
+          ...field.arrayConfig,
+          [property]: value
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
 
     this.updateJsonFromSchema();
     this.validateSchema();
@@ -648,9 +1015,249 @@ export class FormBuilder {
         description: 'Build your form by adding fields from the palette',
         fields: []
       });
+      this.multiStepMode.set(false);
       this.updateJsonFromSchema();
       this.validateSchema();
       this.selectedFieldIndex.set(null);
+      this.selectedSectionIndex.set(null);
     }
+  }
+
+  // Toggle multi-step mode
+  protected toggleMultiStepMode(): void {
+    const currentMode = this.multiStepMode();
+    const newMode = !currentMode;
+
+    if (newMode) {
+      // Switching to multi-step mode
+      const currentSchema = this.schema();
+      const currentFields = currentSchema.fields || [];
+
+      if (currentFields.length > 0) {
+        // Convert existing fields to a single section
+        const sections: FormSection[] = [{
+          title: 'Step 1',
+          description: 'Complete this section',
+          icon: '📋',
+          fields: [...currentFields]
+        }];
+
+        this.schema.set({
+          ...currentSchema,
+          multiStep: true,
+          sections,
+          fields: undefined
+        });
+
+        this.selectedSectionIndex.set(0);
+      } else {
+        // No fields, just enable multi-step mode with one empty section
+        this.schema.set({
+          ...currentSchema,
+          multiStep: true,
+          sections: [{
+            title: 'Step 1',
+            description: 'Complete this section',
+            icon: '📋',
+            fields: []
+          }],
+          fields: undefined
+        });
+
+        this.selectedSectionIndex.set(0);
+      }
+    } else {
+      // Switching to single-step mode
+      const currentSchema = this.schema();
+      const sections = currentSchema.sections || [];
+
+      // Flatten all fields from all sections
+      const allFields: Field[] = [];
+      sections.forEach(section => {
+        allFields.push(...section.fields);
+      });
+
+      this.schema.set({
+        ...currentSchema,
+        multiStep: false,
+        sections: undefined,
+        fields: allFields
+      });
+
+      this.selectedSectionIndex.set(null);
+    }
+
+    this.multiStepMode.set(newMode);
+    this.selectedFieldIndex.set(null);
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  // Add new section
+  protected addSection(): void {
+    const currentSchema = this.schema();
+    const sections = currentSchema.sections || [];
+    const sectionNumber = sections.length + 1;
+
+    const newSection: FormSection = {
+      title: `Step ${sectionNumber}`,
+      description: 'Complete this section',
+      icon: '📋',
+      fields: []
+    };
+
+    this.schema.set({
+      ...currentSchema,
+      sections: [...sections, newSection]
+    });
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+
+    // Select the new section
+    this.selectedSectionIndex.set(sections.length);
+  }
+
+  // Remove section
+  protected removeSection(index: number): void {
+    const currentSchema = this.schema();
+    const sections = currentSchema.sections || [];
+
+    if (sections.length <= 1) {
+      alert('Cannot remove the last section. Switch to single-step mode instead.');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to remove this section and all its fields?')) {
+      return;
+    }
+
+    const updatedSections = sections.filter((_, i) => i !== index);
+
+    this.schema.set({
+      ...currentSchema,
+      sections: updatedSections
+    });
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+
+    // Clear selection if removed section was selected
+    if (this.selectedSectionIndex() === index) {
+      this.selectedSectionIndex.set(null);
+    } else if (this.selectedSectionIndex() !== null && this.selectedSectionIndex()! > index) {
+      // Adjust selection if it was after the removed section
+      this.selectedSectionIndex.set(this.selectedSectionIndex()! - 1);
+    }
+  }
+
+  // Move section up
+  protected moveSectionUp(index: number): void {
+    if (index === 0) return;
+
+    const currentSchema = this.schema();
+    const sections = [...(currentSchema.sections || [])];
+    [sections[index - 1], sections[index]] = [sections[index], sections[index - 1]];
+
+    this.schema.set({
+      ...currentSchema,
+      sections
+    });
+
+    this.updateJsonFromSchema();
+
+    // Update selection
+    if (this.selectedSectionIndex() === index) {
+      this.selectedSectionIndex.set(index - 1);
+    }
+  }
+
+  // Move section down
+  protected moveSectionDown(index: number): void {
+    const currentSchema = this.schema();
+    const sections = currentSchema.sections || [];
+    if (index === sections.length - 1) return;
+
+    const updatedSections = [...sections];
+    [updatedSections[index], updatedSections[index + 1]] = [updatedSections[index + 1], updatedSections[index]];
+
+    this.schema.set({
+      ...currentSchema,
+      sections: updatedSections
+    });
+
+    this.updateJsonFromSchema();
+
+    // Update selection
+    if (this.selectedSectionIndex() === index) {
+      this.selectedSectionIndex.set(index + 1);
+    }
+  }
+
+  // Select section
+  protected selectSection(index: number): void {
+    this.selectedSectionIndex.set(index);
+    this.selectedFieldIndex.set(null);
+  }
+
+  // Update section property
+  protected updateSectionProperty(property: string, value: any): void {
+    const index = this.selectedSectionIndex();
+    if (index === null) return;
+
+    const currentSchema = this.schema();
+    const sections = [...(currentSchema.sections || [])];
+    sections[index] = {
+      ...sections[index],
+      [property]: value
+    };
+
+    this.schema.set({
+      ...currentSchema,
+      sections
+    });
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  // Move field to another section
+  protected moveFieldToSection(fieldIndex: number, targetSectionIndex: number): void {
+    const sourceSectionIndex = this.selectedSectionIndex();
+    if (sourceSectionIndex === null || sourceSectionIndex === targetSectionIndex) return;
+
+    const currentSchema = this.schema();
+    const sections = [...(currentSchema.sections || [])];
+
+    // Remove field from source section
+    const field = sections[sourceSectionIndex].fields[fieldIndex];
+    const sourceFields = [...sections[sourceSectionIndex].fields];
+    sourceFields.splice(fieldIndex, 1);
+
+    // Add field to target section
+    const targetFields = [...sections[targetSectionIndex].fields];
+    targetFields.push(field);
+
+    // Update sections
+    sections[sourceSectionIndex] = {
+      ...sections[sourceSectionIndex],
+      fields: sourceFields
+    };
+
+    sections[targetSectionIndex] = {
+      ...sections[targetSectionIndex],
+      fields: targetFields
+    };
+
+    this.schema.set({
+      ...currentSchema,
+      sections
+    });
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+
+    // Clear field selection
+    this.selectedFieldIndex.set(null);
   }
 }
