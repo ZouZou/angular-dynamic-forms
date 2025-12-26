@@ -89,6 +89,23 @@ export interface Field {
   mask?: FieldMask; // Input mask configuration
   // Computed/calculated field
   computed?: ComputedFieldConfig; // Auto-calculate value based on other fields
+
+  // File upload specific (for type 'file')
+  accept?: string; // MIME types or file extensions (e.g., "image/*", ".pdf,.doc")
+  multiple?: boolean; // Allow multiple file uploads
+  maxFileSize?: number; // Max file size in bytes
+
+  // Multi-select specific (for type 'multiselect')
+  minSelections?: number; // Minimum number of selections
+  maxSelections?: number; // Maximum number of selections
+
+  // DateTime specific (for type 'datetime')
+  includeTime?: boolean; // For datetime vs date
+  timezone?: string; // IANA timezone (e.g., "America/New_York")
+
+  // Rich text editor specific (for type 'richtext')
+  allowedFormats?: string[]; // e.g., ['bold', 'italic', 'underline', 'link']
+  maxCharacters?: number; // Maximum character count
 }
 
 // Field mask configuration

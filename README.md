@@ -1401,3 +1401,272 @@ Computed fields automatically recalculate when any dependency changes:
 - **Dependency Order**: Dependencies sorted by length to avoid partial replacements
 - **Error Handling**: Formula errors show empty value with console warning
 
+
+---
+
+## Additional Field Types
+
+The form system now supports 6 additional field types for enhanced functionality:
+
+### Range Slider
+
+Numeric input with visual slider control for selecting values within a range.
+
+```json
+{
+  "type": "range",
+  "label": "Volume",
+  "name": "volume",
+  "min": 0,
+  "max": 100,
+  "step": 5,
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Min/max bounds
+- Step increments
+- Real-time value display
+- Visual feedback
+- Touch-friendly slider
+
+**Use Cases:** Volume/brightness controls, price ranges, rating systems, quantity selectors
+
+---
+
+### Color Picker
+
+Native HTML5 color input for selecting colors with hex code display.
+
+```json
+{
+  "type": "color",
+  "label": "Brand Color",
+  "name": "brandColor",
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Native color picker UI
+- Hex color code display
+- Visual color preview
+- Cross-browser support
+- Default value (#000000)
+
+**Use Cases:** Theme customization, design tools, branding settings, UI preferences
+
+---
+
+### Multi-Select
+
+Dropdown that allows selecting multiple options simultaneously.
+
+```json
+{
+  "type": "multiselect",
+  "label": "Skills",
+  "name": "skills",
+  "options": [
+    { "value": "js", "label": "JavaScript" },
+    { "value": "ts", "label": "TypeScript" },
+    { "value": "py", "label": "Python" }
+  ],
+  "minSelections": 1,
+  "maxSelections": 5,
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Multiple selection support
+- Min/max selections validation
+- Visual selection feedback
+- Keyboard navigation (Ctrl/Cmd + Click)
+- Dynamic option sizing
+
+**Use Cases:** Skill selection, category tagging, feature preferences, multiple choice questions
+
+---
+
+### DateTime Picker
+
+Native HTML5 datetime input for selecting date and time together.
+
+```json
+{
+  "type": "datetime",
+  "label": "Appointment Time",
+  "name": "appointmentTime",
+  "min": "2025-01-01T00:00",
+  "max": "2025-12-31T23:59",
+  "timezone": "America/New_York",
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Combined date and time selection
+- Native datetime picker
+- Min/max constraints
+- Timezone support
+- Cross-browser compatibility
+
+**Use Cases:** Appointment scheduling, event registration, deadline setting, timestamp collection
+
+---
+
+### File Upload
+
+File input with validation, size restrictions, and image preview.
+
+```json
+{
+  "type": "file",
+  "label": "Profile Picture",
+  "name": "profilePicture",
+  "accept": "image/*",
+  "maxFileSize": 5242880,
+  "multiple": false,
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- File type restrictions (MIME types)
+- File size validation
+- Image preview for supported formats
+- Multiple file upload support
+- File information display (name, size)
+- Base64 encoding for submission
+
+**Attributes:**
+- `accept`: File types (e.g., "image/*", ".pdf,.doc")
+- `maxFileSize`: Maximum file size in bytes
+- `multiple`: Allow multiple files
+
+**Use Cases:** Profile pictures, document uploads, resume submission, image galleries
+
+---
+
+### Rich Text Editor
+
+Basic WYSIWYG editor with formatting toolbar.
+
+```json
+{
+  "type": "richtext",
+  "label": "Description",
+  "name": "description",
+  "maxCharacters": 1000,
+  "validations": { "required": true }
+}
+```
+
+**Features:**
+- Basic formatting toolbar (Bold, Italic, Underline)
+- Bullet and numbered lists
+- Character count with limit
+- HTML output
+- ContentEditable-based
+- Clean, modern UI
+
+**Toolbar Commands:**
+- **B** - Bold text
+- **I** - Italic text
+- **U** - Underline text
+- **•** - Bullet list
+- **1.** - Numbered list
+
+**Use Cases:** Blog post content, product descriptions, comments and feedback, email composition
+
+**Note:** For advanced WYSIWYG features, consider integrating a third-party library like TinyMCE or Quill.
+
+---
+
+## Form Builder 🎨
+
+Visual tool for creating and configuring dynamic forms without writing JSON manually.
+
+### Features
+
+**Visual Form Creation:**
+- Drag-and-drop field ordering
+- Click-to-add field types
+- Real-time form preview
+- Field property editor
+
+**Field Management:**
+- 16 field types available (all basic + 6 new)
+- Configure all field properties
+- Set validations visually
+- Add/remove options for select fields
+
+**JSON Configuration:**
+- Live JSON preview
+- Copy JSON to clipboard
+- Export configuration as JSON file
+- Import existing configurations
+
+**Developer-Friendly:**
+- Clean, intuitive UI
+- Responsive design
+- Full keyboard navigation
+
+### Using the Form Builder
+
+1. **Add Fields:** Click on any field type in the left panel to add it to your form
+2. **Configure Properties:** Select a field to edit its properties in the right panel
+3. **Reorder Fields:** Drag and drop fields in the preview panel to reorder
+4. **Preview JSON:** View the generated JSON configuration in real-time
+5. **Export:** Click "Export" to download your form configuration
+6. **Import:** Click "Import" to load an existing configuration
+
+### Accessing the Form Builder
+
+Add the form builder component to your Angular app:
+
+```typescript
+import { FormBuilderComponent } from './form-builder/form-builder.component';
+
+// In your component or routes
+{
+  path: 'builder',
+  component: FormBuilderComponent
+}
+```
+
+### Example Workflow
+
+1. Open the Form Builder
+2. Add "Text Input" for name
+3. Add "Email" for email address
+4. Add "Multi-Select" for skills
+5. Configure validations (required, min length, etc.)
+6. Export JSON configuration
+7. Use the JSON with `DqDynamicForm` component
+
+---
+
+## Complete Field Types Summary
+
+| Type | Description | Key Features |
+|------|-------------|--------------|
+| `text` | Single-line text | minLength, maxLength, placeholder, mask |
+| `email` | Email with validation | Auto email validation |
+| `password` | Password input | Masked, matchesField validation |
+| `textarea` | Multi-line text | rows, maxLength |
+| `number` | Numeric input | min/max/step values |
+| `date` | Date picker | min/max constraints |
+| `radio` | Radio buttons | horizontal/vertical layout |
+| `select` | Single dropdown | Static/dynamic options, dependencies |
+| `checkbox` | Boolean toggle | requiredTrue, dependencies |
+| `array` | Dynamic field array | Repeatable field groups |
+| `range` | Slider control | Min/max/step values, visual feedback |
+| `color` | Color picker | Hex output, visual preview |
+| `multiselect` | Multiple selection | Min/max selections, Ctrl+Click |
+| `datetime` | Date & time | Min/max, timezone support |
+| `file` | File upload | Size/type validation, preview |
+| `richtext` | WYSIWYG editor | Formatting toolbar, char limit |
+
