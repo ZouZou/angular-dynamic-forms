@@ -1,7 +1,7 @@
 import { Component, computed, effect, inject, signal, input } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { trigger, transition, style, animate } from '@angular/animations';
-import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission, FormSchema, FormSection } from './models/field.model';
+import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission, FormSchema, FormSection, ValueTransform } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
 import { MaskService } from './mask.service';
 import { I18nService } from './i18n.service';
@@ -233,6 +233,52 @@ export class DqDynamicForm {
         if (field.computed) {
           const newValue = this.evaluateComputed(field.computed, values);
           const currentValue = values[field.name];
+
+          // Only update if value changed to avoid infinite loops
+          if (newValue !== currentValue) {
+            this.formValues.update(current => ({
+              ...current,
+              [field.name]: newValue
+            }));
+          }
+        }
+      });
+    });
+
+    // Value transformation effect: apply transformations when parent fields change
+    effect(() => {
+      const values = this.formValues();
+      const fields = this.fields();
+
+      fields.forEach(field => {
+        if (field.valueTransform) {
+          const transform = field.valueTransform;
+          const parentValue = values[transform.dependsOn];
+          const currentValue = values[field.name];
+
+          // Determine new value based on transformation
+          let newValue: any;
+
+          if (!parentValue || parentValue === '') {
+            // Parent is empty
+            if (transform.clearOnEmpty !== false) {
+              newValue = '';
+            } else {
+              return; // Don't change value
+            }
+          } else {
+            // Convert parentValue to string key for object lookup
+            const parentKey = String(parentValue);
+            if (parentKey in transform.mappings) {
+              // Use mapped value
+              newValue = transform.mappings[parentKey];
+            } else if (transform.default !== undefined) {
+              // Use default value
+              newValue = transform.default;
+            } else {
+              return; // No mapping found and no default
+            }
+          }
 
           // Only update if value changed to avoid infinite loops
           if (newValue !== currentValue) {
@@ -990,8 +1036,17 @@ export class DqDynamicForm {
    * Check if a field should be visible based on visibility conditions
    */
   isFieldVisible(field: Field): boolean {
+    // Check hideUntilDependenciesMet first (takes precedence)
+    if (field.hideUntilDependenciesMet && field.dependsOn) {
+      // Hide field until all dependencies have values
+      if (!this.allDependenciesHaveValues(field)) {
+        return false;
+      }
+    }
+
+    // Then check explicit visibility conditions
     if (!field.visibleWhen) {
-      return true; // No visibility condition, always visible
+      return true; // No visibility condition, show field
     }
 
     return this.evaluateVisibilityCondition(field.visibleWhen);
