@@ -28,6 +28,201 @@
       </div>
 
       <div class="panel-body">
+        <!-- Form Settings -->
+        <section class="form-settings-section">
+          <h3>⚙️ Form Settings</h3>
+          <div class="settings-form">
+            <!-- Form Metadata -->
+            <div class="settings-group">
+              <h4>📝 Form Metadata</h4>
+
+              <div class="form-group">
+                <label>Form Title</label>
+                <input
+                  type="text"
+                  [value]="schema().title"
+                  (input)="updateFormProperty('title', $any($event.target).value)"
+                  class="form-control"
+                  placeholder="Enter form title"
+                >
+              </div>
+
+              <div class="form-group">
+                <label>Description</label>
+                <textarea
+                  [value]="schema().description || ''"
+                  (input)="updateFormProperty('description', $any($event.target).value)"
+                  class="form-control"
+                  rows="2"
+                  placeholder="Optional form description"
+                ></textarea>
+              </div>
+            </div>
+
+            <!-- Submission Configuration -->
+            <div class="settings-group">
+              <h4>📤 Submission Configuration</h4>
+
+              <div class="form-group">
+                <label>API Endpoint</label>
+                <input
+                  type="text"
+                  [value]="schema().submission?.endpoint || ''"
+                  (input)="updateSubmissionProperty('endpoint', $any($event.target).value || undefined)"
+                  class="form-control"
+                  placeholder="https://api.example.com/submit"
+                >
+                <small class="text-muted">Leave empty to display data locally</small>
+              </div>
+
+              <div class="form-group">
+                <label>HTTP Method</label>
+                <select
+                  [value]="schema().submission?.method || 'POST'"
+                  (change)="updateSubmissionProperty('method', $any($event.target).value)"
+                  class="form-control"
+                >
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="PATCH">PATCH</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Success Message</label>
+                <input
+                  type="text"
+                  [value]="schema().submission?.successMessage || ''"
+                  (input)="updateSubmissionProperty('successMessage', $any($event.target).value || undefined)"
+                  class="form-control"
+                  placeholder="Form submitted successfully!"
+                >
+              </div>
+
+              <div class="form-group">
+                <label>Error Message</label>
+                <input
+                  type="text"
+                  [value]="schema().submission?.errorMessage || ''"
+                  (input)="updateSubmissionProperty('errorMessage', $any($event.target).value || undefined)"
+                  class="form-control"
+                  placeholder="Error submitting form. Please try again."
+                >
+              </div>
+
+              <div class="form-group">
+                <label>Redirect URL (on success)</label>
+                <input
+                  type="text"
+                  [value]="schema().submission?.redirectOnSuccess || ''"
+                  (input)="updateSubmissionProperty('redirectOnSuccess', $any($event.target).value || undefined)"
+                  class="form-control"
+                  placeholder="/thank-you"
+                >
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="schema().submission?.showDataOnSuccess || false"
+                    (change)="updateSubmissionProperty('showDataOnSuccess', $any($event.target).checked)"
+                  >
+                  Show data on success
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label>Custom Headers (JSON)</label>
+                <textarea
+                  [value]="schema().submission?.headers ? JSON.stringify(schema().submission?.headers, null, 2) : ''"
+                  (input)="updateSubmissionHeadersJSON($any($event.target).value)"
+                  class="form-control"
+                  rows="3"
+                  placeholder='{"Authorization": "Bearer token", "X-Custom": "value"}'
+                ></textarea>
+                <small class="text-muted">Optional custom HTTP headers</small>
+              </div>
+            </div>
+
+            <!-- Autosave Configuration -->
+            <div class="settings-group">
+              <h4>💾 Autosave Configuration</h4>
+
+              <div class="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="schema().autosave?.enabled || false"
+                    (change)="updateAutosaveProperty('enabled', $any($event.target).checked)"
+                  >
+                  Enable autosave
+                </label>
+              </div>
+
+              @if (schema().autosave?.enabled) {
+                <div class="form-group">
+                  <label>Save Interval (seconds)</label>
+                  <input
+                    type="number"
+                    [value]="schema().autosave?.intervalSeconds || 30"
+                    (input)="updateAutosaveProperty('intervalSeconds', Number($any($event.target).value))"
+                    class="form-control"
+                    min="5"
+                    step="5"
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label>Storage Type</label>
+                  <select
+                    [value]="schema().autosave?.storage || 'localStorage'"
+                    (change)="updateAutosaveProperty('storage', $any($event.target).value)"
+                    class="form-control"
+                  >
+                    <option value="localStorage">Local Storage</option>
+                    <option value="sessionStorage">Session Storage</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Storage Key</label>
+                  <input
+                    type="text"
+                    [value]="schema().autosave?.key || ''"
+                    (input)="updateAutosaveProperty('key', $any($event.target).value || undefined)"
+                    class="form-control"
+                    placeholder="custom-draft-key"
+                  >
+                  <small class="text-muted">Leave empty for auto-generated key</small>
+                </div>
+
+                <div class="form-group">
+                  <label>Expiration (days)</label>
+                  <input
+                    type="number"
+                    [value]="schema().autosave?.expirationDays || 7"
+                    (input)="updateAutosaveProperty('expirationDays', Number($any($event.target).value))"
+                    class="form-control"
+                    min="1"
+                  >
+                </div>
+
+                <div class="form-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      [checked]="schema().autosave?.showIndicator !== false"
+                      (change)="updateAutosaveProperty('showIndicator', $any($event.target).checked)"
+                    >
+                    Show save indicator
+                  </label>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+
         <!-- Field Palette -->
         <section class="palette-section">
           <h3>Field Palette</h3>

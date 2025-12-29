@@ -1451,4 +1451,112 @@ export class FormBuilder {
     // Clear field selection
     this.selectedFieldIndex.set(null);
   }
+
+  // Update form-level properties (title, description)
+  protected updateFormProperty(property: string, value: any): void {
+    const currentSchema = this.schema();
+
+    this.schema.set({
+      ...currentSchema,
+      [property]: value
+    });
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  // Update submission configuration properties
+  protected updateSubmissionProperty(property: string, value: any): void {
+    const currentSchema = this.schema();
+    const currentSubmission = currentSchema.submission || {};
+
+    // If no submission config exists and value is undefined/empty, don't create it
+    if (!currentSchema.submission && (value === undefined || value === '')) {
+      return;
+    }
+
+    // Update submission config
+    const updatedSubmission = {
+      ...currentSubmission,
+      [property]: value
+    };
+
+    // Remove undefined values to keep JSON clean
+    Object.keys(updatedSubmission).forEach(key => {
+      if (updatedSubmission[key as keyof typeof updatedSubmission] === undefined) {
+        delete updatedSubmission[key as keyof typeof updatedSubmission];
+      }
+    });
+
+    this.schema.set({
+      ...currentSchema,
+      submission: Object.keys(updatedSubmission).length > 0 ? updatedSubmission : undefined
+    });
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  // Update submission headers with JSON parsing
+  protected updateSubmissionHeadersJSON(jsonValue: string): void {
+    try {
+      if (!jsonValue.trim()) {
+        this.updateSubmissionProperty('headers', undefined);
+        return;
+      }
+      const parsedValue = JSON.parse(jsonValue);
+      this.updateSubmissionProperty('headers', parsedValue);
+    } catch (e) {
+      // Invalid JSON - ignore for now, user might still be typing
+    }
+  }
+
+  // Update autosave configuration properties
+  protected updateAutosaveProperty(property: string, value: any): void {
+    const currentSchema = this.schema();
+    const currentAutosave = currentSchema.autosave || { enabled: false };
+
+    // If enabling autosave for the first time
+    if (property === 'enabled' && value === true && !currentSchema.autosave) {
+      this.schema.set({
+        ...currentSchema,
+        autosave: {
+          enabled: true,
+          intervalSeconds: 30,
+          storage: 'localStorage',
+          expirationDays: 7,
+          showIndicator: true
+        }
+      });
+    }
+    // If disabling autosave
+    else if (property === 'enabled' && value === false) {
+      this.schema.set({
+        ...currentSchema,
+        autosave: undefined
+      });
+    }
+    // Update existing autosave property
+    else {
+      const updatedAutosave = {
+        ...currentAutosave,
+        [property]: value
+      };
+
+      // Remove undefined values to keep JSON clean
+      Object.keys(updatedAutosave).forEach(key => {
+        if (updatedAutosave[key as keyof typeof updatedAutosave] === undefined) {
+          delete updatedAutosave[key as keyof typeof updatedAutosave];
+        }
+      });
+
+      this.schema.set({
+        ...currentSchema,
+        autosave: updatedAutosave
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
 }
