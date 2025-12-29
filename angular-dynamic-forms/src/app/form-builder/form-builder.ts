@@ -123,7 +123,8 @@ export class FormBuilder {
         options: [
           { label: 'Option 1', value: 'option1' },
           { label: 'Option 2', value: 'option2' }
-        ]
+        ],
+        searchable: false
       }
     },
     {
@@ -198,7 +199,8 @@ export class FormBuilder {
           { label: 'Option 3', value: 'option3' }
         ],
         minSelections: 1,
-        maxSelections: 3
+        maxSelections: 3,
+        searchable: false
       }
     },
     {

@@ -109,6 +109,9 @@ export interface Field {
   minSelections?: number; // Minimum number of selections
   maxSelections?: number; // Maximum number of selections
 
+  // Select specific (for type 'select' and 'multiselect')
+  searchable?: boolean; // Enable search/filter for select fields with many options
+
   // DateTime specific (for type 'datetime')
   includeTime?: boolean; // For datetime vs date
   timezone?: string; // IANA timezone (e.g., "America/New_York")
