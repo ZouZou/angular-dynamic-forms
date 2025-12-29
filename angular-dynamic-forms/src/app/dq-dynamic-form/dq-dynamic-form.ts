@@ -60,8 +60,6 @@ export class DqDynamicForm {
   private readonly isUpdatingProgrammatically = signal<Set<string>>(new Set());
   // Store file data for file uploads
   protected readonly fileData = signal<Record<string, any>>({});
-  // Track previous form values to detect parent field changes for dependent fields
-  private readonly previousFormValues = signal<Record<string, unknown>>({});
 
   // Autosave state
   protected readonly lastSaved = signal<Date | null>(null);
@@ -133,45 +131,31 @@ export class DqDynamicForm {
     // Watch for changes in form values to reset dependent fields
     effect(() => {
       const values = this.formValues();
-      const previousValues = this.previousFormValues();
       const fields = this.fields();
 
       // Find all dependent fields and reset them when parent changes
       fields.forEach((field) => {
-        if (field.dependsOn) {
-          // Get all dependencies as array (handles both string and string[])
-          const dependencies = Array.isArray(field.dependsOn)
-            ? field.dependsOn
-            : [field.dependsOn];
+        if (field.dependsOn && typeof field.dependsOn === 'string') {
+          // Only handle single string dependencies here (for optionsMap)
+          const parentValue = values[field.dependsOn];
+          const currentValue = values[field.name];
 
-          // Check if any parent dependency value has changed
-          const parentChanged = dependencies.some(dep => {
-            return previousValues[dep] !== undefined &&
-                   previousValues[dep] !== values[dep];
-          });
+          // Reset child field if parent changed and current value is invalid
+          if (currentValue && field.optionsMap) {
+            const validOptions = field.optionsMap[parentValue as string] || [];
+            const isValidOption = validOptions.some(
+              (opt) => opt.value === currentValue
+            );
 
-          // Reset dependent field if any parent changed
-          if (parentChanged) {
-            // Determine the appropriate empty value based on field type
-            let emptyValue: any = '';
-            if (field.type === 'multiselect') {
-              emptyValue = [];
-            } else if (field.type === 'checkbox') {
-              emptyValue = false;
-            } else if (field.type === 'number') {
-              emptyValue = field.min ?? 0;
+            if (!isValidOption) {
+              this.formValues.update((current) => ({
+                ...current,
+                [field.name]: '',
+              }));
             }
-
-            this.formValues.update((current) => ({
-              ...current,
-              [field.name]: emptyValue,
-            }));
           }
         }
       });
-
-      // Update previous values for next comparison
-      this.previousFormValues.set({ ...values });
     });
 
     // Watch for form value changes and fetch API options for dependent fields
@@ -439,8 +423,6 @@ export class DqDynamicForm {
       this.dirty.set(initialDirty);
       // Store initial values for comparison
       this.initialValues.set({ ...initialValues });
-      // Initialize previous values to track parent field changes
-      this.previousFormValues.set({ ...initialValues });
       this.loading.set(false);
   }
 
