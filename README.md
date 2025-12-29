@@ -98,6 +98,53 @@ Show or hide fields dynamically based on other field values. Supports both simpl
 }
 ```
 
+### Smooth Animations
+
+Fields with conditional visibility automatically animate in and out with smooth transitions:
+
+- **Fade In**: Fields fade in with a subtle upward slide (300ms ease-out) when they become visible
+- **Fade Out**: Fields fade out smoothly (250ms ease-in) when they become hidden
+- **Hardware Accelerated**: Animations use GPU acceleration for smooth 60fps performance
+- **No Configuration Needed**: Animations work automatically with any `visibleWhen` condition
+
+**Example with Animations:**
+```json
+{
+  "fields": [
+    {
+      "name": "employmentStatus",
+      "label": "Employment Status",
+      "type": "select",
+      "options": ["Employed", "Self-Employed", "Unemployed", "Student"]
+    },
+    {
+      "name": "companyName",
+      "label": "Company Name",
+      "type": "text",
+      "visibleWhen": {
+        "operator": "or",
+        "conditions": [
+          { "field": "employmentStatus", "operator": "equals", "value": "Employed" },
+          { "field": "employmentStatus", "operator": "equals", "value": "Self-Employed" }
+        ]
+      }
+    },
+    {
+      "name": "jobTitle",
+      "label": "Job Title",
+      "type": "text",
+      "visibleWhen": {
+        "field": "employmentStatus",
+        "operator": "equals",
+        "value": "Employed"
+      }
+    }
+  ]
+}
+```
+
+When the user changes their employment status, the company name and job title fields smoothly animate in or out based on the conditions. No flickering, no jarring transitions - just smooth, professional animations.
+
 ---
 
 ## Cross-Field Validation
@@ -331,6 +378,373 @@ Fetch options dynamically from API endpoints with template variable support.
 - Loading indicators during fetch
 - Error handling with user feedback
 - Best for large option sets (100s or 1000s of options)
+
+---
+
+## Advanced Dependency Features
+
+Beyond basic dependent dropdowns, the form system supports advanced dependency capabilities for complex form interactions.
+
+### Value Transformation
+
+Automatically populate a field's value when a parent field changes. Perfect for derived values like phone prefixes, currency symbols, tax rates, or time zones.
+
+**Configuration:**
+```typescript
+interface ValueTransform {
+  dependsOn: string;                    // Parent field to watch
+  mappings: Record<string, any>;        // Map parent values to child values
+  default?: any;                        // Default value if no mapping found
+  clearOnEmpty?: boolean;               // Clear value when parent is empty (default: true)
+}
+```
+
+#### Example 1: Phone Prefix Based on Country
+
+```json
+{
+  "fields": [
+    {
+      "name": "country",
+      "label": "Country",
+      "type": "select",
+      "options": ["USA", "UK", "France", "Germany", "Japan", "Australia"]
+    },
+    {
+      "name": "phonePrefix",
+      "label": "Phone Prefix",
+      "type": "text",
+      "readonly": true,
+      "valueTransform": {
+        "dependsOn": "country",
+        "mappings": {
+          "USA": "+1",
+          "UK": "+44",
+          "France": "+33",
+          "Germany": "+49",
+          "Japan": "+81",
+          "Australia": "+61"
+        },
+        "default": "+1"
+      }
+    },
+    {
+      "name": "phoneNumber",
+      "label": "Phone Number",
+      "type": "text",
+      "mask": "phone",
+      "placeholder": "(123) 456-7890"
+    }
+  ]
+}
+```
+
+When the user selects "UK" from the country dropdown, the phone prefix automatically becomes "+44". No manual input needed!
+
+#### Example 2: Currency and Tax Based on Region
+
+```json
+{
+  "fields": [
+    {
+      "name": "region",
+      "label": "Region",
+      "type": "select",
+      "options": ["North America", "Europe", "Asia Pacific"]
+    },
+    {
+      "name": "currency",
+      "label": "Currency",
+      "type": "text",
+      "readonly": true,
+      "valueTransform": {
+        "dependsOn": "region",
+        "mappings": {
+          "North America": "USD",
+          "Europe": "EUR",
+          "Asia Pacific": "JPY"
+        }
+      }
+    },
+    {
+      "name": "taxRate",
+      "label": "Tax Rate (%)",
+      "type": "number",
+      "readonly": true,
+      "valueTransform": {
+        "dependsOn": "region",
+        "mappings": {
+          "North America": 8.5,
+          "Europe": 20,
+          "Asia Pacific": 10
+        },
+        "clearOnEmpty": false
+      }
+    }
+  ]
+}
+```
+
+#### Example 3: Shipping Method Based on Product Type
+
+```json
+{
+  "fields": [
+    {
+      "name": "productType",
+      "label": "Product Type",
+      "type": "select",
+      "options": ["Standard", "Fragile", "Perishable", "Hazardous"]
+    },
+    {
+      "name": "shippingMethod",
+      "label": "Shipping Method",
+      "type": "text",
+      "readonly": true,
+      "valueTransform": {
+        "dependsOn": "productType",
+        "mappings": {
+          "Standard": "Ground",
+          "Fragile": "Express with Insurance",
+          "Perishable": "Next Day Air - Refrigerated",
+          "Hazardous": "Specialized Carrier"
+        },
+        "default": "Ground"
+      }
+    }
+  ]
+}
+```
+
+### Hide Until Dependencies Met
+
+Automatically hide fields until all their dependencies have values. Provides a cleaner, more progressive UI experience.
+
+**Property:**
+```typescript
+hideUntilDependenciesMet?: boolean;  // Auto-hide until dependencies are filled
+```
+
+**Benefits:**
+- ✅ Cleaner UI - Fields appear smoothly when ready (with animations!)
+- ✅ Better UX - No confusing disabled/grayed-out fields
+- ✅ Progressive disclosure - Users see only relevant fields at each step
+- ✅ Reduced cognitive load - Simpler forms that grow as needed
+
+#### Example 1: Cascading Location Fields
+
+```json
+{
+  "fields": [
+    {
+      "name": "country",
+      "label": "Country",
+      "type": "select",
+      "options": ["USA", "Canada", "UK", "France"],
+      "validations": { "required": true }
+    },
+    {
+      "name": "state",
+      "label": "State/Province",
+      "type": "select",
+      "dependsOn": "country",
+      "hideUntilDependenciesMet": true,
+      "optionsEndpoint": "/api/states?country={{country}}"
+    },
+    {
+      "name": "city",
+      "label": "City",
+      "type": "select",
+      "dependsOn": ["country", "state"],
+      "hideUntilDependenciesMet": true,
+      "optionsEndpoint": "/api/cities?country={{country}}&state={{state}}"
+    },
+    {
+      "name": "zipCode",
+      "label": "Zip/Postal Code",
+      "type": "text",
+      "dependsOn": ["country", "state", "city"],
+      "hideUntilDependenciesMet": true,
+      "placeholder": "Enter zip code"
+    }
+  ]
+}
+```
+
+**User Experience:**
+1. User sees only "Country" field initially
+2. After selecting country → "State/Province" smoothly fades in
+3. After selecting state → "City" smoothly fades in
+4. After selecting city → "Zip Code" smoothly fades in
+
+Each field appears with a smooth animation when its dependencies are met!
+
+#### Example 2: Product Configuration Wizard
+
+```json
+{
+  "fields": [
+    {
+      "name": "productCategory",
+      "label": "Product Category",
+      "type": "select",
+      "options": ["Electronics", "Clothing", "Furniture", "Books"]
+    },
+    {
+      "name": "productType",
+      "label": "Product Type",
+      "type": "select",
+      "dependsOn": "productCategory",
+      "hideUntilDependenciesMet": true,
+      "optionsMap": {
+        "Electronics": [
+          { "value": "laptop", "label": "Laptop" },
+          { "value": "phone", "label": "Phone" },
+          { "value": "tablet", "label": "Tablet" }
+        ],
+        "Clothing": [
+          { "value": "shirt", "label": "Shirt" },
+          { "value": "pants", "label": "Pants" },
+          { "value": "shoes", "label": "Shoes" }
+        ],
+        "Furniture": [
+          { "value": "desk", "label": "Desk" },
+          { "value": "chair", "label": "Chair" },
+          { "value": "shelf", "label": "Shelf" }
+        ]
+      }
+    },
+    {
+      "name": "model",
+      "label": "Model",
+      "type": "select",
+      "dependsOn": ["productCategory", "productType"],
+      "hideUntilDependenciesMet": true,
+      "optionsEndpoint": "/api/models?category={{productCategory}}&type={{productType}}"
+    },
+    {
+      "name": "specifications",
+      "label": "Specifications",
+      "type": "textarea",
+      "dependsOn": ["productCategory", "productType", "model"],
+      "hideUntilDependenciesMet": true,
+      "rows": 4
+    }
+  ]
+}
+```
+
+### Combining Multiple Dependency Features
+
+You can combine value transformation, hiding, visibility conditions, and API-driven options for powerful form logic:
+
+```json
+{
+  "fields": [
+    {
+      "name": "country",
+      "label": "Country",
+      "type": "select",
+      "options": ["USA", "UK", "France", "Germany", "Japan"],
+      "validations": { "required": true }
+    },
+    {
+      "name": "phonePrefix",
+      "label": "Phone Prefix",
+      "type": "text",
+      "readonly": true,
+      "valueTransform": {
+        "dependsOn": "country",
+        "mappings": {
+          "USA": "+1",
+          "UK": "+44",
+          "France": "+33",
+          "Germany": "+49",
+          "Japan": "+81"
+        }
+      }
+    },
+    {
+      "name": "currencySymbol",
+      "label": "Currency",
+      "type": "text",
+      "readonly": true,
+      "valueTransform": {
+        "dependsOn": "country",
+        "mappings": {
+          "USA": "$",
+          "UK": "£",
+          "France": "€",
+          "Germany": "€",
+          "Japan": "¥"
+        }
+      }
+    },
+    {
+      "name": "state",
+      "label": "State/Province",
+      "type": "select",
+      "dependsOn": "country",
+      "hideUntilDependenciesMet": true,
+      "optionsEndpoint": "/api/states?country={{country}}",
+      "visibleWhen": {
+        "field": "country",
+        "operator": "in",
+        "value": ["USA", "Canada"]
+      }
+    },
+    {
+      "name": "city",
+      "label": "City",
+      "type": "select",
+      "dependsOn": ["country", "state"],
+      "hideUntilDependenciesMet": true,
+      "optionsEndpoint": "/api/cities?country={{country}}&state={{state}}"
+    },
+    {
+      "name": "taxRate",
+      "label": "Tax Rate (%)",
+      "type": "number",
+      "readonly": true,
+      "computed": {
+        "formula": "country === 'USA' ? (state === 'CA' ? 9.5 : 7.5) : (country === 'UK' ? 20 : 19)",
+        "dependencies": ["country", "state"],
+        "decimal": 2
+      }
+    }
+  ]
+}
+```
+
+**This example demonstrates:**
+- ✅ Value transformation (phone prefix, currency symbol)
+- ✅ Hide until dependencies met (state, city)
+- ✅ Conditional visibility (state only for USA/Canada)
+- ✅ API-driven options (state, city)
+- ✅ Computed fields (tax rate)
+- ✅ Dependency chains (country → state → city)
+
+### Use Cases for Advanced Dependencies
+
+**E-Commerce:**
+- Product category → Product type → Model → Specifications
+- Region → Currency → Tax rate → Shipping options
+
+**Travel Booking:**
+- Country → State → City → Airport
+- Passenger type → Meal preference → Seat selection
+
+**HR/Onboarding:**
+- Department → Team → Manager → Office location
+- Employment type → Benefits tier → Insurance options
+
+**Real Estate:**
+- Property type → Features → Amenities → Price range
+- Location → Neighborhood → School district → HOA
+
+**Healthcare:**
+- Insurance provider → Plan type → Coverage level → Copay
+- Specialty → Doctor → Available times → Appointment type
 
 ---
 

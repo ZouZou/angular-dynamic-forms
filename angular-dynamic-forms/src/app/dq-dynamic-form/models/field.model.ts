@@ -62,6 +62,14 @@ export interface AsyncValidator {
   // For 'custom' validWhen, the API should return { valid: boolean, message?: string }
 }
 
+// Value transformation configuration
+export interface ValueTransform {
+  dependsOn: string;                       // Parent field to watch
+  mappings: Record<string, any>;           // Map parent values to this field's values
+  default?: any;                           // Default value if parent value not in mappings
+  clearOnEmpty?: boolean;                  // Clear this field when parent is empty (default: true)
+}
+
 export interface Field {
   type: string;
   label: string;
@@ -73,6 +81,8 @@ export interface Field {
   dependencyType?: 'same' | 'opposite'; // For checkbox dependencies: 'same' = both checked/unchecked together, 'opposite' = inverse relationship
   validations?: FieldValidations;
   visibleWhen?: VisibilityCondition; // Conditional visibility
+  hideUntilDependenciesMet?: boolean; // Auto-hide field until all dependencies have values (default: false)
+  valueTransform?: ValueTransform; // Automatic value transformation based on parent field
   placeholder?: string; // Custom placeholder text
   rows?: number; // For textarea
   min?: number; // For number and date inputs

@@ -10,17 +10,23 @@ This document tracks planned improvements and enhancements for the Angular Dynam
 
 ---
 
-## 1. Conditional Visibility 🚧
+## 1. Conditional Visibility ✅
 
-**Priority:** High | **Complexity:** Medium | **Status:** In Progress
+**Priority:** High | **Complexity:** Medium | **Status:** Completed
 
-Show/hide fields based on other field values.
+Show/hide fields based on other field values with smooth animations.
 
 ### Features
-- Support operators: `equals`, `notEquals`, `contains`, `greaterThan`, `lessThan`, `in`, `notIn`
-- Multiple conditions with AND/OR logic
-- Complex expressions with nested conditions
-- Smooth animations when showing/hiding
+- ✅ Support operators: `equals`, `notEquals`, `contains`, `notContains`, `greaterThan`, `lessThan`, `greaterThanOrEqual`, `lessThanOrEqual`, `in`, `notIn`, `isEmpty`, `isNotEmpty`
+- ✅ Multiple conditions with AND/OR logic
+- ✅ Complex expressions with nested conditions
+- ✅ Smooth animations when showing/hiding (fade + slide transitions)
+
+### Implementation Details
+- **Animation System**: Uses Angular animations with `@fieldAnimation` trigger
+- **Fade In**: 300ms ease-out with upward slide when fields appear
+- **Fade Out**: 250ms ease-in when fields disappear
+- **Performance**: Animations are hardware-accelerated and don't block the main thread
 
 ### Example Configuration
 ```json
@@ -367,32 +373,165 @@ Improved submission handling.
 
 ---
 
-## 11. Advanced Dependency Features 📋
+## 11. Advanced Dependency Features ✅
 
-**Priority:** Medium | **Complexity:** Medium-High
+**Priority:** Medium | **Complexity:** Medium-High | **Status:** Completed
 
-Enhanced field dependency capabilities.
+Enhanced field dependency capabilities for complex form interactions.
 
 ### Features
-- Dependent visibility (not just disabled state)
-- Value mapping/transformation
-- Multiple parent dependencies
-- Computed dependency values
-- Dependency chains (A → B → C)
+- ✅ **Dependent visibility** - Auto-hide fields until dependencies are met
+- ✅ **Value transformation** - Auto-populate values based on parent field changes
+- ✅ **Multiple parent dependencies** - Fields can depend on multiple other fields
+- ✅ **Computed dependency values** - Calculated fields based on dependencies
+- ✅ **Dependency chains** - Cascading dependencies (A → B → C)
+- ✅ **API-driven options** - Dynamically fetch options based on dependencies
+- ✅ **Checkbox dependencies** - Same/opposite relationship management
 
-### Example Configuration
+### 1. Value Transformation
+
+Automatically set a field's value when a parent field changes.
+
+**Configuration:**
+```typescript
+interface ValueTransform {
+  dependsOn: string;                    // Parent field to watch
+  mappings: Record<string, any>;        // Map parent values to child values
+  default?: any;                        // Default value if no mapping found
+  clearOnEmpty?: boolean;               // Clear value when parent is empty (default: true)
+}
+```
+
+**Example - Phone Prefix:**
 ```json
 {
-  "name": "cityApi",
-  "dependsOn": ["country", "state"],
-  "optionsEndpoint": "/api/cities?country={{country}}&state={{state}}",
-  "visibleWhen": {
-    "operator": "and",
-    "conditions": [
-      { "field": "country", "operator": "notEmpty" },
-      { "field": "state", "operator": "notEmpty" }
-    ]
+  "name": "phonePrefix",
+  "label": "Phone Prefix",
+  "type": "text",
+  "readonly": true,
+  "valueTransform": {
+    "dependsOn": "country",
+    "mappings": {
+      "USA": "+1",
+      "UK": "+44",
+      "France": "+33",
+      "Germany": "+49",
+      "Japan": "+81"
+    },
+    "default": "+1"
   }
+}
+```
+
+**Example - Currency Symbol:**
+```json
+{
+  "name": "currencySymbol",
+  "label": "Currency",
+  "type": "text",
+  "readonly": true,
+  "valueTransform": {
+    "dependsOn": "country",
+    "mappings": {
+      "USA": "$",
+      "UK": "£",
+      "Europe": "€",
+      "Japan": "¥"
+    },
+    "default": "$",
+    "clearOnEmpty": false
+  }
+}
+```
+
+### 2. Hide Until Dependencies Met
+
+Automatically hide fields until all their dependencies have values.
+
+**Property:**
+```typescript
+hideUntilDependenciesMet?: boolean;  // Auto-hide until dependencies filled
+```
+
+**Example - Cascading Dropdowns:**
+```json
+{
+  "name": "state",
+  "label": "State/Province",
+  "type": "select",
+  "dependsOn": "country",
+  "hideUntilDependenciesMet": true,
+  "optionsEndpoint": "/api/states?country={{country}}"
+},
+{
+  "name": "city",
+  "label": "City",
+  "type": "select",
+  "dependsOn": ["country", "state"],
+  "hideUntilDependenciesMet": true,
+  "optionsEndpoint": "/api/cities?country={{country}}&state={{state}}"
+}
+```
+
+**Benefits:**
+- Cleaner UI - Fields appear smoothly when ready (with animations!)
+- Better UX - No confusing disabled/grayed-out fields
+- Progressive disclosure - Users see only relevant fields
+
+### 3. Complete Dependency Example
+
+Combining multiple dependency features:
+
+```json
+{
+  "fields": [
+    {
+      "name": "country",
+      "label": "Country",
+      "type": "select",
+      "options": ["USA", "UK", "France", "Germany", "Japan"],
+      "validations": { "required": true }
+    },
+    {
+      "name": "phonePrefix",
+      "label": "Phone Prefix",
+      "type": "text",
+      "readonly": true,
+      "valueTransform": {
+        "dependsOn": "country",
+        "mappings": {
+          "USA": "+1",
+          "UK": "+44",
+          "France": "+33",
+          "Germany": "+49",
+          "Japan": "+81"
+        }
+      }
+    },
+    {
+      "name": "state",
+      "label": "State/Province",
+      "type": "select",
+      "dependsOn": "country",
+      "hideUntilDependenciesMet": true,
+      "optionsEndpoint": "/api/states?country={{country}}"
+    },
+    {
+      "name": "city",
+      "label": "City",
+      "type": "select",
+      "dependsOn": ["country", "state"],
+      "hideUntilDependenciesMet": true,
+      "optionsEndpoint": "/api/cities?country={{country}}&state={{state}}",
+      "visibleWhen": {
+        "operator": "and",
+        "conditions": [
+          { "field": "country", "operator": "isNotEmpty" },
+          { "field": "state", "operator": "isNotEmpty" }
+        ]
+      }
+    }
+  ]
 }
 ```
 
