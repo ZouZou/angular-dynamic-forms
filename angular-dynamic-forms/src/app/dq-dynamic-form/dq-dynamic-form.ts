@@ -1,6 +1,8 @@
 import { Component, computed, effect, inject, signal, input } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { NgSelectModule } from '@ng-select/ng-select';
+import { FormsModule } from '@angular/forms';
 import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission, FormSchema, FormSection, ValueTransform } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
 import { MaskService } from './mask.service';
@@ -8,7 +10,7 @@ import { I18nService } from './i18n.service';
 
 @Component({
   selector: 'dq-dynamic-form',
-  imports: [],
+  imports: [NgSelectModule, FormsModule],
   templateUrl: './dq-dynamic-form.html',
   styleUrl: './dq-dynamic-form.scss',
   providers: [DynamicFormsService],

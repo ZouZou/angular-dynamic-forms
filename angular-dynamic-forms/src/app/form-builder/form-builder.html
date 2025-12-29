@@ -998,6 +998,24 @@
                 </div>
               }
 
+              <!-- Select & Multi-Select Search Configuration -->
+              @if (field.type === 'select' || field.type === 'multiselect') {
+                <div class="type-specific-config">
+                  <h4 style="margin-top: 1rem; border-top: 1px solid #ddd; padding-top: 1rem;">🔍 Search Configuration</h4>
+
+                  <div class="form-group">
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="field.searchable || false"
+                        (change)="updateFieldProperty('searchable', $any($event.target).checked)"
+                      >
+                      Enable Search/Filter (useful for large option lists)
+                    </label>
+                  </div>
+                </div>
+              }
+
               <!-- Multi-Select Configuration -->
               @if (field.type === 'multiselect') {
                 <div class="type-specific-config">

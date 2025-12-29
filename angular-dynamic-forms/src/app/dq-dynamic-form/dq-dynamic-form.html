@@ -194,24 +194,54 @@
         <span class="loading-indicator">Loading...</span>
         }
       </label>
-      <select
-        class="form-select"
-        [disabled]="isFieldDisabled(field) || fieldLoading()[field.name]"
-        (change)="updateFormValue(field.name, $any($event.target).value)"
-      >
-        <option value="" [selected]="!formValues()[field.name]">
+
+      @if (field.searchable) {
+        <!-- Searchable Select with ng-select -->
+        <ng-select
+          [items]="getAvailableOptions(field)"
+          bindLabel="label"
+          bindValue="value"
+          [placeholder]="field.placeholder || 'Choose ' + field.label.toLowerCase()"
+          [disabled]="isFieldDisabled(field) || fieldLoading()[field.name]"
+          [ngModel]="formValues()[field.name]"
+          (ngModelChange)="updateFormValue(field.name, $event)"
+          [clearable]="!field.validations?.required"
+          [searchable]="true"
+          [loading]="fieldLoading()[field.name]"
+        >
           @if (fieldLoading()[field.name]) {
-            Loading options...
-          } @else {
-            Choose {{ field.label.toLowerCase() }}
+            <ng-template ng-loadingspinner-tmp>
+              <span>Loading options...</span>
+            </ng-template>
           }
-        </option>
-        @for (opt of getAvailableOptions(field); track opt.value) {
-        <option [value]="opt.value" [selected]="formValues()[field.name] === opt.value">
-          {{ opt.label }}
-        </option>
-        }
-      </select>
+          @if (!getAvailableOptions(field) || getAvailableOptions(field).length === 0) {
+            <ng-template ng-notfound-tmp>
+              <div class="ng-option disabled">No items found</div>
+            </ng-template>
+          }
+        </ng-select>
+      } @else {
+        <!-- Native Select -->
+        <select
+          class="form-select"
+          [disabled]="isFieldDisabled(field) || fieldLoading()[field.name]"
+          (change)="updateFormValue(field.name, $any($event.target).value)"
+        >
+          <option value="" [selected]="!formValues()[field.name]">
+            @if (fieldLoading()[field.name]) {
+              Loading options...
+            } @else {
+              Choose {{ field.label.toLowerCase() }}
+            }
+          </option>
+          @for (opt of getAvailableOptions(field); track opt.value) {
+          <option [value]="opt.value" [selected]="formValues()[field.name] === opt.value">
+            {{ opt.label }}
+          </option>
+          }
+        </select>
+      }
+
       @if (isFieldDisabled(field)) {
       <small class="text-muted">Please fill in required dependencies first</small>
       }
@@ -289,20 +319,52 @@
         <span class="required">*</span>
         }
       </label>
-      <select
-        class="form-select"
-        multiple
-        [disabled]="isFieldDisabled(field) || fieldLoading()[field.name]"
-        (change)="updateMultiSelectValue(field.name, $any($event.target).selectedOptions)"
-        [size]="Math.min(getAvailableOptions(field).length, 6)"
-      >
-        @for (opt of getAvailableOptions(field); track opt.value) {
-        <option [value]="opt.value" [selected]="isMultiSelectOptionSelected(field.name, opt.value)">
-          {{ opt.label }}
-        </option>
-        }
-      </select>
-      <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
+
+      @if (field.searchable) {
+        <!-- Searchable Multi-Select with ng-select -->
+        <ng-select
+          [items]="getAvailableOptions(field)"
+          bindLabel="label"
+          bindValue="value"
+          [placeholder]="field.placeholder || 'Choose ' + field.label.toLowerCase()"
+          [disabled]="isFieldDisabled(field) || fieldLoading()[field.name]"
+          [ngModel]="formValues()[field.name]"
+          (ngModelChange)="updateFormValue(field.name, $event)"
+          [multiple]="true"
+          [clearable]="!field.validations?.required"
+          [searchable]="true"
+          [closeOnSelect]="false"
+          [loading]="fieldLoading()[field.name]"
+          [maxSelectedItems]="field.maxSelections"
+        >
+          @if (fieldLoading()[field.name]) {
+            <ng-template ng-loadingspinner-tmp>
+              <span>Loading options...</span>
+            </ng-template>
+          }
+          @if (!getAvailableOptions(field) || getAvailableOptions(field).length === 0) {
+            <ng-template ng-notfound-tmp>
+              <div class="ng-option disabled">No items found</div>
+            </ng-template>
+          }
+        </ng-select>
+      } @else {
+        <!-- Native Multi-Select -->
+        <select
+          class="form-select"
+          multiple
+          [disabled]="isFieldDisabled(field) || fieldLoading()[field.name]"
+          (change)="updateMultiSelectValue(field.name, $any($event.target).selectedOptions)"
+          [size]="Math.min(getAvailableOptions(field).length, 6)"
+        >
+          @for (opt of getAvailableOptions(field); track opt.value) {
+          <option [value]="opt.value" [selected]="isMultiSelectOptionSelected(field.name, opt.value)">
+            {{ opt.label }}
+          </option>
+          }
+        </select>
+        <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
+      }
       @if (field.minSelections || field.maxSelections) {
       <small class="text-muted">
         @if (field.minSelections && field.maxSelections) {
