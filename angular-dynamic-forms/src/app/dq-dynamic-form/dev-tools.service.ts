@@ -98,8 +98,9 @@ export class DevToolsService {
 
     // Validate field type
     const validTypes = [
-      'text', 'email', 'password', 'number', 'date', 'textarea',
-      'select', 'radio', 'checkbox', 'array'
+      'text', 'email', 'password', 'number', 'date', 'datetime', 'textarea',
+      'select', 'multiselect', 'radio', 'checkbox', 'array', 'range',
+      'color', 'file', 'richtext'
     ];
 
     if (field.type && !validTypes.includes(field.type)) {
@@ -112,6 +113,20 @@ export class DevToolsService {
       warnings.push(`${fieldRef}: Select/Radio field should have "options", "optionsEndpoint", or "optionsMap"`);
     }
 
+    // Validate multiselect fields have options
+    if (field.type === 'multiselect' &&
+        !field.options && !field.optionsEndpoint && !field.optionsMap) {
+      warnings.push(`${fieldRef}: Multiselect field should have "options", "optionsEndpoint", or "optionsMap"`);
+    }
+
+    // Validate multiselect min/maxSelections
+    if (field.type === 'multiselect') {
+      if (field.minSelections !== undefined && field.maxSelections !== undefined &&
+          field.minSelections > field.maxSelections) {
+        errors.push(`${fieldRef}: "minSelections" cannot be greater than "maxSelections"`);
+      }
+    }
+
     // Validate array fields have arrayConfig
     if (field.type === 'array' && !field.arrayConfig) {
       errors.push(`${fieldRef}: Array field must have "arrayConfig" property`);
@@ -121,6 +136,30 @@ export class DevToolsService {
     if (field.type === 'number') {
       if (field.min !== undefined && field.max !== undefined && field.min > field.max) {
         errors.push(`${fieldRef}: "min" (${field.min}) cannot be greater than "max" (${field.max})`);
+      }
+    }
+
+    // Validate min/max for range fields
+    if (field.type === 'range') {
+      if (field.min === undefined || field.max === undefined) {
+        warnings.push(`${fieldRef}: Range field should have both "min" and "max" properties`);
+      }
+      if (field.min !== undefined && field.max !== undefined && field.min >= field.max) {
+        errors.push(`${fieldRef}: "min" must be less than "max" for range fields`);
+      }
+    }
+
+    // Validate file upload fields
+    if (field.type === 'file') {
+      if (field.maxFileSize !== undefined && field.maxFileSize <= 0) {
+        warnings.push(`${fieldRef}: "maxFileSize" should be a positive number`);
+      }
+    }
+
+    // Validate richtext fields
+    if (field.type === 'richtext') {
+      if (field.maxCharacters !== undefined && field.maxCharacters <= 0) {
+        warnings.push(`${fieldRef}: "maxCharacters" should be a positive number`);
       }
     }
 
@@ -337,11 +376,15 @@ export class DevToolsService {
       case 'email':
       case 'password':
       case 'textarea':
+      case 'richtext':
+      case 'color':
         return 'string';
       case 'number':
+      case 'range':
         return 'number';
       case 'date':
-        return 'string'; // ISO date string
+      case 'datetime':
+        return 'string'; // ISO date/datetime string
       case 'checkbox':
         return 'boolean';
       case 'select':
@@ -353,6 +396,16 @@ export class DevToolsService {
           return values.join(' | ');
         }
         return 'string';
+      case 'multiselect':
+        if (field.options && Array.isArray(field.options)) {
+          const values = field.options.map(opt =>
+            typeof opt === 'string' ? `'${opt}'` : `'${opt.value}'`
+          );
+          return `(${values.join(' | ')})[]`;
+        }
+        return 'string[]';
+      case 'file':
+        return field.multiple ? 'File[]' : 'File';
       case 'array':
         return 'any[]'; // Could be improved with nested types
       default:
