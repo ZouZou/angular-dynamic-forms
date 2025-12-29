@@ -21,7 +21,12 @@ export class DynamicFormsService {
 
   getFormSchema(): Observable<FormSchema> {
     return this.http.get<FormSchema>(
-      'forms/multi-step-registration.json'
+      '/forms/multi-step-registration.json'
+    ).pipe(
+      catchError((error) => {
+        console.error('[Form Schema Error] Failed to load form schema:', error);
+        throw error;
+      })
     );
   }
 
