@@ -59,6 +59,7 @@
   }
 
   <form role="form" aria-label="{{ title() }}">
+    <div class="form-fields-container">
     @for (field of currentStepFields(); track field.name) {
     <!-- Only show field if visibility condition is met -->
     @if (isFieldVisible(field)) {
@@ -528,6 +529,7 @@
     </div>
     }
     }
+    </div>
 
     <!-- Submission Error Message -->
     @if (submitError()) {
