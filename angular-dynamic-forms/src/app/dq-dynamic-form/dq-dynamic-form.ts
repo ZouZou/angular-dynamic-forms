@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, signal, input } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { trigger, transition, style, animate } from '@angular/animations';
 import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission, FormSchema, FormSection } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
 import { MaskService } from './mask.service';
@@ -11,6 +12,17 @@ import { I18nService } from './i18n.service';
   templateUrl: './dq-dynamic-form.html',
   styleUrl: './dq-dynamic-form.scss',
   providers: [DynamicFormsService],
+  animations: [
+    trigger('fieldAnimation', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(-10px)' }),
+        animate('300ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+      ]),
+      transition(':leave', [
+        animate('250ms ease-in', style({ opacity: 0, transform: 'translateY(-10px)' }))
+      ])
+    ])
+  ]
 })
 export class DqDynamicForm {
   // Optional input for providing schema directly (used by form builder)

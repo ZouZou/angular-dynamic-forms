@@ -70,7 +70,11 @@
   }
 }
 
-/* Form Group */
+/* Form Group
+ * Supports both initial load animations and conditional visibility animations.
+ * - Initial load: slideIn animation with staggered delays
+ * - Conditional visibility: Angular @fieldAnimation trigger (fade + slide)
+ */
 .form-group {
   margin-bottom: var(--spacing-lg);
   display: flex;

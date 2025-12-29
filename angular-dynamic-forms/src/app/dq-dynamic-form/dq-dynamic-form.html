@@ -62,7 +62,7 @@
     @for (field of currentStepFields(); track field.name) {
     <!-- Only show field if visibility condition is met -->
     @if (isFieldVisible(field)) {
-    <div class="form-group" [class]="'width-' + (field.width || 'full') + (field.cssClass ? ' ' + field.cssClass : '')" role="group" [attr.aria-labelledby]="'label-' + field.name">
+    <div class="form-group" [@fieldAnimation] [class]="'width-' + (field.width || 'full') + (field.cssClass ? ' ' + field.cssClass : '')" role="group" [attr.aria-labelledby]="'label-' + field.name">
       <!-- Text / Email / Password -->
       @if (field.type === 'text' || field.type === 'email' || field.type === 'password') {
       <label class="form-label" [id]="'label-' + field.name" [attr.for]="field.name">
