@@ -1,6 +1,7 @@
 import { Component, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { DqDynamicForm } from '../dq-dynamic-form/dq-dynamic-form';
 import { DevToolsService, ValidationResult } from '../dq-dynamic-form/dev-tools.service';
 import { FormSchema, Field, FormSection } from '../dq-dynamic-form/models/field.model';
@@ -15,7 +16,7 @@ interface FieldTemplate {
 @Component({
   selector: 'app-form-builder',
   standalone: true,
-  imports: [CommonModule, FormsModule, DqDynamicForm],
+  imports: [CommonModule, FormsModule, DragDropModule, DqDynamicForm],
   templateUrl: './form-builder.html',
   styleUrl: './form-builder.scss'
 })
@@ -43,6 +44,9 @@ export class FormBuilder {
 
   // Selected section index (for multi-step mode)
   protected readonly selectedSectionIndex = signal<number | null>(null);
+
+  // Active tab in property editor
+  protected readonly activePropertyTab = signal<string>('basic');
 
   // Expose Number, JSON, Array for template (needed for numeric input conversions and JSON operations)
   protected readonly Number = Number;
@@ -520,6 +524,82 @@ export class FormBuilder {
   // Select field for editing
   protected selectField(index: number): void {
     this.selectedFieldIndex.set(index);
+    // Reset to basic tab when selecting a new field
+    this.activePropertyTab.set('basic');
+  }
+
+  // Switch property editor tab
+  protected setPropertyTab(tab: string): void {
+    this.activePropertyTab.set(tab);
+  }
+
+  // Drag and drop field handler
+  protected onFieldDrop(event: CdkDragDrop<Field[]>): void {
+    if (event.previousIndex === event.currentIndex) {
+      return;
+    }
+
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    if (multiStep) {
+      // Multi-step mode: reorder within selected section
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const fields = [...sections[sectionIndex].fields];
+      moveItemInArray(fields, event.previousIndex, event.currentIndex);
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      // Single-step mode: reorder in fields array
+      const fields = [...(currentSchema.fields || [])];
+      moveItemInArray(fields, event.previousIndex, event.currentIndex);
+
+      this.schema.set({
+        ...currentSchema,
+        fields
+      });
+    }
+
+    this.updateJsonFromSchema();
+
+    // Update selection to follow the moved field
+    if (this.selectedFieldIndex() === event.previousIndex) {
+      this.selectedFieldIndex.set(event.currentIndex);
+    }
+  }
+
+  // Drag and drop section handler
+  protected onSectionDrop(event: CdkDragDrop<FormSection[]>): void {
+    if (event.previousIndex === event.currentIndex) {
+      return;
+    }
+
+    const currentSchema = this.schema();
+    const sections = [...(currentSchema.sections || [])];
+    moveItemInArray(sections, event.previousIndex, event.currentIndex);
+
+    this.schema.set({
+      ...currentSchema,
+      sections
+    });
+
+    this.updateJsonFromSchema();
+
+    // Update selection to follow the moved section
+    if (this.selectedSectionIndex() === event.previousIndex) {
+      this.selectedSectionIndex.set(event.currentIndex);
+    }
   }
 
   // Update field property
