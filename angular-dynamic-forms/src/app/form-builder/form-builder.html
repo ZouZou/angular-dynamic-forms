@@ -250,18 +250,25 @@
               </button>
             </div>
 
-            <div class="sections-tree">
+            <div
+              class="sections-tree"
+              cdkDropList
+              (cdkDropListDropped)="onSectionDrop($event)"
+            >
               @if (currentSections().length === 0) {
                 <div class="empty-state">
                   <p>No sections yet. Click "Add Section" to create one.</p>
                 </div>
               } @else {
                 @for (section of currentSections(); track $index) {
-                  <div class="section-item" [class.selected]="selectedSectionIndex() === $index">
+                  <div class="section-item" cdkDrag [class.selected]="selectedSectionIndex() === $index">
                     <div
                       class="section-header"
                       (click)="selectSection($index)"
                     >
+                      <div class="drag-handle" cdkDragHandle>
+                        <span class="drag-icon">⋮⋮</span>
+                      </div>
                       <div class="section-info">
                         <span class="section-icon">{{ section.icon || '📋' }}</span>
                         <div class="section-details">
@@ -270,22 +277,6 @@
                         </div>
                       </div>
                       <div class="section-actions">
-                        <button
-                          class="btn-icon"
-                          (click)="moveSectionUp($index); $event.stopPropagation()"
-                          [disabled]="$index === 0"
-                          title="Move up"
-                        >
-                          ⬆️
-                        </button>
-                        <button
-                          class="btn-icon"
-                          (click)="moveSectionDown($index); $event.stopPropagation()"
-                          [disabled]="$index === currentSections().length - 1"
-                          title="Move down"
-                        >
-                          ⬇️
-                        </button>
                         <button
                           class="btn-icon btn-danger"
                           (click)="removeSection($index); $event.stopPropagation()"
@@ -308,49 +299,44 @@
                             <p>No fields yet. Add fields from the palette above.</p>
                           </div>
                         } @else {
-                          @for (field of section.fields; track $index) {
-                            <div
-                              class="field-item"
-                              [class.selected]="selectedFieldIndex() === $index"
-                              (click)="selectField($index)"
-                            >
-                              <div class="field-item-content">
-                                <span class="field-icon">{{ getFieldIcon(field.type) }}</span>
-                                <div class="field-info">
-                                  <div class="field-name">{{ field.name }}</div>
-                                  <div class="field-label">{{ field.label }}</div>
+                          <div
+                            cdkDropList
+                            (cdkDropListDropped)="onFieldDrop($event)"
+                          >
+                            @for (field of section.fields; track $index) {
+                              <div
+                                class="field-item"
+                                cdkDrag
+                                [class.selected]="selectedFieldIndex() === $index"
+                                (click)="selectField($index)"
+                              >
+                                <div class="drag-handle" cdkDragHandle>
+                                  <span class="drag-icon">⋮⋮</span>
                                 </div>
+                                <div class="field-item-content">
+                                  <span class="field-icon">{{ getFieldIcon(field.type) }}</span>
+                                  <div class="field-info">
+                                    <div class="field-name">{{ field.name }}</div>
+                                    <div class="field-label">{{ field.label }}</div>
+                                  </div>
+                                </div>
+                                <div class="field-actions">
+                                  <button
+                                    class="btn-icon btn-danger"
+                                    (click)="removeField($index); $event.stopPropagation()"
+                                    title="Delete"
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
+                                <div class="drag-placeholder" *cdkDragPlaceholder></div>
                               </div>
-                              <div class="field-actions">
-                                <button
-                                  class="btn-icon"
-                                  (click)="moveFieldUp($index); $event.stopPropagation()"
-                                  [disabled]="$index === 0"
-                                  title="Move up"
-                                >
-                                  ⬆️
-                                </button>
-                                <button
-                                  class="btn-icon"
-                                  (click)="moveFieldDown($index); $event.stopPropagation()"
-                                  [disabled]="$index === section.fields.length - 1"
-                                  title="Move down"
-                                >
-                                  ⬇️
-                                </button>
-                                <button
-                                  class="btn-icon btn-danger"
-                                  (click)="removeField($index); $event.stopPropagation()"
-                                  title="Delete"
-                                >
-                                  🗑️
-                                </button>
-                              </div>
-                            </div>
-                          }
+                            }
+                          </div>
                         }
                       </div>
                     }
+                    <div class="drag-placeholder" *cdkDragPlaceholder></div>
                   </div>
                 }
               }
@@ -360,7 +346,11 @@
           <!-- Single-Step Mode: Fields -->
           <section class="tree-section">
             <h3>Form Fields ({{ currentFields().length }})</h3>
-            <div class="field-tree">
+            <div
+              class="field-tree"
+              cdkDropList
+              (cdkDropListDropped)="onFieldDrop($event)"
+            >
               @if (currentFields().length === 0) {
                 <div class="empty-state">
                   <p>👆 Click a field type above to add it to your form</p>
@@ -369,9 +359,13 @@
                 @for (field of currentFields(); track $index) {
                   <div
                     class="field-item"
+                    cdkDrag
                     [class.selected]="selectedFieldIndex() === $index"
                     (click)="selectField($index)"
                   >
+                    <div class="drag-handle" cdkDragHandle>
+                      <span class="drag-icon">⋮⋮</span>
+                    </div>
                     <div class="field-item-content">
                       <span class="field-icon">{{ getFieldIcon(field.type) }}</span>
                       <div class="field-info">
@@ -381,22 +375,6 @@
                     </div>
                     <div class="field-actions">
                       <button
-                        class="btn-icon"
-                        (click)="moveFieldUp($index); $event.stopPropagation()"
-                        [disabled]="$index === 0"
-                        title="Move up"
-                      >
-                        ⬆️
-                      </button>
-                      <button
-                        class="btn-icon"
-                        (click)="moveFieldDown($index); $event.stopPropagation()"
-                        [disabled]="$index === currentFields().length - 1"
-                        title="Move down"
-                      >
-                        ⬇️
-                      </button>
-                      <button
                         class="btn-icon btn-danger"
                         (click)="removeField($index); $event.stopPropagation()"
                         title="Delete"
@@ -404,6 +382,7 @@
                         🗑️
                       </button>
                     </div>
+                    <div class="drag-placeholder" *cdkDragPlaceholder></div>
                   </div>
                 }
               }
