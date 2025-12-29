@@ -313,6 +313,86 @@
     }
   }
 
+  // Form Settings Section
+  .form-settings-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid #e0e0e0;
+
+    h3 {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      color: #2c3e50;
+      margin: 0 0 1rem 0;
+      font-weight: 600;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #3498db;
+    }
+
+    .settings-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+
+      .settings-group {
+        background: #f8f9fa;
+        border-radius: 6px;
+        padding: 1rem;
+        border: 1px solid #e0e0e0;
+
+        h4 {
+          font-size: 0.85rem;
+          text-transform: uppercase;
+          color: #555;
+          margin: 0 0 0.75rem 0;
+          font-weight: 600;
+          padding-bottom: 0.5rem;
+          border-bottom: 1px solid #ddd;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+          margin-bottom: 0.75rem;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #555;
+
+            input[type="checkbox"] {
+              margin-right: 0.5rem;
+            }
+          }
+
+          .form-control {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+
+            &:focus {
+              outline: none;
+              border-color: #3498db;
+              box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+            }
+          }
+
+          .text-muted {
+            font-size: 0.75rem;
+            color: #999;
+            font-style: italic;
+          }
+        }
+      }
+    }
+  }
+
   .properties-section {
     h3 {
       font-size: 0.9rem;
