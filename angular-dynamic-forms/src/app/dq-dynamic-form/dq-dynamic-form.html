@@ -195,11 +195,10 @@
       </label>
       <select
         class="form-select"
-        [value]="formValues()[field.name]"
         [disabled]="isFieldDisabled(field) || fieldLoading()[field.name]"
         (change)="updateFormValue(field.name, $any($event.target).value)"
       >
-        <option value="">
+        <option value="" [selected]="!formValues()[field.name]">
           @if (fieldLoading()[field.name]) {
             Loading options...
           } @else {
@@ -207,7 +206,7 @@
           }
         </option>
         @for (opt of getAvailableOptions(field); track opt.value) {
-        <option [value]="opt.value">
+        <option [value]="opt.value" [selected]="formValues()[field.name] === opt.value">
           {{ opt.label }}
         </option>
         }
@@ -292,13 +291,12 @@
       <select
         class="form-select"
         multiple
-        [value]="formValues()[field.name]"
         [disabled]="isFieldDisabled(field) || fieldLoading()[field.name]"
         (change)="updateMultiSelectValue(field.name, $any($event.target).selectedOptions)"
         [size]="Math.min(getAvailableOptions(field).length, 6)"
       >
         @for (opt of getAvailableOptions(field); track opt.value) {
-        <option [value]="opt.value">
+        <option [value]="opt.value" [selected]="isMultiSelectOptionSelected(field.name, opt.value)">
           {{ opt.label }}
         </option>
         }
@@ -472,12 +470,11 @@
               </label>
               <select
                 class="form-select"
-                [value]="formValues()[getArrayFieldName(field.name, index, subField.name)]"
                 (change)="updateFormValue(getArrayFieldName(field.name, index, subField.name), $any($event.target).value)"
               >
-                <option value="">Choose {{ subField.label.toLowerCase() }}</option>
+                <option value="" [selected]="!formValues()[getArrayFieldName(field.name, index, subField.name)]">Choose {{ subField.label.toLowerCase() }}</option>
                 @for (opt of normalizeOptions(subField.options || []); track opt.value) {
-                <option [value]="opt.value">{{ opt.label }}</option>
+                <option [value]="opt.value" [selected]="formValues()[getArrayFieldName(field.name, index, subField.name)] === opt.value">{{ opt.label }}</option>
                 }
               </select>
               }

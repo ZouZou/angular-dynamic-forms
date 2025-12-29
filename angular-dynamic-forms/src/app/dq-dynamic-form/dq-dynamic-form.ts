@@ -1695,6 +1695,17 @@ export class DqDynamicForm {
   }
 
   /**
+   * Check if a multi-select option is selected
+   */
+  isMultiSelectOptionSelected(fieldName: string, optionValue: string): boolean {
+    const fieldValue = this.formValues()[fieldName];
+    if (!Array.isArray(fieldValue)) {
+      return false;
+    }
+    return fieldValue.includes(optionValue);
+  }
+
+  /**
    * Handle file upload
    */
   handleFileUpload(fieldName: string, files: FileList | null, field: Field): void {
