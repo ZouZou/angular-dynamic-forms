@@ -3,7 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { FormsModule } from '@angular/forms';
-import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission, FormSchema, FormSection, ValueTransform } from './models/field.model';
+import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission, FormSchema, FormSection, ValueTransform, DataTableColumn, DataTableRow, DataTableConfig } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
 import { MaskService } from './mask.service';
 import { I18nService } from './i18n.service';
@@ -93,6 +93,22 @@ export class DqDynamicForm {
   protected readonly multiStepEnabled = signal(false);
   protected readonly currentStep = signal(0);
   protected readonly completedSteps = signal<Set<number>>(new Set());
+
+  // DataTable state
+  // Store all table data (original rows before filtering/sorting)
+  protected readonly tableData = signal<Record<string, any[]>>({});
+  // Store current page for each table
+  protected readonly tableCurrentPage = signal<Record<string, number>>({});
+  // Store rows per page for each table
+  protected readonly tableRowsPerPage = signal<Record<string, number>>({});
+  // Store sort configuration for each table
+  protected readonly tableSortConfig = signal<Record<string, { column: string; direction: 'asc' | 'desc' }>>({});
+  // Store filter/search term for each table
+  protected readonly tableFilterTerm = signal<Record<string, string>>({});
+  // Store selected row IDs for each table
+  protected readonly tableSelection = signal<Record<string, Set<string | number>>>({});
+  // Store loading state for tables with API endpoints
+  protected readonly tableLoading = signal<Record<string, boolean>>({});
 
   // Expose Math for template (needed for multiselect size calculation and other calculations)
   protected readonly Math = Math;
@@ -417,6 +433,17 @@ export class DqDynamicForm {
       if (schema.i18n) {
         this._i18nService.initialize(schema.i18n);
       }
+
+      // Initialize datatable fields
+      allFields.forEach(field => {
+        if (field.type === 'datatable' && field.tableConfig) {
+          this.initializeDataTable(field);
+          // Initialize empty array for selected rows
+          initialValues[field.name] = [];
+          initialTouched[field.name] = false;
+          initialDirty[field.name] = false;
+        }
+      });
 
       this.formValues.set(initialValues);
       this.touched.set(initialTouched);
@@ -2054,5 +2081,440 @@ export class DqDynamicForm {
    */
   private scrollToTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ==================== DataTable Methods ====================
+
+  /**
+   * Initialize datatable field
+   */
+  protected initializeDataTable(field: Field): void {
+    if (!field.tableConfig) return;
+
+    const fieldName = field.name;
+    const config = field.tableConfig;
+
+    // Initialize data
+    if (config.rows) {
+      this.tableData.update(data => ({
+        ...data,
+        [fieldName]: config.rows || []
+      }));
+    } else if (config.dataEndpoint) {
+      // Fetch data from API
+      this.fetchTableData(fieldName, config.dataEndpoint);
+    }
+
+    // Initialize pagination
+    const rowsPerPage = config.pagination?.rowsPerPage || 10;
+    this.tableRowsPerPage.update(state => ({
+      ...state,
+      [fieldName]: rowsPerPage
+    }));
+    this.tableCurrentPage.update(state => ({
+      ...state,
+      [fieldName]: 1
+    }));
+
+    // Initialize sorting
+    if (config.defaultSort) {
+      this.tableSortConfig.update(state => ({
+        ...state,
+        [fieldName]: config.defaultSort!
+      }));
+    }
+
+    // Initialize selection
+    if (config.selection?.enabled) {
+      this.tableSelection.update(state => ({
+        ...state,
+        [fieldName]: new Set()
+      }));
+    }
+
+    // Initialize filter
+    this.tableFilterTerm.update(state => ({
+      ...state,
+      [fieldName]: ''
+    }));
+  }
+
+  /**
+   * Fetch table data from API
+   */
+  private fetchTableData(fieldName: string, endpoint: string): void {
+    this.tableLoading.update(state => ({ ...state, [fieldName]: true }));
+
+    this._http.get<any[]>(endpoint).subscribe({
+      next: (data) => {
+        this.tableData.update(state => ({
+          ...state,
+          [fieldName]: data
+        }));
+        this.tableLoading.update(state => ({ ...state, [fieldName]: false }));
+      },
+      error: (error) => {
+        console.error('Error fetching table data:', error);
+        this.tableLoading.update(state => ({ ...state, [fieldName]: false }));
+      }
+    });
+  }
+
+  /**
+   * Get processed table rows (filtered, sorted, paginated)
+   */
+  protected getTableRows(field: Field): DataTableRow[] {
+    const fieldName = field.name;
+    const config = field.tableConfig;
+    if (!config) return [];
+
+    let rows = this.tableData()[fieldName] || [];
+
+    // Apply filtering
+    const filterTerm = this.tableFilterTerm()[fieldName];
+    if (filterTerm && config.filter?.enabled) {
+      const searchColumns = config.filter.searchColumns || config.columns.map(c => c.key);
+      rows = rows.filter(row =>
+        searchColumns.some(col =>
+          String(row[col] || '').toLowerCase().includes(filterTerm.toLowerCase())
+        )
+      );
+    }
+
+    // Apply sorting
+    const sortConfig = this.tableSortConfig()[fieldName];
+    if (sortConfig) {
+      rows = [...rows].sort((a, b) => {
+        const aVal = a[sortConfig.column];
+        const bVal = b[sortConfig.column];
+
+        // Handle different data types
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+
+        const aStr = String(aVal || '').toLowerCase();
+        const bStr = String(bVal || '').toLowerCase();
+
+        if (aStr < bStr) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aStr > bStr) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    // Apply pagination
+    if (config.pagination?.enabled !== false) {
+      const currentPage = this.tableCurrentPage()[fieldName] || 1;
+      const rowsPerPage = this.tableRowsPerPage()[fieldName] || 10;
+      const startIndex = (currentPage - 1) * rowsPerPage;
+      const endIndex = startIndex + rowsPerPage;
+      rows = rows.slice(startIndex, endIndex);
+    }
+
+    return rows;
+  }
+
+  /**
+   * Get total row count (after filtering)
+   */
+  protected getTableTotalRows(field: Field): number {
+    const fieldName = field.name;
+    const config = field.tableConfig;
+    if (!config) return 0;
+
+    let rows = this.tableData()[fieldName] || [];
+
+    // Apply filtering
+    const filterTerm = this.tableFilterTerm()[fieldName];
+    if (filterTerm && config.filter?.enabled) {
+      const searchColumns = config.filter.searchColumns || config.columns.map(c => c.key);
+      rows = rows.filter(row =>
+        searchColumns.some(col =>
+          String(row[col] || '').toLowerCase().includes(filterTerm.toLowerCase())
+        )
+      );
+    }
+
+    return rows.length;
+  }
+
+  /**
+   * Get total pages
+   */
+  protected getTableTotalPages(field: Field): number {
+    const totalRows = this.getTableTotalRows(field);
+    const rowsPerPage = this.tableRowsPerPage()[field.name] || 10;
+    return Math.ceil(totalRows / rowsPerPage);
+  }
+
+  /**
+   * Sort table by column
+   */
+  protected sortTableColumn(fieldName: string, columnKey: string): void {
+    const currentSort = this.tableSortConfig()[fieldName];
+
+    // Toggle sort direction or set new column
+    const newDirection = currentSort?.column === columnKey && currentSort.direction === 'asc'
+      ? 'desc'
+      : 'asc';
+
+    this.tableSortConfig.update(state => ({
+      ...state,
+      [fieldName]: { column: columnKey, direction: newDirection }
+    }));
+  }
+
+  /**
+   * Filter table data
+   */
+  protected filterTable(fieldName: string, term: string): void {
+    this.tableFilterTerm.update(state => ({
+      ...state,
+      [fieldName]: term
+    }));
+
+    // Reset to first page when filtering
+    this.tableCurrentPage.update(state => ({
+      ...state,
+      [fieldName]: 1
+    }));
+  }
+
+  /**
+   * Change page
+   */
+  protected goToTablePage(fieldName: string, page: number): void {
+    this.tableCurrentPage.update(state => ({
+      ...state,
+      [fieldName]: page
+    }));
+  }
+
+  /**
+   * Change rows per page
+   */
+  protected changeTableRowsPerPage(fieldName: string, rowsPerPage: number): void {
+    this.tableRowsPerPage.update(state => ({
+      ...state,
+      [fieldName]: rowsPerPage
+    }));
+
+    // Reset to first page
+    this.tableCurrentPage.update(state => ({
+      ...state,
+      [fieldName]: 1
+    }));
+  }
+
+  /**
+   * Toggle row selection
+   */
+  protected toggleTableRowSelection(fieldName: string, rowId: string | number): void {
+    this.tableSelection.update(state => {
+      const currentSelection = new Set(state[fieldName] || []);
+
+      if (currentSelection.has(rowId)) {
+        currentSelection.delete(rowId);
+      } else {
+        currentSelection.add(rowId);
+      }
+
+      return {
+        ...state,
+        [fieldName]: currentSelection
+      };
+    });
+
+    // Update form value with selected row IDs
+    const selectedIds = Array.from(this.tableSelection()[fieldName] || []);
+    this.formValues.update(values => ({
+      ...values,
+      [fieldName]: selectedIds
+    }));
+  }
+
+  /**
+   * Toggle select all rows
+   */
+  protected toggleTableSelectAll(fieldName: string, field: Field): void {
+    const currentSelection = this.tableSelection()[fieldName] || new Set();
+    const visibleRows = this.getTableRows(field);
+
+    // If all visible rows are selected, deselect all; otherwise select all
+    const allSelected = visibleRows.every(row => currentSelection.has(row.id!));
+
+    this.tableSelection.update(state => {
+      const newSelection = new Set(state[fieldName] || []);
+
+      if (allSelected) {
+        // Deselect all visible rows
+        visibleRows.forEach(row => newSelection.delete(row.id!));
+      } else {
+        // Select all visible rows
+        visibleRows.forEach(row => {
+          if (row.id !== undefined) {
+            newSelection.add(row.id);
+          }
+        });
+      }
+
+      return {
+        ...state,
+        [fieldName]: newSelection
+      };
+    });
+
+    // Update form value
+    const selectedIds = Array.from(this.tableSelection()[fieldName] || []);
+    this.formValues.update(values => ({
+      ...values,
+      [fieldName]: selectedIds
+    }));
+  }
+
+  /**
+   * Check if row is selected
+   */
+  protected isTableRowSelected(fieldName: string, rowId: string | number): boolean {
+    return this.tableSelection()[fieldName]?.has(rowId) || false;
+  }
+
+  /**
+   * Check if all visible rows are selected
+   */
+  protected isTableAllSelected(fieldName: string, field: Field): boolean {
+    const currentSelection = this.tableSelection()[fieldName];
+    if (!currentSelection || currentSelection.size === 0) return false;
+
+    const visibleRows = this.getTableRows(field);
+    return visibleRows.length > 0 && visibleRows.every(row => currentSelection.has(row.id!));
+  }
+
+  /**
+   * Check if some (but not all) visible rows are selected
+   */
+  protected isTableIndeterminate(fieldName: string, field: Field): boolean {
+    const currentSelection = this.tableSelection()[fieldName];
+    if (!currentSelection || currentSelection.size === 0) return false;
+
+    const visibleRows = this.getTableRows(field);
+    const selectedCount = visibleRows.filter(row => currentSelection.has(row.id!)).length;
+
+    return selectedCount > 0 && selectedCount < visibleRows.length;
+  }
+
+  /**
+   * Format cell value based on column type
+   */
+  protected formatTableCell(value: any, column: DataTableColumn): string {
+    if (value === null || value === undefined) return '';
+
+    switch (column.type) {
+      case 'currency':
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD'
+        }).format(Number(value));
+
+      case 'number':
+        if (column.format) {
+          return new Intl.NumberFormat('en-US').format(Number(value));
+        }
+        return String(value);
+
+      case 'date':
+        if (column.format) {
+          // Simple date formatting
+          const date = new Date(value);
+          return date.toLocaleDateString('en-US');
+        }
+        return String(value);
+
+      default:
+        return String(value);
+    }
+  }
+
+  /**
+   * Get badge color class for status badges
+   */
+  protected getBadgeColor(value: string, column: DataTableColumn): string {
+    if (!column.badgeColorMap) return 'secondary';
+    return column.badgeColorMap[value] || 'secondary';
+  }
+
+  /**
+   * Generate link URL from template
+   */
+  protected generateTableLink(row: DataTableRow, template: string): string {
+    let url = template;
+    // Replace {{key}} placeholders with row values
+    Object.keys(row).forEach(key => {
+      url = url.replace(new RegExp(`{{${key}}}`, 'g'), String(row[key]));
+    });
+    return url;
+  }
+
+  /**
+   * Get avatar initials from name
+   */
+  protected getAvatarInitials(name: string): string {
+    if (!name) return '?';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+
+  /**
+   * Get pagination info text (e.g., "1-10 of 100")
+   */
+  protected getTablePaginationInfo(field: Field): string {
+    const fieldName = field.name;
+    const currentPage = this.tableCurrentPage()[fieldName] || 1;
+    const rowsPerPage = this.tableRowsPerPage()[fieldName] || 10;
+    const totalRows = this.getTableTotalRows(field);
+
+    if (totalRows === 0) return '0-0 of 0';
+
+    const startRow = (currentPage - 1) * rowsPerPage + 1;
+    const endRow = Math.min(currentPage * rowsPerPage, totalRows);
+
+    return `${startRow}-${endRow} of ${totalRows}`;
+  }
+
+  /**
+   * Get page numbers for pagination
+   */
+  protected getTablePageNumbers(field: Field): number[] {
+    const totalPages = this.getTableTotalPages(field);
+    const currentPage = this.tableCurrentPage()[field.name] || 1;
+
+    // Show max 5 page numbers
+    const maxPages = 5;
+    const pages: number[] = [];
+
+    let startPage = Math.max(1, currentPage - Math.floor(maxPages / 2));
+    let endPage = Math.min(totalPages, startPage + maxPages - 1);
+
+    // Adjust start if we're near the end
+    if (endPage - startPage < maxPages - 1) {
+      startPage = Math.max(1, endPage - maxPages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    return pages;
+  }
+
+  /**
+   * Handle table action click
+   */
+  protected handleTableAction(action: string, row: DataTableRow): void {
+    console.log('Table action:', action, 'Row:', row);
+    // This can be extended to emit events or call custom handlers
   }
 }

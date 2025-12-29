@@ -582,6 +582,284 @@
       </div>
       }
 
+      <!-- DataTable -->
+      @if (field.type === 'datatable' && field.tableConfig) {
+      <div class="datatable-wrapper" [class.bordered]="field.tableConfig.bordered !== false" [class.dense]="field.tableConfig.dense">
+        <label class="form-label">{{ field.label }}</label>
+
+        <!-- Search/Filter Bar -->
+        @if (field.tableConfig.filter?.enabled) {
+        <div class="datatable-search-bar">
+          <input
+            type="text"
+            class="datatable-search-input"
+            [placeholder]="field.tableConfig.filter.placeholder || 'Search...'"
+            (input)="filterTable(field.name, $any($event.target).value)"
+            [value]="tableFilterTerm()[field.name] || ''"
+          />
+        </div>
+        }
+
+        <!-- Loading State -->
+        @if (tableLoading()[field.name]) {
+        <div class="datatable-loading">
+          <div class="loading-spinner"></div>
+          <span>Loading data...</span>
+        </div>
+        } @else {
+
+        <!-- Table -->
+        <div class="datatable-scroll">
+          <table class="datatable"
+                 [class.striped]="field.tableConfig.striped"
+                 [class.hoverable]="field.tableConfig.hoverable !== false">
+            <!-- Table Header -->
+            <thead>
+              <tr>
+                <!-- Selection Column -->
+                @if (field.tableConfig.selection?.enabled) {
+                <th class="datatable-select-col">
+                  @if (field.tableConfig.selection.mode !== 'single' && field.tableConfig.selection.showSelectAll !== false) {
+                  <input
+                    type="checkbox"
+                    class="datatable-checkbox"
+                    [checked]="isTableAllSelected(field.name, field)"
+                    [indeterminate]="isTableIndeterminate(field.name, field)"
+                    (change)="toggleTableSelectAll(field.name, field)"
+                    aria-label="Select all rows"
+                  />
+                  }
+                </th>
+                }
+
+                <!-- Data Columns -->
+                @for (column of field.tableConfig.columns; track column.key) {
+                <th
+                  [style.width]="column.width"
+                  [class.sortable]="column.sortable"
+                  [class.text-center]="column.align === 'center'"
+                  [class.text-right]="column.align === 'right'"
+                  (click)="column.sortable && sortTableColumn(field.name, column.key)"
+                >
+                  <div class="datatable-header-content">
+                    <span>{{ column.label }}</span>
+                    @if (column.sortable && tableSortConfig()[field.name]?.column === column.key) {
+                    <span class="sort-indicator">
+                      {{ tableSortConfig()[field.name]?.direction === 'asc' ? '↑' : '↓' }}
+                    </span>
+                    }
+                  </div>
+                </th>
+                }
+              </tr>
+            </thead>
+
+            <!-- Table Body -->
+            <tbody>
+              @for (row of getTableRows(field); track row.id || $index) {
+              <tr [class.selected]="isTableRowSelected(field.name, row.id!)">
+                <!-- Selection Column -->
+                @if (field.tableConfig.selection?.enabled) {
+                <td class="datatable-select-col">
+                  <input
+                    type="checkbox"
+                    class="datatable-checkbox"
+                    [checked]="isTableRowSelected(field.name, row.id!)"
+                    (change)="toggleTableRowSelection(field.name, row.id!)"
+                    [attr.aria-label]="'Select row ' + row.id"
+                  />
+                </td>
+                }
+
+                <!-- Data Columns -->
+                @for (column of field.tableConfig.columns; track column.key) {
+                <td
+                  [class.text-center]="column.align === 'center'"
+                  [class.text-right]="column.align === 'right'"
+                >
+                  <!-- Text Column -->
+                  @if (!column.type || column.type === 'text') {
+                    {{ row[column.key] }}
+                  }
+
+                  <!-- Number Column -->
+                  @if (column.type === 'number') {
+                    {{ formatTableCell(row[column.key], column) }}
+                  }
+
+                  <!-- Currency Column -->
+                  @if (column.type === 'currency') {
+                    {{ formatTableCell(row[column.key], column) }}
+                  }
+
+                  <!-- Date Column -->
+                  @if (column.type === 'date') {
+                    {{ formatTableCell(row[column.key], column) }}
+                  }
+
+                  <!-- Badge Column -->
+                  @if (column.type === 'badge') {
+                    <span class="datatable-badge badge-{{ getBadgeColor(row[column.key], column) }}">
+                      {{ row[column.key] }}
+                    </span>
+                  }
+
+                  <!-- Avatar Column -->
+                  @if (column.type === 'avatar') {
+                    <div class="datatable-avatar-cell">
+                      @if (row[column.avatarKey || column.key + 'Avatar']) {
+                        <img
+                          class="datatable-avatar"
+                          [src]="row[column.avatarKey || column.key + 'Avatar']"
+                          [alt]="row[column.key]"
+                        />
+                      } @else {
+                        <div class="datatable-avatar-placeholder">
+                          {{ getAvatarInitials(row[column.key]) }}
+                        </div>
+                      }
+                      <span class="datatable-avatar-name">{{ row[column.key] }}</span>
+                    </div>
+                  }
+
+                  <!-- Link Column -->
+                  @if (column.type === 'link' && column.linkTemplate) {
+                    <a
+                      [href]="generateTableLink(row, column.linkTemplate)"
+                      [target]="column.linkTarget || '_self'"
+                      class="datatable-link"
+                    >
+                      {{ row[column.key] }}
+                    </a>
+                  }
+
+                  <!-- Actions Column -->
+                  @if (column.type === 'actions' && column.actions) {
+                    <div class="datatable-actions">
+                      @for (action of column.actions; track action.label) {
+                        <button
+                          type="button"
+                          class="datatable-action-btn action-{{ action.color || 'secondary' }}"
+                          (click)="handleTableAction(action.onClick || action.label, row)"
+                          [title]="action.label"
+                        >
+                          @if (action.icon) {
+                            <span class="action-icon">{{ action.icon }}</span>
+                          } @else {
+                            {{ action.label }}
+                          }
+                        </button>
+                      }
+                    </div>
+                  }
+                </td>
+                }
+              </tr>
+              }
+
+              <!-- Empty State -->
+              @if (getTableRows(field).length === 0) {
+              <tr class="datatable-empty-row">
+                <td [attr.colspan]="field.tableConfig.columns.length + (field.tableConfig.selection?.enabled ? 1 : 0)">
+                  <div class="datatable-empty-state">
+                    {{ field.tableConfig.emptyMessage || 'No data available' }}
+                  </div>
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (field.tableConfig.pagination?.enabled !== false && getTableTotalRows(field) > 0) {
+        <div class="datatable-pagination">
+          <!-- Rows per page selector -->
+          <div class="datatable-rows-per-page">
+            <label>Rows per page:</label>
+            <select
+              class="datatable-select"
+              [value]="tableRowsPerPage()[field.name] || 10"
+              (change)="changeTableRowsPerPage(field.name, Number($any($event.target).value))"
+            >
+              @for (option of field.tableConfig.pagination?.rowsPerPageOptions || [10, 25, 50, 100]; track option) {
+                <option [value]="option">{{ option }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Pagination info -->
+          @if (field.tableConfig.pagination?.showPageInfo !== false) {
+          <div class="datatable-pagination-info">
+            {{ getTablePaginationInfo(field) }}
+          </div>
+          }
+
+          <!-- Page navigation -->
+          <div class="datatable-pagination-controls">
+            <!-- First page button -->
+            <button
+              type="button"
+              class="datatable-page-btn"
+              [disabled]="(tableCurrentPage()[field.name] || 1) === 1"
+              (click)="goToTablePage(field.name, 1)"
+              aria-label="First page"
+            >
+              «
+            </button>
+
+            <!-- Previous page button -->
+            <button
+              type="button"
+              class="datatable-page-btn"
+              [disabled]="(tableCurrentPage()[field.name] || 1) === 1"
+              (click)="goToTablePage(field.name, (tableCurrentPage()[field.name] || 1) - 1)"
+              aria-label="Previous page"
+            >
+              ‹
+            </button>
+
+            <!-- Page numbers -->
+            @for (pageNum of getTablePageNumbers(field); track pageNum) {
+              <button
+                type="button"
+                class="datatable-page-btn"
+                [class.active]="pageNum === (tableCurrentPage()[field.name] || 1)"
+                (click)="goToTablePage(field.name, pageNum)"
+                [attr.aria-label]="'Page ' + pageNum"
+              >
+                {{ pageNum }}
+              </button>
+            }
+
+            <!-- Next page button -->
+            <button
+              type="button"
+              class="datatable-page-btn"
+              [disabled]="(tableCurrentPage()[field.name] || 1) === getTableTotalPages(field)"
+              (click)="goToTablePage(field.name, (tableCurrentPage()[field.name] || 1) + 1)"
+              aria-label="Next page"
+            >
+              ›
+            </button>
+
+            <!-- Last page button -->
+            <button
+              type="button"
+              class="datatable-page-btn"
+              [disabled]="(tableCurrentPage()[field.name] || 1) === getTableTotalPages(field)"
+              (click)="goToTablePage(field.name, getTableTotalPages(field))"
+              aria-label="Last page"
+            >
+              »
+            </button>
+          </div>
+        </div>
+        }
+        }
+      </div>
+      }
+
       <!-- Error -->
       @if (touched()[field.name] && errors()[field.name]) {
       <div [id]="'error-' + field.name" class="error" role="alert" aria-live="assertive">

@@ -119,6 +119,9 @@ export interface Field {
   // Rich text editor specific (for type 'richtext')
   allowedFormats?: string[]; // e.g., ['bold', 'italic', 'underline', 'link']
   maxCharacters?: number; // Maximum character count
+
+  // DataTable specific (for type 'datatable')
+  tableConfig?: DataTableConfig; // DataTable configuration
 }
 
 // Field mask configuration
@@ -215,4 +218,90 @@ export interface I18nConfig {
   translations: Record<string, any>;   // Translation objects keyed by locale
   dateFormat?: string;                 // Date format per locale (e.g., 'MM/DD/YYYY')
   direction?: 'ltr' | 'rtl';          // Text direction (auto-detected from locale)
+}
+
+// DataTable column configuration
+export interface DataTableColumn {
+  key: string;                         // Property key in row data
+  label: string;                       // Column header label
+  width?: string;                      // Column width (e.g., '100px', '20%')
+  type?: 'text' | 'number' | 'date' | 'currency' | 'badge' | 'avatar' | 'link' | 'actions'; // Column data type
+  sortable?: boolean;                  // Enable sorting for this column (default: false)
+  filterable?: boolean;                // Enable filtering for this column (default: false)
+  align?: 'left' | 'center' | 'right'; // Text alignment (default: 'left')
+  format?: string;                     // Format string for dates/numbers (e.g., 'MM/DD/YYYY', '$0,0.00')
+  // For 'badge' type
+  badgeColorMap?: Record<string, string>; // Map values to badge colors (e.g., { 'Pending': 'warning', 'Settled': 'success', 'Closed': 'secondary' })
+  // For 'avatar' type
+  avatarKey?: string;                  // Property key for avatar image URL (separate from text)
+  avatarFallback?: string;             // Fallback text/initials if no image
+  // For 'link' type
+  linkTemplate?: string;               // URL template with {{placeholders}} (e.g., '/claims/{{id}}')
+  linkTarget?: '_blank' | '_self';     // Link target (default: '_self')
+  // For 'actions' type
+  actions?: DataTableAction[];         // Array of action buttons/menus
+}
+
+// DataTable action configuration
+export interface DataTableAction {
+  label: string;                       // Action label
+  icon?: string;                       // Icon class/name (optional)
+  type?: 'button' | 'menu';           // Action type (default: 'menu')
+  color?: 'primary' | 'secondary' | 'danger' | 'warning'; // Action color
+  onClick?: string;                    // Event handler name or action identifier
+  visibleWhen?: string;                // Condition for visibility (evaluated with row context)
+}
+
+// DataTable row data
+export interface DataTableRow {
+  id?: string | number;                // Unique row identifier (for selection/tracking)
+  [key: string]: any;                  // Dynamic properties matching column keys
+}
+
+// DataTable pagination configuration
+export interface DataTablePagination {
+  enabled: boolean;                    // Enable pagination (default: true)
+  rowsPerPage?: number;                // Rows per page (default: 10)
+  rowsPerPageOptions?: number[];       // Available rows per page options (default: [10, 25, 50, 100])
+  showPageInfo?: boolean;              // Show "1-10 of 100" info (default: true)
+}
+
+// DataTable filter configuration
+export interface DataTableFilter {
+  enabled: boolean;                    // Enable global search/filter (default: false)
+  placeholder?: string;                // Search input placeholder (default: 'Search...')
+  searchColumns?: string[];            // Columns to search (default: all text columns)
+  debounceMs?: number;                 // Debounce delay in milliseconds (default: 300)
+}
+
+// DataTable selection configuration
+export interface DataTableSelection {
+  enabled: boolean;                    // Enable row selection (default: false)
+  mode?: 'single' | 'multiple';       // Selection mode (default: 'multiple')
+  showSelectAll?: boolean;             // Show select all checkbox (default: true for multiple mode)
+}
+
+// Complete DataTable configuration
+export interface DataTableConfig {
+  columns: DataTableColumn[];          // Column definitions
+  rows?: DataTableRow[];               // Static row data (can also be loaded via API)
+  dataEndpoint?: string;               // API endpoint to fetch data dynamically
+  pagination?: DataTablePagination;    // Pagination settings
+  filter?: DataTableFilter;            // Filter/search settings
+  selection?: DataTableSelection;      // Row selection settings
+  // Styling options
+  striped?: boolean;                   // Alternate row colors (default: false)
+  bordered?: boolean;                  // Show table borders (default: true)
+  hoverable?: boolean;                 // Highlight row on hover (default: true)
+  dense?: boolean;                     // Compact row height (default: false)
+  // Sorting
+  defaultSort?: {                      // Default sort configuration
+    column: string;                    // Column key to sort by
+    direction: 'asc' | 'desc';        // Sort direction
+  };
+  // Empty state
+  emptyMessage?: string;               // Message when no data (default: 'No data available')
+  // Actions
+  onRowClick?: string;                 // Event handler for row click
+  onSelectionChange?: string;          // Event handler for selection change
 }

@@ -1,0 +1,233 @@
+{
+  "title": "Insurance Claims Management",
+  "description": "Comprehensive claims search and management system",
+  "fields": [
+    {
+      "type": "text",
+      "label": "Search Claims",
+      "name": "searchQuery",
+      "placeholder": "Search by claim number, policy, or claimant name",
+      "width": "full"
+    },
+    {
+      "type": "datatable",
+      "label": "Claims Search Results",
+      "name": "claimsTable",
+      "tableConfig": {
+        "columns": [
+          {
+            "key": "claimNo",
+            "label": "Claim No",
+            "width": "140px",
+            "type": "link",
+            "sortable": true,
+            "linkTemplate": "/claims/{{id}}"
+          },
+          {
+            "key": "occurredDate",
+            "label": "Occurred Date",
+            "width": "130px",
+            "type": "date",
+            "sortable": true
+          },
+          {
+            "key": "policyHolder",
+            "label": "Policy Holder",
+            "type": "avatar",
+            "sortable": true,
+            "avatarKey": "policyHolderAvatar"
+          },
+          {
+            "key": "evaluationAmt",
+            "label": "Evaluation Amt",
+            "width": "140px",
+            "type": "currency",
+            "sortable": true,
+            "align": "right"
+          },
+          {
+            "key": "status",
+            "label": "Status",
+            "width": "120px",
+            "type": "badge",
+            "sortable": true,
+            "align": "center",
+            "badgeColorMap": {
+              "Pending": "warning",
+              "Settled": "success",
+              "Closed": "secondary"
+            }
+          },
+          {
+            "key": "actions",
+            "label": "Actions",
+            "width": "100px",
+            "type": "actions",
+            "align": "center",
+            "actions": [
+              {
+                "label": "View",
+                "icon": "👁",
+                "onClick": "viewClaim",
+                "color": "primary"
+              },
+              {
+                "label": "Edit",
+                "icon": "✏",
+                "onClick": "editClaim",
+                "color": "secondary"
+              },
+              {
+                "label": "Delete",
+                "icon": "🗑",
+                "onClick": "deleteClaim",
+                "color": "danger"
+              }
+            ]
+          }
+        ],
+        "rows": [
+          {
+            "id": "CLM-2023-8892",
+            "claimNo": "CLM-2023-8892",
+            "occurredDate": "2023-10-24",
+            "policyHolder": "Michael Chen",
+            "policyHolderAvatar": "https://i.pravatar.cc/150?img=12",
+            "evaluationAmt": 12450.00,
+            "status": "Pending"
+          },
+          {
+            "id": "CLM-2023-8410",
+            "claimNo": "CLM-2023-8410",
+            "occurredDate": "2023-09-12",
+            "policyHolder": "Sarah Connor",
+            "policyHolderAvatar": "https://i.pravatar.cc/150?img=45",
+            "evaluationAmt": 3200.00,
+            "status": "Settled"
+          },
+          {
+            "id": "CLM-2023-7721",
+            "claimNo": "CLM-2023-7721",
+            "occurredDate": "2023-08-05",
+            "policyHolder": "James Smith",
+            "policyHolderAvatar": "https://i.pravatar.cc/150?img=33",
+            "evaluationAmt": 45000.00,
+            "status": "Pending"
+          },
+          {
+            "id": "CLM-2023-6522",
+            "claimNo": "CLM-2023-6522",
+            "occurredDate": "2023-07-19",
+            "policyHolder": "Emily Blunt",
+            "policyHolderAvatar": "https://i.pravatar.cc/150?img=20",
+            "evaluationAmt": 850.00,
+            "status": "Closed"
+          },
+          {
+            "id": "CLM-2023-5431",
+            "claimNo": "CLM-2023-5431",
+            "occurredDate": "2023-06-22",
+            "policyHolder": "Robert Johnson",
+            "policyHolderAvatar": "https://i.pravatar.cc/150?img=51",
+            "evaluationAmt": 18750.00,
+            "status": "Settled"
+          },
+          {
+            "id": "CLM-2023-4892",
+            "claimNo": "CLM-2023-4892",
+            "occurredDate": "2023-05-30",
+            "policyHolder": "Maria Garcia",
+            "policyHolderAvatar": "https://i.pravatar.cc/150?img=44",
+            "evaluationAmt": 9340.00,
+            "status": "Pending"
+          },
+          {
+            "id": "CLM-2023-3677",
+            "claimNo": "CLM-2023-3677",
+            "occurredDate": "2023-04-15",
+            "policyHolder": "David Lee",
+            "policyHolderAvatar": "https://i.pravatar.cc/150?img=13",
+            "evaluationAmt": 27500.00,
+            "status": "Closed"
+          },
+          {
+            "id": "CLM-2023-2456",
+            "claimNo": "CLM-2023-2456",
+            "occurredDate": "2023-03-08",
+            "policyHolder": "Jennifer Wilson",
+            "policyHolderAvatar": "https://i.pravatar.cc/150?img=23",
+            "evaluationAmt": 5600.00,
+            "status": "Settled"
+          },
+          {
+            "id": "CLM-2023-1234",
+            "claimNo": "CLM-2023-1234",
+            "occurredDate": "2023-02-12",
+            "policyHolder": "Thomas Anderson",
+            "policyHolderAvatar": "https://i.pravatar.cc/150?img=59",
+            "evaluationAmt": 34200.00,
+            "status": "Pending"
+          },
+          {
+            "id": "CLM-2023-0089",
+            "claimNo": "CLM-2023-0089",
+            "occurredDate": "2023-01-05",
+            "policyHolder": "Lisa Martinez",
+            "policyHolderAvatar": "https://i.pravatar.cc/150?img=48",
+            "evaluationAmt": 11400.00,
+            "status": "Closed"
+          },
+          {
+            "id": "CLM-2022-9988",
+            "claimNo": "CLM-2022-9988",
+            "occurredDate": "2022-12-28",
+            "policyHolder": "Christopher Brown",
+            "policyHolderAvatar": "https://i.pravatar.cc/150?img=56",
+            "evaluationAmt": 19800.00,
+            "status": "Settled"
+          },
+          {
+            "id": "CLM-2022-8765",
+            "claimNo": "CLM-2022-8765",
+            "occurredDate": "2022-11-14",
+            "policyHolder": "Amanda Taylor",
+            "policyHolderAvatar": "https://i.pravatar.cc/150?img=26",
+            "evaluationAmt": 7250.00,
+            "status": "Pending"
+          }
+        ],
+        "pagination": {
+          "enabled": true,
+          "rowsPerPage": 10,
+          "rowsPerPageOptions": [10, 25, 50, 100],
+          "showPageInfo": true
+        },
+        "filter": {
+          "enabled": true,
+          "placeholder": "Search claims...",
+          "searchColumns": ["claimNo", "policyHolder", "status"]
+        },
+        "selection": {
+          "enabled": true,
+          "mode": "multiple",
+          "showSelectAll": true
+        },
+        "striped": false,
+        "bordered": true,
+        "hoverable": true,
+        "dense": false,
+        "defaultSort": {
+          "column": "occurredDate",
+          "direction": "desc"
+        },
+        "emptyMessage": "No claims found matching your criteria"
+      }
+    }
+  ],
+  "submission": {
+    "endpoint": "/api/claims/search",
+    "method": "POST",
+    "successMessage": "Claims search completed successfully",
+    "showDataOnSuccess": true
+  }
+}
