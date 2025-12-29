@@ -28,6 +28,9 @@ export class DqDynamicForm {
   // Optional input for providing schema directly (used by form builder)
   formSchema = input<FormSchema | null>(null);
 
+  // Optional input for dynamically setting the submission endpoint
+  submissionEndpoint = input<string | null>(null);
+
   private readonly _formService = inject(DynamicFormsService);
   private readonly _maskService = inject(MaskService);
   private readonly _http = inject(HttpClient);
@@ -1409,8 +1412,11 @@ export class DqDynamicForm {
     this.submitError.set(null);
     this.submitSuccess.set(false);
 
-    // If no submission config, just show data locally
-    if (!this.submissionConfig?.endpoint) {
+    // Determine endpoint: prioritize input endpoint over schema endpoint
+    const endpoint = this.submissionEndpoint() || this.submissionConfig?.endpoint;
+
+    // If no endpoint configured, just show data locally
+    if (!endpoint) {
       this.submittedData.set(this.formValues());
       this.submitted.set(true);
       this.submitSuccess.set(true);
@@ -1431,21 +1437,23 @@ export class DqDynamicForm {
    * Submit form data to API with retry logic
    */
   private submitToApi(attemptNumber: number): void {
-    if (!this.submissionConfig?.endpoint) return;
+    // Determine endpoint: prioritize input endpoint over schema endpoint
+    const endpoint = this.submissionEndpoint() || this.submissionConfig?.endpoint;
+    if (!endpoint) return;
 
     this.submitting.set(true);
     this.submitRetryCount.set(attemptNumber);
 
-    const method = this.submissionConfig.method || 'POST';
-    const headers = this.submissionConfig.headers || {};
+    const method = this.submissionConfig?.method || 'POST';
+    const headers = this.submissionConfig?.headers || {};
     const formData = this.formValues();
 
     // Make HTTP request
     const request$ = method === 'POST'
-      ? this._http.post(this.submissionConfig.endpoint, formData, { headers })
+      ? this._http.post(endpoint, formData, { headers })
       : method === 'PUT'
-        ? this._http.put(this.submissionConfig.endpoint, formData, { headers })
-        : this._http.patch(this.submissionConfig.endpoint, formData, { headers });
+        ? this._http.put(endpoint, formData, { headers })
+        : this._http.patch(endpoint, formData, { headers });
 
     request$.subscribe({
       next: (response) => {
