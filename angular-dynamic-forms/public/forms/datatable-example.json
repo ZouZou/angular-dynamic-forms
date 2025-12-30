@@ -189,6 +189,13 @@
             "align": "center",
             "actions": [
               {
+                "label": "View",
+                "icon": "👁️",
+                "type": "button",
+                "onClick": "viewUser",
+                "color": "primary"
+              },
+              {
                 "label": "Edit",
                 "icon": "✏️",
                 "type": "button",
@@ -204,40 +211,11 @@
                 "visibleWhen": "row.status !== 'Inactive'"
               },
               {
-                "label": "More",
-                "icon": "⚙️",
-                "type": "menu",
-                "color": "secondary",
-                "menuItems": [
-                  {
-                    "label": "View Details",
-                    "icon": "👁️",
-                    "onClick": "viewDetails"
-                  },
-                  {
-                    "label": "Export",
-                    "icon": "📥",
-                    "onClick": "exportUser"
-                  },
-                  {
-                    "label": "Archive",
-                    "icon": "📦",
-                    "onClick": "archiveUser",
-                    "visibleWhen": "row.status === 'Active'"
-                  },
-                  {
-                    "label": "Restore",
-                    "icon": "♻️",
-                    "onClick": "restoreUser",
-                    "visibleWhen": "row.status === 'Inactive'"
-                  },
-                  {
-                    "label": "Unsuspend",
-                    "icon": "🔓",
-                    "onClick": "unsuspendUser",
-                    "visibleWhen": "row.status === 'Suspended'"
-                  }
-                ]
+                "label": "Share",
+                "icon": "🔗",
+                "type": "button",
+                "onClick": "shareUser",
+                "color": "secondary"
               }
             ]
           }

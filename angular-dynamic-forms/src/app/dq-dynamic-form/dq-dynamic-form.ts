@@ -2570,4 +2570,18 @@ export class DqDynamicForm {
       [menuKey]: false
     }));
   }
+
+  /**
+   * Get visible actions for a row (excluding menu items, counting only top-level actions)
+   */
+  protected getVisibleActions(actions: DataTableAction[], row: DataTableRow): DataTableAction[] {
+    return actions.filter(action => this.isActionVisible(action, row));
+  }
+
+  /**
+   * Count visible actions for a row (excluding menu items, counting only top-level actions)
+   */
+  protected getVisibleActionsCount(actions: DataTableAction[], row: DataTableRow): number {
+    return this.getVisibleActions(actions, row).length;
+  }
 }

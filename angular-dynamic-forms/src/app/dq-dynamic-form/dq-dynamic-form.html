@@ -736,52 +736,43 @@
                   <!-- Actions Column -->
                   @if (column.type === 'actions' && column.actions) {
                     <div class="datatable-actions">
-                      @for (action of column.actions; track action.label) {
-                        <!-- Check visibility condition -->
-                        @if (isActionVisible(action, row)) {
-                          <!-- Button type action -->
-                          @if (!action.type || action.type === 'button') {
-                            <button
-                              type="button"
-                              class="datatable-action-btn action-{{ action.color || 'secondary' }}"
-                              (click)="handleTableAction(action.onClick || action.label, row)"
-                              [title]="action.label"
-                            >
-                              @if (action.icon) {
-                                <span class="action-icon">{{ action.icon }}</span>
-                              }
-                              @if (!action.icon || action.label) {
-                                <span class="action-label">{{ action.label }}</span>
-                              }
-                            </button>
-                          }
+                      <!-- Check if more than 3 visible actions -->
+                      @if (getVisibleActionsCount(column.actions, row) > 3) {
+                        <!-- Show overflow menu (three vertical dots) with all actions -->
+                        <div class="datatable-action-menu">
+                          <button
+                            type="button"
+                            class="datatable-action-menu-trigger datatable-action-overflow action-secondary"
+                            (click)="toggleActionMenu(field.name + '_overflow', row.id!); $event.stopPropagation()"
+                            title="More actions"
+                          >
+                            <span class="action-icon">⋮</span>
+                          </button>
 
-                          <!-- Menu type action (dropdown) -->
-                          @if (action.type === 'menu') {
-                            <div class="datatable-action-menu">
-                              <button
-                                type="button"
-                                class="datatable-action-menu-trigger action-{{ action.color || 'secondary' }}"
-                                (click)="toggleActionMenu(field.name, row.id!); $event.stopPropagation()"
-                                [title]="action.label"
-                              >
-                                @if (action.icon) {
-                                  <span class="action-icon">{{ action.icon }}</span>
+                          @if (isActionMenuOpen(field.name + '_overflow', row.id!)) {
+                            <div class="datatable-action-dropdown">
+                              @for (action of getVisibleActions(column.actions, row); track action.label) {
+                                <!-- For button type actions in overflow menu -->
+                                @if (!action.type || action.type === 'button') {
+                                  <button
+                                    type="button"
+                                    class="datatable-action-dropdown-item"
+                                    (click)="handleTableAction(action.onClick || action.label, row); closeActionMenu(field.name + '_overflow', row.id!)"
+                                  >
+                                    @if (action.icon) {
+                                      <span class="action-icon">{{ action.icon }}</span>
+                                    }
+                                    <span>{{ action.label }}</span>
+                                  </button>
                                 }
-                                @if (!action.icon || action.label) {
-                                  <span class="action-label">{{ action.label }}</span>
-                                }
-                                <span class="menu-arrow">▼</span>
-                              </button>
-
-                              @if (isActionMenuOpen(field.name, row.id!)) {
-                                <div class="datatable-action-dropdown">
+                                <!-- For menu type actions in overflow menu, show menu items directly -->
+                                @if (action.type === 'menu' && action.menuItems) {
                                   @for (subAction of action.menuItems; track subAction.label) {
                                     @if (isActionVisible(subAction, row)) {
                                       <button
                                         type="button"
                                         class="datatable-action-dropdown-item"
-                                        (click)="handleTableAction(subAction.onClick || subAction.label, row); closeActionMenu(field.name, row.id!)"
+                                        (click)="handleTableAction(subAction.onClick || subAction.label, row); closeActionMenu(field.name + '_overflow', row.id!)"
                                       >
                                         @if (subAction.icon) {
                                           <span class="action-icon">{{ subAction.icon }}</span>
@@ -790,9 +781,71 @@
                                       </button>
                                     }
                                   }
-                                </div>
+                                }
                               }
                             </div>
+                          }
+                        </div>
+                      } @else {
+                        <!-- Show actions normally (3 or fewer) -->
+                        @for (action of column.actions; track action.label) {
+                          <!-- Check visibility condition -->
+                          @if (isActionVisible(action, row)) {
+                            <!-- Button type action -->
+                            @if (!action.type || action.type === 'button') {
+                              <button
+                                type="button"
+                                class="datatable-action-btn action-{{ action.color || 'secondary' }}"
+                                (click)="handleTableAction(action.onClick || action.label, row)"
+                                [title]="action.label"
+                              >
+                                @if (action.icon) {
+                                  <span class="action-icon">{{ action.icon }}</span>
+                                }
+                                @if (!action.icon || action.label) {
+                                  <span class="action-label">{{ action.label }}</span>
+                                }
+                              </button>
+                            }
+
+                            <!-- Menu type action (dropdown) -->
+                            @if (action.type === 'menu') {
+                              <div class="datatable-action-menu">
+                                <button
+                                  type="button"
+                                  class="datatable-action-menu-trigger action-{{ action.color || 'secondary' }}"
+                                  (click)="toggleActionMenu(field.name, row.id!); $event.stopPropagation()"
+                                  [title]="action.label"
+                                >
+                                  @if (action.icon) {
+                                    <span class="action-icon">{{ action.icon }}</span>
+                                  }
+                                  @if (!action.icon || action.label) {
+                                    <span class="action-label">{{ action.label }}</span>
+                                  }
+                                  <span class="menu-arrow">▼</span>
+                                </button>
+
+                                @if (isActionMenuOpen(field.name, row.id!)) {
+                                  <div class="datatable-action-dropdown">
+                                    @for (subAction of action.menuItems; track subAction.label) {
+                                      @if (isActionVisible(subAction, row)) {
+                                        <button
+                                          type="button"
+                                          class="datatable-action-dropdown-item"
+                                          (click)="handleTableAction(subAction.onClick || subAction.label, row); closeActionMenu(field.name, row.id!)"
+                                        >
+                                          @if (subAction.icon) {
+                                            <span class="action-icon">{{ subAction.icon }}</span>
+                                          }
+                                          <span>{{ subAction.label }}</span>
+                                        </button>
+                                      }
+                                    }
+                                  </div>
+                                }
+                              </div>
+                            }
                           }
                         }
                       }
