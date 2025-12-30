@@ -776,7 +776,7 @@
 
                               @if (isActionMenuOpen(field.name, row.id!)) {
                                 <div class="datatable-action-dropdown">
-                                  @for (subAction of (action as any).menuItems; track subAction.label) {
+                                  @for (subAction of action.menuItems; track subAction.label) {
                                     @if (isActionVisible(subAction, row)) {
                                       <button
                                         type="button"
