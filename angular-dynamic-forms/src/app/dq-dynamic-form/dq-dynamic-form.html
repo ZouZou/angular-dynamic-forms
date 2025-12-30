@@ -593,7 +593,7 @@
           <input
             type="text"
             class="datatable-search-input"
-            [placeholder]="field.tableConfig.filter.placeholder || 'Search...'"
+            [placeholder]="field.tableConfig.filter?.placeholder || 'Search...'"
             (input)="filterTable(field.name, $any($event.target).value)"
             [value]="tableFilterTerm()[field.name] || ''"
           />
@@ -619,7 +619,7 @@
                 <!-- Selection Column -->
                 @if (field.tableConfig.selection?.enabled) {
                 <th class="datatable-select-col">
-                  @if (field.tableConfig.selection.mode !== 'single' && field.tableConfig.selection.showSelectAll !== false) {
+                  @if (field.tableConfig.selection?.mode !== 'single' && field.tableConfig.selection?.showSelectAll !== false) {
                   <input
                     type="checkbox"
                     class="datatable-checkbox"
