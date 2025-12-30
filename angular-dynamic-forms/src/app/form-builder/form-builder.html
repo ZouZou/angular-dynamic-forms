@@ -1310,56 +1310,52 @@
                                   >
                                 </div>
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
-                                  <div class="form-group" style="margin-bottom: 0.4rem;">
-                                    <label style="font-size: 0.85em;">Icon/Emoji</label>
-                                    <input
-                                      type="text"
-                                      [value]="action.icon || ''"
-                                      (input)="updateTableColumnAction(selectedFieldIndex()!, colIdx, actionIdx, 'icon', $any($event.target).value || undefined)"
-                                      class="form-control form-control-sm"
-                                      placeholder="✏️"
-                                    >
-                                  </div>
-
-                                  <div class="form-group" style="margin-bottom: 0.4rem;">
-                                    <label style="font-size: 0.85em;">Type</label>
-                                    <select
-                                      [value]="action.type || 'button'"
-                                      (change)="updateTableColumnAction(selectedFieldIndex()!, colIdx, actionIdx, 'type', $any($event.target).value)"
-                                      class="form-control form-control-sm"
-                                    >
-                                      <option value="button">Button</option>
-                                      <option value="menu">Dropdown Menu</option>
-                                    </select>
-                                  </div>
+                                <div class="form-group" style="margin-bottom: 0.4rem;">
+                                  <label style="font-size: 0.85em;">Icon/Emoji</label>
+                                  <input
+                                    type="text"
+                                    [value]="action.icon || ''"
+                                    (input)="updateTableColumnAction(selectedFieldIndex()!, colIdx, actionIdx, 'icon', $any($event.target).value || undefined)"
+                                    class="form-control form-control-sm"
+                                    placeholder="✏️"
+                                  >
                                 </div>
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
-                                  <div class="form-group" style="margin-bottom: 0.4rem;">
-                                    <label style="font-size: 0.85em;">Color</label>
-                                    <select
-                                      [value]="action.color || 'secondary'"
-                                      (change)="updateTableColumnAction(selectedFieldIndex()!, colIdx, actionIdx, 'color', $any($event.target).value)"
-                                      class="form-control form-control-sm"
-                                    >
-                                      <option value="primary">Primary (Blue)</option>
-                                      <option value="secondary">Secondary (Gray)</option>
-                                      <option value="danger">Danger (Red)</option>
-                                      <option value="warning">Warning (Yellow)</option>
-                                    </select>
-                                  </div>
+                                <div class="form-group" style="margin-bottom: 0.4rem;">
+                                  <label style="font-size: 0.85em;">Type</label>
+                                  <select
+                                    [value]="action.type || 'button'"
+                                    (change)="updateTableColumnAction(selectedFieldIndex()!, colIdx, actionIdx, 'type', $any($event.target).value)"
+                                    class="form-control form-control-sm"
+                                  >
+                                    <option value="button">Button</option>
+                                    <option value="menu">Dropdown Menu</option>
+                                  </select>
+                                </div>
 
-                                  <div class="form-group" style="margin-bottom: 0.4rem;">
-                                    <label style="font-size: 0.85em;">onClick Handler</label>
-                                    <input
-                                      type="text"
-                                      [value]="action.onClick || ''"
-                                      (input)="updateTableColumnAction(selectedFieldIndex()!, colIdx, actionIdx, 'onClick', $any($event.target).value || undefined)"
-                                      class="form-control form-control-sm"
-                                      placeholder="editUser"
-                                    >
-                                  </div>
+                                <div class="form-group" style="margin-bottom: 0.4rem;">
+                                  <label style="font-size: 0.85em;">Color</label>
+                                  <select
+                                    [value]="action.color || 'secondary'"
+                                    (change)="updateTableColumnAction(selectedFieldIndex()!, colIdx, actionIdx, 'color', $any($event.target).value)"
+                                    class="form-control form-control-sm"
+                                  >
+                                    <option value="primary">Primary (Blue)</option>
+                                    <option value="secondary">Secondary (Gray)</option>
+                                    <option value="danger">Danger (Red)</option>
+                                    <option value="warning">Warning (Yellow)</option>
+                                  </select>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 0.4rem;">
+                                  <label style="font-size: 0.85em;">onClick Handler</label>
+                                  <input
+                                    type="text"
+                                    [value]="action.onClick || ''"
+                                    (input)="updateTableColumnAction(selectedFieldIndex()!, colIdx, actionIdx, 'onClick', $any($event.target).value || undefined)"
+                                    class="form-control form-control-sm"
+                                    placeholder="editUser"
+                                  >
                                 </div>
 
                                 <div class="form-group" style="margin-bottom: 0.4rem;">
