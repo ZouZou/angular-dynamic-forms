@@ -100,7 +100,7 @@ export class DevToolsService {
     const validTypes = [
       'text', 'email', 'password', 'number', 'date', 'datetime', 'textarea',
       'select', 'multiselect', 'radio', 'checkbox', 'array', 'range',
-      'color', 'file', 'richtext'
+      'color', 'file', 'richtext', 'datatable'
     ];
 
     if (field.type && !validTypes.includes(field.type)) {
@@ -160,6 +160,39 @@ export class DevToolsService {
     if (field.type === 'richtext') {
       if (field.maxCharacters !== undefined && field.maxCharacters <= 0) {
         warnings.push(`${fieldRef}: "maxCharacters" should be a positive number`);
+      }
+    }
+
+    // Validate datatable fields
+    if (field.type === 'datatable') {
+      if (!field.tableConfig) {
+        errors.push(`${fieldRef}: DataTable field must have "tableConfig" property`);
+      } else {
+        // Validate columns
+        if (!field.tableConfig.columns || field.tableConfig.columns.length === 0) {
+          errors.push(`${fieldRef}: DataTable must have at least one column defined in "tableConfig.columns"`);
+        } else {
+          // Validate each column
+          field.tableConfig.columns.forEach((col, idx) => {
+            if (!col.key) {
+              errors.push(`${fieldRef}: Column ${idx} must have a "key" property`);
+            }
+            if (!col.label) {
+              errors.push(`${fieldRef}: Column ${idx} must have a "label" property`);
+            }
+            // Validate column type if specified
+            const validColumnTypes = ['text', 'number', 'date', 'currency', 'badge', 'avatar', 'link', 'actions'];
+            if (col.type && !validColumnTypes.includes(col.type)) {
+              warnings.push(`${fieldRef}: Column "${col.key}" has unknown type "${col.type}"`);
+            }
+          });
+        }
+        // Validate pagination settings
+        if (field.tableConfig.pagination) {
+          if (field.tableConfig.pagination.rowsPerPage !== undefined && field.tableConfig.pagination.rowsPerPage <= 0) {
+            warnings.push(`${fieldRef}: "pagination.rowsPerPage" should be a positive number`);
+          }
+        }
       }
     }
 
@@ -408,6 +441,8 @@ export class DevToolsService {
         return field.multiple ? 'File[]' : 'File';
       case 'array':
         return 'any[]'; // Could be improved with nested types
+      case 'datatable':
+        return 'any[]'; // Array of row objects
       default:
         return 'any';
     }
