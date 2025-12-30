@@ -1783,6 +1783,510 @@ export class FormBuilder {
     this.validateSchema();
   }
 
+  /**
+   * Add action button to a DataTable column
+   */
+  protected addTableColumnAction(fieldIndex: number, columnIndex: number): void {
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
+
+    if (!field.tableConfig || !field.tableConfig.columns) return;
+
+    const columns = [...field.tableConfig.columns];
+    const column = columns[columnIndex];
+
+    if (column.type !== 'actions') return;
+
+    const newAction = {
+      label: 'New Action',
+      icon: '⚡',
+      type: 'button' as const,
+      color: 'secondary' as const,
+      onClick: 'handleAction'
+    };
+
+    columns[columnIndex] = {
+      ...column,
+      actions: [...(column.actions || []), newAction]
+    };
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Remove action button from a DataTable column
+   */
+  protected removeTableColumnAction(fieldIndex: number, columnIndex: number, actionIndex: number): void {
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
+
+    if (!field.tableConfig || !field.tableConfig.columns) return;
+
+    const columns = [...field.tableConfig.columns];
+    const column = columns[columnIndex];
+
+    if (column.type !== 'actions' || !column.actions) return;
+
+    const actions = [...column.actions];
+    actions.splice(actionIndex, 1);
+
+    columns[columnIndex] = {
+      ...column,
+      actions
+    };
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Update action button property in a DataTable column
+   */
+  protected updateTableColumnAction(fieldIndex: number, columnIndex: number, actionIndex: number, property: string, value: any): void {
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
+
+    if (!field.tableConfig || !field.tableConfig.columns) return;
+
+    const columns = [...field.tableConfig.columns];
+    const column = columns[columnIndex];
+
+    if (column.type !== 'actions' || !column.actions) return;
+
+    const actions = [...column.actions];
+    actions[actionIndex] = {
+      ...actions[actionIndex],
+      [property]: value
+    };
+
+    columns[columnIndex] = {
+      ...column,
+      actions
+    };
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Add menu item to an action button
+   */
+  protected addTableColumnActionMenuItem(fieldIndex: number, columnIndex: number, actionIndex: number): void {
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
+
+    if (!field.tableConfig || !field.tableConfig.columns) return;
+
+    const columns = [...field.tableConfig.columns];
+    const column = columns[columnIndex];
+
+    if (column.type !== 'actions' || !column.actions) return;
+
+    const actions = [...column.actions];
+    const action = actions[actionIndex];
+
+    const newMenuItem = {
+      label: 'Menu Item',
+      icon: '📋',
+      onClick: 'handleMenuItem'
+    };
+
+    actions[actionIndex] = {
+      ...action,
+      menuItems: [...((action as any).menuItems || []), newMenuItem]
+    };
+
+    columns[columnIndex] = {
+      ...column,
+      actions
+    };
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Remove menu item from an action button
+   */
+  protected removeTableColumnActionMenuItem(fieldIndex: number, columnIndex: number, actionIndex: number, menuItemIndex: number): void {
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
+
+    if (!field.tableConfig || !field.tableConfig.columns) return;
+
+    const columns = [...field.tableConfig.columns];
+    const column = columns[columnIndex];
+
+    if (column.type !== 'actions' || !column.actions) return;
+
+    const actions = [...column.actions];
+    const action = actions[actionIndex];
+    const menuItems = [...((action as any).menuItems || [])];
+    menuItems.splice(menuItemIndex, 1);
+
+    actions[actionIndex] = {
+      ...action,
+      menuItems
+    };
+
+    columns[columnIndex] = {
+      ...column,
+      actions
+    };
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Update menu item property
+   */
+  protected updateTableColumnActionMenuItem(fieldIndex: number, columnIndex: number, actionIndex: number, menuItemIndex: number, property: string, value: any): void {
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
+
+    if (!field.tableConfig || !field.tableConfig.columns) return;
+
+    const columns = [...field.tableConfig.columns];
+    const column = columns[columnIndex];
+
+    if (column.type !== 'actions' || !column.actions) return;
+
+    const actions = [...column.actions];
+    const action = actions[actionIndex];
+    const menuItems = [...((action as any).menuItems || [])];
+    menuItems[menuItemIndex] = {
+      ...menuItems[menuItemIndex],
+      [property]: value
+    };
+
+    actions[actionIndex] = {
+      ...action,
+      menuItems
+    };
+
+    columns[columnIndex] = {
+      ...column,
+      actions
+    };
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
   // Clear form
   protected clearForm(): void {
     if (confirm('Are you sure you want to clear the entire form?')) {
