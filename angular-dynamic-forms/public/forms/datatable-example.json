@@ -1,0 +1,267 @@
+{
+  "title": "DataTable Field Examples",
+  "description": "Examples demonstrating different DataTable configurations and features",
+  "fields": [
+    {
+      "type": "datatable",
+      "label": "Basic Employee Table",
+      "name": "employeesTable",
+      "tableConfig": {
+        "columns": [
+          {
+            "key": "id",
+            "label": "ID",
+            "width": "80px",
+            "type": "text",
+            "sortable": true
+          },
+          {
+            "key": "name",
+            "label": "Name",
+            "type": "text",
+            "sortable": true
+          },
+          {
+            "key": "department",
+            "label": "Department",
+            "type": "text",
+            "sortable": true
+          },
+          {
+            "key": "salary",
+            "label": "Salary",
+            "type": "currency",
+            "sortable": true,
+            "align": "right"
+          }
+        ],
+        "rows": [
+          { "id": 1, "name": "John Doe", "department": "Engineering", "salary": 85000 },
+          { "id": 2, "name": "Jane Smith", "department": "Marketing", "salary": 72000 },
+          { "id": 3, "name": "Bob Johnson", "department": "Sales", "salary": 68000 },
+          { "id": 4, "name": "Alice Williams", "department": "Engineering", "salary": 92000 },
+          { "id": 5, "name": "Charlie Brown", "department": "HR", "salary": 65000 }
+        ],
+        "striped": true,
+        "bordered": true,
+        "hoverable": true
+      }
+    },
+    {
+      "type": "datatable",
+      "label": "Product Inventory (with Search & Pagination)",
+      "name": "productsTable",
+      "tableConfig": {
+        "columns": [
+          {
+            "key": "sku",
+            "label": "SKU",
+            "width": "120px",
+            "type": "text",
+            "sortable": true
+          },
+          {
+            "key": "name",
+            "label": "Product Name",
+            "type": "text",
+            "sortable": true
+          },
+          {
+            "key": "category",
+            "label": "Category",
+            "type": "badge",
+            "sortable": true,
+            "badgeColorMap": {
+              "Electronics": "primary",
+              "Clothing": "warning",
+              "Food": "success",
+              "Books": "secondary"
+            }
+          },
+          {
+            "key": "stock",
+            "label": "Stock",
+            "type": "number",
+            "sortable": true,
+            "align": "center"
+          },
+          {
+            "key": "price",
+            "label": "Price",
+            "type": "currency",
+            "sortable": true,
+            "align": "right"
+          }
+        ],
+        "rows": [
+          { "id": 1, "sku": "ELEC-001", "name": "Wireless Mouse", "category": "Electronics", "stock": 45, "price": 29.99 },
+          { "id": 2, "sku": "CLTH-002", "name": "Cotton T-Shirt", "category": "Clothing", "stock": 120, "price": 19.99 },
+          { "id": 3, "sku": "FOOD-003", "name": "Organic Coffee", "category": "Food", "stock": 80, "price": 14.99 },
+          { "id": 4, "sku": "BOOK-004", "name": "JavaScript Guide", "category": "Books", "stock": 30, "price": 39.99 },
+          { "id": 5, "sku": "ELEC-005", "name": "USB-C Cable", "category": "Electronics", "stock": 200, "price": 12.99 },
+          { "id": 6, "sku": "CLTH-006", "name": "Denim Jeans", "category": "Clothing", "stock": 60, "price": 49.99 },
+          { "id": 7, "sku": "FOOD-007", "name": "Green Tea", "category": "Food", "stock": 150, "price": 8.99 },
+          { "id": 8, "sku": "BOOK-008", "name": "Python Handbook", "category": "Books", "stock": 25, "price": 44.99 },
+          { "id": 9, "sku": "ELEC-009", "name": "Bluetooth Speaker", "category": "Electronics", "stock": 35, "price": 79.99 },
+          { "id": 10, "sku": "CLTH-010", "name": "Winter Jacket", "category": "Clothing", "stock": 40, "price": 129.99 },
+          { "id": 11, "sku": "FOOD-011", "name": "Dark Chocolate", "category": "Food", "stock": 90, "price": 5.99 },
+          { "id": 12, "sku": "BOOK-012", "name": "Angular Essentials", "category": "Books", "stock": 18, "price": 49.99 },
+          { "id": 13, "sku": "ELEC-013", "name": "Laptop Stand", "category": "Electronics", "stock": 55, "price": 34.99 },
+          { "id": 14, "sku": "CLTH-014", "name": "Running Shoes", "category": "Clothing", "stock": 75, "price": 89.99 },
+          { "id": 15, "sku": "FOOD-015", "name": "Protein Bars", "category": "Food", "stock": 110, "price": 24.99 }
+        ],
+        "pagination": {
+          "enabled": true,
+          "rowsPerPage": 5,
+          "rowsPerPageOptions": [5, 10, 25],
+          "showPageInfo": true
+        },
+        "filter": {
+          "enabled": true,
+          "placeholder": "Search products by SKU or name...",
+          "searchColumns": ["sku", "name"]
+        },
+        "selection": {
+          "enabled": true,
+          "mode": "multiple",
+          "showSelectAll": true
+        },
+        "striped": true,
+        "bordered": true,
+        "hoverable": true,
+        "defaultSort": {
+          "column": "name",
+          "direction": "asc"
+        }
+      }
+    },
+    {
+      "type": "datatable",
+      "label": "User Management (with Avatars & Actions)",
+      "name": "usersTable",
+      "tableConfig": {
+        "columns": [
+          {
+            "key": "name",
+            "label": "User",
+            "type": "avatar",
+            "sortable": true,
+            "avatarKey": "avatar"
+          },
+          {
+            "key": "email",
+            "label": "Email",
+            "type": "text",
+            "sortable": true
+          },
+          {
+            "key": "role",
+            "label": "Role",
+            "type": "badge",
+            "sortable": true,
+            "badgeColorMap": {
+              "Admin": "danger",
+              "Editor": "warning",
+              "Viewer": "secondary"
+            }
+          },
+          {
+            "key": "lastLogin",
+            "label": "Last Login",
+            "type": "date",
+            "sortable": true
+          },
+          {
+            "key": "status",
+            "label": "Status",
+            "type": "badge",
+            "align": "center",
+            "badgeColorMap": {
+              "Active": "success",
+              "Inactive": "secondary",
+              "Suspended": "danger"
+            }
+          },
+          {
+            "key": "actions",
+            "label": "Actions",
+            "type": "actions",
+            "align": "center",
+            "actions": [
+              {
+                "label": "Edit",
+                "icon": "✏",
+                "onClick": "editUser",
+                "color": "primary"
+              },
+              {
+                "label": "Delete",
+                "icon": "🗑",
+                "onClick": "deleteUser",
+                "color": "danger"
+              }
+            ]
+          }
+        ],
+        "rows": [
+          {
+            "id": 1,
+            "name": "Alex Morgan",
+            "avatar": "https://i.pravatar.cc/150?img=1",
+            "email": "alex.morgan@example.com",
+            "role": "Admin",
+            "lastLogin": "2025-12-28",
+            "status": "Active"
+          },
+          {
+            "id": 2,
+            "name": "Sam Taylor",
+            "avatar": "https://i.pravatar.cc/150?img=5",
+            "email": "sam.taylor@example.com",
+            "role": "Editor",
+            "lastLogin": "2025-12-27",
+            "status": "Active"
+          },
+          {
+            "id": 3,
+            "name": "Jordan Lee",
+            "avatar": "https://i.pravatar.cc/150?img=8",
+            "email": "jordan.lee@example.com",
+            "role": "Viewer",
+            "lastLogin": "2025-12-20",
+            "status": "Inactive"
+          },
+          {
+            "id": 4,
+            "name": "Casey Kim",
+            "avatar": "https://i.pravatar.cc/150?img=15",
+            "email": "casey.kim@example.com",
+            "role": "Admin",
+            "lastLogin": "2025-12-29",
+            "status": "Active"
+          },
+          {
+            "id": 5,
+            "name": "Riley Parker",
+            "avatar": "https://i.pravatar.cc/150?img=22",
+            "email": "riley.parker@example.com",
+            "role": "Editor",
+            "lastLogin": "2025-11-15",
+            "status": "Suspended"
+          }
+        ],
+        "pagination": {
+          "enabled": true,
+          "rowsPerPage": 10
+        },
+        "selection": {
+          "enabled": false
+        },
+        "striped": false,
+        "bordered": true,
+        "hoverable": true,
+        "dense": false
+      }
+    }
+  ]
+}
