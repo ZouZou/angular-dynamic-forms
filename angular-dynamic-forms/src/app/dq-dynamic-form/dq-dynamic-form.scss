@@ -1924,6 +1924,19 @@ textarea.form-control {
         }
       }
 
+      // Overflow menu (three dots) specific styling
+      &.datatable-action-overflow {
+        padding: 6px 10px;
+        min-width: 36px;
+        justify-content: center;
+
+        .action-icon {
+          font-size: 1.25rem;
+          font-weight: bold;
+          line-height: 1;
+        }
+      }
+
       .action-icon {
         font-size: 1rem;
       }
