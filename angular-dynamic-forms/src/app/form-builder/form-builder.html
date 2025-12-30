@@ -1133,6 +1133,367 @@
                   </div>
                 </div>
               }
+
+              <!-- DataTable Configuration -->
+              @if (field.type === 'datatable' && field.tableConfig) {
+                <div class="datatable-config-section">
+                  <h4 style="margin-top: 1rem; border-top: 1px solid #ddd; padding-top: 1rem;">📊 DataTable Configuration</h4>
+
+                  <!-- Columns Configuration -->
+                  <h5 style="margin-top: 1rem;">Columns</h5>
+                  <div class="datatable-columns">
+                    @for (column of field.tableConfig.columns || []; track $index) {
+                      <div class="column-item" style="border: 1px solid #ddd; padding: 0.75rem; margin-bottom: 0.75rem; border-radius: 4px; background-color: #f9f9f9;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                          <strong style="font-size: 0.95em;">Column {{ $index + 1 }}: {{ column.label || 'Untitled' }}</strong>
+                          <button
+                            class="btn btn-danger btn-sm"
+                            (click)="removeTableColumn(selectedFieldIndex()!, $index)"
+                            style="padding: 0.2rem 0.5rem; font-size: 0.85em;"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                          <label style="font-size: 0.9em;">Key (property name)</label>
+                          <input
+                            type="text"
+                            [value]="column.key"
+                            (input)="updateTableColumn(selectedFieldIndex()!, $index, 'key', $any($event.target).value)"
+                            class="form-control"
+                            placeholder="id"
+                          >
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                          <label style="font-size: 0.9em;">Label</label>
+                          <input
+                            type="text"
+                            [value]="column.label"
+                            (input)="updateTableColumn(selectedFieldIndex()!, $index, 'label', $any($event.target).value)"
+                            class="form-control"
+                            placeholder="ID"
+                          >
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                          <label style="font-size: 0.9em;">Type</label>
+                          <select
+                            [value]="column.type || 'text'"
+                            (change)="updateTableColumn(selectedFieldIndex()!, $index, 'type', $any($event.target).value)"
+                            class="form-control"
+                          >
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="date">Date</option>
+                            <option value="currency">Currency</option>
+                            <option value="badge">Badge</option>
+                            <option value="avatar">Avatar</option>
+                            <option value="link">Link</option>
+                            <option value="actions">Actions</option>
+                          </select>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                          <div class="form-group" style="margin-bottom: 0.5rem;">
+                            <label style="font-size: 0.9em;">Width</label>
+                            <input
+                              type="text"
+                              [value]="column.width || ''"
+                              (input)="updateTableColumn(selectedFieldIndex()!, $index, 'width', $any($event.target).value || undefined)"
+                              class="form-control"
+                              placeholder="auto"
+                            >
+                          </div>
+
+                          <div class="form-group" style="margin-bottom: 0.5rem;">
+                            <label style="font-size: 0.9em;">Align</label>
+                            <select
+                              [value]="column.align || 'left'"
+                              (change)="updateTableColumn(selectedFieldIndex()!, $index, 'align', $any($event.target).value)"
+                              class="form-control"
+                            >
+                              <option value="left">Left</option>
+                              <option value="center">Center</option>
+                              <option value="right">Right</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                          <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 0.9em;">
+                              <input
+                                type="checkbox"
+                                [checked]="column.sortable || false"
+                                (change)="updateTableColumn(selectedFieldIndex()!, $index, 'sortable', $any($event.target).checked)"
+                              >
+                              Sortable
+                            </label>
+                          </div>
+
+                          <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 0.9em;">
+                              <input
+                                type="checkbox"
+                                [checked]="column.filterable || false"
+                                (change)="updateTableColumn(selectedFieldIndex()!, $index, 'filterable', $any($event.target).checked)"
+                              >
+                              Filterable
+                            </label>
+                          </div>
+                        </div>
+
+                        @if (column.type === 'badge') {
+                          <div class="form-group" style="margin-top: 0.5rem;">
+                            <label style="font-size: 0.9em;">Badge Color Map (JSON)</label>
+                            <textarea
+                              [value]="JSON.stringify(column.badgeColorMap || {}, null, 2)"
+                              (input)="updateTableColumnBadgeColorMap(selectedFieldIndex()!, $index, $any($event.target).value)"
+                              class="form-control"
+                              rows="3"
+                              placeholder='{"active": "success", "inactive": "secondary"}'
+                            ></textarea>
+                          </div>
+                        }
+
+                        @if (column.type === 'link') {
+                          <div class="form-group" style="margin-top: 0.5rem;">
+                            <label style="font-size: 0.9em;">Link Template</label>
+                            <input
+                              type="text"
+                              [value]="column.linkTemplate || ''"
+                              (input)="updateTableColumn(selectedFieldIndex()!, $index, 'linkTemplate', $any($event.target).value)"
+                              class="form-control"
+                              [attr.placeholder]="'/users/' + '{{' + 'id' + '}}'"
+                            >
+                          </div>
+                          <div class="form-group" style="margin-top: 0.5rem;">
+                            <label style="font-size: 0.9em;">Link Target</label>
+                            <select
+                              [value]="column.linkTarget || '_self'"
+                              (change)="updateTableColumn(selectedFieldIndex()!, $index, 'linkTarget', $any($event.target).value)"
+                              class="form-control"
+                            >
+                              <option value="_self">Same Window</option>
+                              <option value="_blank">New Tab</option>
+                            </select>
+                          </div>
+                        }
+                      </div>
+                    }
+
+                    <button
+                      class="btn btn-primary"
+                      (click)="addTableColumn(selectedFieldIndex()!)"
+                      style="width: 100%; margin-top: 0.5rem;"
+                    >
+                      ➕ Add Column
+                    </button>
+                  </div>
+
+                  <!-- Data Source -->
+                  <h5 style="margin-top: 1.5rem;">Data Source</h5>
+                  <div class="form-group">
+                    <label>Data Endpoint (API URL for dynamic data)</label>
+                    <input
+                      type="text"
+                      [value]="field.tableConfig.dataEndpoint || ''"
+                      (input)="updateTableConfig('dataEndpoint', $any($event.target).value || undefined)"
+                      class="form-control"
+                      placeholder="https://api.example.com/data"
+                    >
+                    <small style="color: #666; font-size: 0.85em;">Leave empty to use static rows data</small>
+                  </div>
+
+                  <!-- Pagination Settings -->
+                  <h5 style="margin-top: 1.5rem;">Pagination</h5>
+                  <div class="form-group">
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="field.tableConfig.pagination?.enabled ?? true"
+                        (change)="updateTableConfigNested('pagination', 'enabled', $any($event.target).checked)"
+                      >
+                      Enable Pagination
+                    </label>
+                  </div>
+
+                  @if (field.tableConfig.pagination?.enabled ?? true) {
+                    <div class="form-group">
+                      <label>Rows Per Page</label>
+                      <input
+                        type="number"
+                        [value]="field.tableConfig.pagination?.rowsPerPage || 10"
+                        (input)="updateTableConfigNested('pagination', 'rowsPerPage', Number($any($event.target).value))"
+                        class="form-control"
+                        min="1"
+                      >
+                    </div>
+
+                    <div class="form-group">
+                      <label>Rows Per Page Options (comma-separated)</label>
+                      <input
+                        type="text"
+                        [value]="(field.tableConfig.pagination?.rowsPerPageOptions || [10, 25, 50, 100]).join(', ')"
+                        (input)="updateTableConfigRowsPerPageOptions(selectedFieldIndex()!, $any($event.target).value)"
+                        class="form-control"
+                        placeholder="10, 25, 50, 100"
+                      >
+                    </div>
+
+                    <div class="form-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="field.tableConfig.pagination?.showPageInfo ?? true"
+                          (change)="updateTableConfigNested('pagination', 'showPageInfo', $any($event.target).checked)"
+                        >
+                        Show Page Info (e.g., "1-10 of 100")
+                      </label>
+                    </div>
+                  }
+
+                  <!-- Filter Settings -->
+                  <h5 style="margin-top: 1.5rem;">Search & Filter</h5>
+                  <div class="form-group">
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="field.tableConfig.filter?.enabled ?? true"
+                        (change)="updateTableConfigNested('filter', 'enabled', $any($event.target).checked)"
+                      >
+                      Enable Global Search
+                    </label>
+                  </div>
+
+                  @if (field.tableConfig.filter?.enabled ?? true) {
+                    <div class="form-group">
+                      <label>Search Placeholder</label>
+                      <input
+                        type="text"
+                        [value]="field.tableConfig.filter?.placeholder || 'Search...'"
+                        (input)="updateTableConfigNested('filter', 'placeholder', $any($event.target).value)"
+                        class="form-control"
+                        placeholder="Search..."
+                      >
+                    </div>
+
+                    <div class="form-group">
+                      <label>Debounce (ms)</label>
+                      <input
+                        type="number"
+                        [value]="field.tableConfig.filter?.debounceMs || 300"
+                        (input)="updateTableConfigNested('filter', 'debounceMs', Number($any($event.target).value))"
+                        class="form-control"
+                        min="0"
+                      >
+                    </div>
+                  }
+
+                  <!-- Selection Settings -->
+                  <h5 style="margin-top: 1.5rem;">Row Selection</h5>
+                  <div class="form-group">
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="field.tableConfig.selection?.enabled || false"
+                        (change)="updateTableConfigNested('selection', 'enabled', $any($event.target).checked)"
+                      >
+                      Enable Row Selection
+                    </label>
+                  </div>
+
+                  @if (field.tableConfig.selection?.enabled) {
+                    <div class="form-group">
+                      <label>Selection Mode</label>
+                      <select
+                        [value]="field.tableConfig.selection?.mode || 'multiple'"
+                        (change)="updateTableConfigNested('selection', 'mode', $any($event.target).value)"
+                        class="form-control"
+                      >
+                        <option value="single">Single</option>
+                        <option value="multiple">Multiple</option>
+                      </select>
+                    </div>
+
+                    @if (field.tableConfig.selection?.mode === 'multiple' || !field.tableConfig.selection?.mode) {
+                      <div class="form-group">
+                        <label>
+                          <input
+                            type="checkbox"
+                            [checked]="field.tableConfig.selection?.showSelectAll ?? true"
+                            (change)="updateTableConfigNested('selection', 'showSelectAll', $any($event.target).checked)"
+                          >
+                          Show Select All Checkbox
+                        </label>
+                      </div>
+                    }
+                  }
+
+                  <!-- Styling Options -->
+                  <h5 style="margin-top: 1.5rem;">Styling</h5>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div class="form-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="field.tableConfig.striped || false"
+                          (change)="updateTableConfig('striped', $any($event.target).checked)"
+                        >
+                        Striped Rows
+                      </label>
+                    </div>
+
+                    <div class="form-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="field.tableConfig.bordered ?? true"
+                          (change)="updateTableConfig('bordered', $any($event.target).checked)"
+                        >
+                        Bordered
+                      </label>
+                    </div>
+
+                    <div class="form-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="field.tableConfig.hoverable || false"
+                          (change)="updateTableConfig('hoverable', $any($event.target).checked)"
+                        >
+                        Hoverable Rows
+                      </label>
+                    </div>
+
+                    <div class="form-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="field.tableConfig.dense || false"
+                          (change)="updateTableConfig('dense', $any($event.target).checked)"
+                        >
+                        Compact/Dense
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Other Options -->
+                  <h5 style="margin-top: 1.5rem;">Other Options</h5>
+                  <div class="form-group">
+                    <label>Empty Message</label>
+                    <input
+                      type="text"
+                      [value]="field.tableConfig.emptyMessage || 'No data available'"
+                      (input)="updateTableConfig('emptyMessage', $any($event.target).value)"
+                      class="form-control"
+                      placeholder="No data available"
+                    >
+                  </div>
+                </div>
+              }
             </div>
           </section>
         }

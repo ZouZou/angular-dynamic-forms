@@ -263,6 +263,65 @@ export class FormBuilder {
         allowedFormats: ['bold', 'italic', 'underline', 'link'],
         maxCharacters: 1000
       }
+    },
+    {
+      type: 'datatable',
+      label: 'Data Table',
+      icon: '📊',
+      defaultConfig: {
+        type: 'datatable',
+        name: 'datatableField',
+        label: 'Data Table',
+        tableConfig: {
+          columns: [
+            {
+              key: 'id',
+              label: 'ID',
+              type: 'text',
+              sortable: true,
+              width: '80px'
+            },
+            {
+              key: 'name',
+              label: 'Name',
+              type: 'text',
+              sortable: true
+            },
+            {
+              key: 'status',
+              label: 'Status',
+              type: 'badge',
+              sortable: true,
+              badgeColorMap: {
+                'active': 'success',
+                'inactive': 'secondary',
+                'pending': 'warning'
+              }
+            }
+          ],
+          rows: [],
+          striped: true,
+          bordered: true,
+          hoverable: true,
+          pagination: {
+            enabled: true,
+            rowsPerPage: 10,
+            rowsPerPageOptions: [10, 25, 50, 100],
+            showPageInfo: true
+          },
+          filter: {
+            enabled: true,
+            placeholder: 'Search...',
+            debounceMs: 300
+          },
+          selection: {
+            enabled: false,
+            mode: 'multiple',
+            showSelectAll: true
+          },
+          emptyMessage: 'No data available'
+        }
+      }
     }
   ];
 
@@ -1267,6 +1326,450 @@ export class FormBuilder {
         arrayConfig: {
           ...field.arrayConfig,
           [property]: value
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Update DataTable configuration
+   */
+  protected updateTableConfig(property: string, value: any): void {
+    const index = this.selectedFieldIndex();
+    if (index === null) return;
+
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[index];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[index];
+    }
+
+    if (!field.tableConfig) return;
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          [property]: value
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          [property]: value
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Update nested DataTable configuration (e.g., pagination.enabled)
+   */
+  protected updateTableConfigNested(parent: string, property: string, value: any): void {
+    const index = this.selectedFieldIndex();
+    if (index === null) return;
+
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[index];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[index];
+    }
+
+    if (!field.tableConfig) return;
+
+    const parentConfig = (field.tableConfig as any)[parent] || {};
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          [parent]: {
+            ...parentConfig,
+            [property]: value
+          }
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          [parent]: {
+            ...parentConfig,
+            [property]: value
+          }
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Add a new column to DataTable
+   */
+  protected addTableColumn(fieldIndex: number): void {
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
+
+    if (!field.tableConfig) return;
+
+    const newColumn = {
+      key: 'newColumn',
+      label: 'New Column',
+      type: 'text' as const,
+      sortable: false
+    };
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns: [...(field.tableConfig.columns || []), newColumn]
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns: [...(field.tableConfig.columns || []), newColumn]
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Remove a column from DataTable
+   */
+  protected removeTableColumn(fieldIndex: number, columnIndex: number): void {
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
+
+    if (!field.tableConfig || !field.tableConfig.columns) return;
+
+    const columns = [...field.tableConfig.columns];
+    columns.splice(columnIndex, 1);
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Update a column property in DataTable
+   */
+  protected updateTableColumn(fieldIndex: number, columnIndex: number, property: string, value: any): void {
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
+
+    if (!field.tableConfig || !field.tableConfig.columns) return;
+
+    const columns = [...field.tableConfig.columns];
+    columns[columnIndex] = {
+      ...columns[columnIndex],
+      [property]: value
+    };
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          columns
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Update badge color map for a column
+   */
+  protected updateTableColumnBadgeColorMap(fieldIndex: number, columnIndex: number, jsonString: string): void {
+    try {
+      const colorMap = JSON.parse(jsonString);
+      this.updateTableColumn(fieldIndex, columnIndex, 'badgeColorMap', colorMap);
+    } catch (e) {
+      // Invalid JSON, ignore
+    }
+  }
+
+  /**
+   * Update rows per page options
+   */
+  protected updateTableConfigRowsPerPageOptions(fieldIndex: number, value: string): void {
+    const options = value.split(',').map(v => Number(v.trim())).filter(n => !isNaN(n) && n > 0);
+    const index = fieldIndex;
+    if (index === null) return;
+
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[index];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[index];
+    }
+
+    if (!field.tableConfig) return;
+
+    const pagination = field.tableConfig.pagination || { enabled: true };
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          pagination: {
+            ...pagination,
+            rowsPerPageOptions: options
+          }
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        tableConfig: {
+          ...field.tableConfig,
+          pagination: {
+            ...pagination,
+            rowsPerPageOptions: options
+          }
         }
       };
 
