@@ -246,8 +246,17 @@ export interface DataTableColumn {
 export interface DataTableAction {
   label: string;                       // Action label
   icon?: string;                       // Icon class/name (optional)
-  type?: 'button' | 'menu';           // Action type (default: 'menu')
+  type?: 'button' | 'menu';           // Action type (default: 'button')
   color?: 'primary' | 'secondary' | 'danger' | 'warning'; // Action color
+  onClick?: string;                    // Event handler name or action identifier
+  visibleWhen?: string;                // Condition for visibility (evaluated with row context)
+  menuItems?: DataTableActionMenuItem[]; // Sub-actions for menu type
+}
+
+// DataTable action menu item
+export interface DataTableActionMenuItem {
+  label: string;                       // Menu item label
+  icon?: string;                       // Icon class/name (optional)
   onClick?: string;                    // Event handler name or action identifier
   visibleWhen?: string;                // Condition for visibility (evaluated with row context)
 }

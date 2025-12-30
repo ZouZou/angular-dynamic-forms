@@ -190,15 +190,54 @@
             "actions": [
               {
                 "label": "Edit",
-                "icon": "✏",
+                "icon": "✏️",
+                "type": "button",
                 "onClick": "editUser",
                 "color": "primary"
               },
               {
                 "label": "Delete",
-                "icon": "🗑",
+                "icon": "🗑️",
+                "type": "button",
                 "onClick": "deleteUser",
-                "color": "danger"
+                "color": "danger",
+                "visibleWhen": "row.status !== 'Inactive'"
+              },
+              {
+                "label": "More",
+                "icon": "⚙️",
+                "type": "menu",
+                "color": "secondary",
+                "menuItems": [
+                  {
+                    "label": "View Details",
+                    "icon": "👁️",
+                    "onClick": "viewDetails"
+                  },
+                  {
+                    "label": "Export",
+                    "icon": "📥",
+                    "onClick": "exportUser"
+                  },
+                  {
+                    "label": "Archive",
+                    "icon": "📦",
+                    "onClick": "archiveUser",
+                    "visibleWhen": "row.status === 'Active'"
+                  },
+                  {
+                    "label": "Restore",
+                    "icon": "♻️",
+                    "onClick": "restoreUser",
+                    "visibleWhen": "row.status === 'Inactive'"
+                  },
+                  {
+                    "label": "Unsuspend",
+                    "icon": "🔓",
+                    "onClick": "unsuspendUser",
+                    "visibleWhen": "row.status === 'Suspended'"
+                  }
+                ]
               }
             ]
           }

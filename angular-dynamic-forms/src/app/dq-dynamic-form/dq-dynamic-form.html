@@ -737,18 +737,64 @@
                   @if (column.type === 'actions' && column.actions) {
                     <div class="datatable-actions">
                       @for (action of column.actions; track action.label) {
-                        <button
-                          type="button"
-                          class="datatable-action-btn action-{{ action.color || 'secondary' }}"
-                          (click)="handleTableAction(action.onClick || action.label, row)"
-                          [title]="action.label"
-                        >
-                          @if (action.icon) {
-                            <span class="action-icon">{{ action.icon }}</span>
-                          } @else {
-                            {{ action.label }}
+                        <!-- Check visibility condition -->
+                        @if (isActionVisible(action, row)) {
+                          <!-- Button type action -->
+                          @if (!action.type || action.type === 'button') {
+                            <button
+                              type="button"
+                              class="datatable-action-btn action-{{ action.color || 'secondary' }}"
+                              (click)="handleTableAction(action.onClick || action.label, row)"
+                              [title]="action.label"
+                            >
+                              @if (action.icon) {
+                                <span class="action-icon">{{ action.icon }}</span>
+                              }
+                              @if (!action.icon || action.label) {
+                                <span class="action-label">{{ action.label }}</span>
+                              }
+                            </button>
                           }
-                        </button>
+
+                          <!-- Menu type action (dropdown) -->
+                          @if (action.type === 'menu') {
+                            <div class="datatable-action-menu">
+                              <button
+                                type="button"
+                                class="datatable-action-menu-trigger action-{{ action.color || 'secondary' }}"
+                                (click)="toggleActionMenu(field.name, row.id!); $event.stopPropagation()"
+                                [title]="action.label"
+                              >
+                                @if (action.icon) {
+                                  <span class="action-icon">{{ action.icon }}</span>
+                                }
+                                @if (!action.icon || action.label) {
+                                  <span class="action-label">{{ action.label }}</span>
+                                }
+                                <span class="menu-arrow">▼</span>
+                              </button>
+
+                              @if (isActionMenuOpen(field.name, row.id!)) {
+                                <div class="datatable-action-dropdown">
+                                  @for (subAction of (action as any).menuItems; track subAction.label) {
+                                    @if (isActionVisible(subAction, row)) {
+                                      <button
+                                        type="button"
+                                        class="datatable-action-dropdown-item"
+                                        (click)="handleTableAction(subAction.onClick || subAction.label, row); closeActionMenu(field.name, row.id!)"
+                                      >
+                                        @if (subAction.icon) {
+                                          <span class="action-icon">{{ subAction.icon }}</span>
+                                        }
+                                        <span>{{ subAction.label }}</span>
+                                      </button>
+                                    }
+                                  }
+                                </div>
+                              }
+                            </div>
+                          }
+                        }
                       }
                     </div>
                   }

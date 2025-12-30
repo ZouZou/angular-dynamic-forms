@@ -3,7 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { FormsModule } from '@angular/forms';
-import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission, FormSchema, FormSection, ValueTransform, DataTableColumn, DataTableRow, DataTableConfig } from './models/field.model';
+import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, ComplexVisibilityCondition, VisibilityOperator, ArrayFieldConfig, AsyncValidator, ComputedFieldConfig, FormSubmission, FormSchema, FormSection, ValueTransform, DataTableColumn, DataTableRow, DataTableConfig, DataTableAction, DataTableActionMenuItem } from './models/field.model';
 import { DynamicFormsService } from './dq-dynamic-form.service';
 import { MaskService } from './mask.service';
 import { I18nService } from './i18n.service';
@@ -2516,5 +2516,58 @@ export class DqDynamicForm {
   protected handleTableAction(action: string, row: DataTableRow): void {
     console.log('Table action:', action, 'Row:', row);
     // This can be extended to emit events or call custom handlers
+  }
+
+  /**
+   * Check if an action button should be visible based on visibleWhen condition
+   */
+  protected isActionVisible(action: any, row: DataTableRow): boolean {
+    if (!action.visibleWhen) return true;
+
+    try {
+      // Create a function that evaluates the condition with row context
+      // The visibleWhen string is a JavaScript expression that can reference row properties
+      // Example: "row.status === 'Active'" or "row.role === 'Admin'"
+      const evalFunc = new Function('row', `return ${action.visibleWhen};`);
+      return evalFunc(row);
+    } catch (error) {
+      console.error('Error evaluating action visibility condition:', error, action.visibleWhen);
+      return true; // Show by default if condition fails
+    }
+  }
+
+  /**
+   * Track dropdown menu state for action menus
+   */
+  protected readonly openActionMenus = signal<Record<string, boolean>>({});
+
+  /**
+   * Toggle action dropdown menu
+   */
+  protected toggleActionMenu(tableFieldName: string, rowId: string | number): void {
+    const menuKey = `${tableFieldName}_${rowId}`;
+    this.openActionMenus.update(state => ({
+      ...state,
+      [menuKey]: !state[menuKey]
+    }));
+  }
+
+  /**
+   * Check if action menu is open
+   */
+  protected isActionMenuOpen(tableFieldName: string, rowId: string | number): boolean {
+    const menuKey = `${tableFieldName}_${rowId}`;
+    return this.openActionMenus()[menuKey] || false;
+  }
+
+  /**
+   * Close action menu
+   */
+  protected closeActionMenu(tableFieldName: string, rowId: string | number): void {
+    const menuKey = `${tableFieldName}_${rowId}`;
+    this.openActionMenus.update(state => ({
+      ...state,
+      [menuKey]: false
+    }));
   }
 }
