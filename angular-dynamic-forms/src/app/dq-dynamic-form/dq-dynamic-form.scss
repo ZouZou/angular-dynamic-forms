@@ -2575,11 +2575,24 @@ textarea.form-control {
 /* Left Alignment */
 .timeline-wrapper.timeline-left {
   .timeline-container.show-connector::before {
-    left: 20px;
+    left: 120px;
   }
 
   .timeline-item {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto auto 1fr;
+    gap: var(--spacing-md);
+
+    .timeline-timestamp {
+      grid-column: 1;
+    }
+
+    .timeline-marker-wrapper {
+      grid-column: 2;
+    }
+
+    .timeline-content {
+      grid-column: 3;
+    }
   }
 }
 
@@ -2624,6 +2637,9 @@ textarea.form-control {
     &.position-left {
       .timeline-content {
         grid-column: 1;
+      }
+
+      .timeline-simple-content {
         text-align: right;
       }
 

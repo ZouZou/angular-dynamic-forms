@@ -1164,31 +1164,103 @@
                     </div>
                   </div>
 
-                  <!-- Content (simplified for grouped view) -->
+                  <!-- Content -->
                   <div class="timeline-content">
-                    <div class="timeline-header">
-                      <h4 class="timeline-title">{{ item.title }}</h4>
-                      @if (item.badge) {
-                      <span class="timeline-badge" [ngClass]="getTimelineBadgeClass(item.badge)">
-                        {{ item.badge.label }}
-                      </span>
+                    <!-- Card Style -->
+                    @if (field.timelineConfig.style?.cardStyle) {
+                    <div class="timeline-card">
+                      <div class="timeline-card-header">
+                        <div class="timeline-card-title-row">
+                          <h4 class="timeline-title">{{ item.title }}</h4>
+                          @if (item.badge) {
+                          <span class="timeline-badge" [ngClass]="getTimelineBadgeClass(item.badge)">
+                            {{ item.badge.label }}
+                          </span>
+                          }
+                        </div>
+                        @if (item.timestamp && field.timelineConfig.style?.alignment !== 'left') {
+                        <div class="timeline-date">
+                          {{ formatTimelineDate(item.timestamp, field.timelineConfig.dateFormat) }}
+                        </div>
+                        }
+                      </div>
+
+                      @if (item.description) {
+                      <div class="timeline-card-body">
+                        <p class="timeline-description">{{ item.description }}</p>
+                      </div>
+                      }
+
+                      @if (item.metadata && item.metadata.length > 0) {
+                      <div class="timeline-metadata">
+                        @for (meta of item.metadata; track meta.key) {
+                        <div class="timeline-metadata-item">
+                          @if (meta.icon) {
+                          <span class="metadata-icon">{{ meta.icon }}</span>
+                          }
+                          <span class="metadata-key">{{ meta.key }}:</span>
+                          <span class="metadata-value">{{ meta.value }}</span>
+                        </div>
+                        }
+                      </div>
+                      }
+
+                      @if (item.link) {
+                      <div class="timeline-card-footer">
+                        <a [href]="item.link.url" [target]="item.link.target || '_self'" class="timeline-link">
+                          @if (item.link.icon) {
+                          <span class="link-icon">{{ item.link.icon }}</span>
+                          }
+                          {{ item.link.label || 'View details' }}
+                        </a>
+                      </div>
                       }
                     </div>
+                    } @else {
+                      <!-- Simple Content -->
+                      <div class="timeline-simple-content">
+                        <div class="timeline-header">
+                          <h4 class="timeline-title">{{ item.title }}</h4>
+                          @if (item.badge) {
+                          <span class="timeline-badge" [ngClass]="getTimelineBadgeClass(item.badge)">
+                            {{ item.badge.label }}
+                          </span>
+                          }
+                        </div>
 
-                    @if (item.timestamp) {
-                    <div class="timeline-date">
-                      {{ formatTimelineDate(item.timestamp, field.timelineConfig.dateFormat) }}
-                    </div>
-                    }
+                        @if (item.timestamp && field.timelineConfig.style?.alignment !== 'left') {
+                        <div class="timeline-date">
+                          {{ formatTimelineDate(item.timestamp, field.timelineConfig.dateFormat) }}
+                        </div>
+                        }
 
-                    @if (item.description) {
-                    <p class="timeline-description">{{ item.description }}</p>
-                    }
+                        @if (item.description) {
+                        <p class="timeline-description">{{ item.description }}</p>
+                        }
 
-                    @if (item.link) {
-                    <a [href]="item.link.url" [target]="item.link.target || '_self'" class="timeline-link">
-                      {{ item.link.label || 'View details' }}
-                    </a>
+                        @if (item.metadata && item.metadata.length > 0) {
+                        <div class="timeline-metadata">
+                          @for (meta of item.metadata; track meta.key) {
+                          <div class="timeline-metadata-item">
+                            @if (meta.icon) {
+                            <span class="metadata-icon">{{ meta.icon }}</span>
+                            }
+                            <span class="metadata-key">{{ meta.key }}:</span>
+                            <span class="metadata-value">{{ meta.value }}</span>
+                          </div>
+                          }
+                        </div>
+                        }
+
+                        @if (item.link) {
+                        <a [href]="item.link.url" [target]="item.link.target || '_self'" class="timeline-link">
+                          @if (item.link.icon) {
+                          <span class="link-icon">{{ item.link.icon }}</span>
+                          }
+                          {{ item.link.label || 'View details' }}
+                        </a>
+                        }
+                      </div>
                     }
                   </div>
                 </div>
