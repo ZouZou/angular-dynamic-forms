@@ -310,8 +310,32 @@ When multiple option sources are defined, the system uses this priority:
 |------|-------------|---------|
 | `text` | Text input | Name, address |
 | `email` | Email input with validation | user@example.com |
+| `password` | Password input | Secure password |
+| `number` | Numeric input | Age, quantity |
+| `textarea` | Multi-line text | Comments, description |
 | `select` | Dropdown (single select) | Country, state, category |
+| `multiselect` | Multi-select dropdown | Tags, categories |
+| `radio` | Radio button group | Gender, options |
 | `checkbox` | Boolean checkbox | Accept terms |
+| `date` | Date picker | Birth date, deadline |
+| `datetime` | Date and time picker | Appointment time |
+| `range` | Range slider | Volume, rating |
+| `color` | Color picker | Theme color |
+| `file` | File upload | Documents, images |
+| `richtext` | Rich text editor | Formatted content |
+| `array` | Dynamic field array/repeater | Multiple addresses |
+| `datatable` | Data table with sorting/filtering | User list, reports |
+| `timeline` | Timeline/chronological display | Order tracking, history |
+
+---
+
+## Advanced Field Types
+
+### DataTable
+For complex tabular data with sorting, filtering, pagination, and more, see the [DataTable Feature Documentation](./DATATABLE_FEATURE.md).
+
+### Timeline
+For chronological displays with rich formatting, grouping, and multiple layout options, see the [Timeline Feature Documentation](./TIMELINE_FEATURE.md).
 
 ---
 
@@ -568,7 +592,7 @@ The Form Builder provides a unified interface with three synchronized panels:
 ### Features
 
 **Visual Editor Panel:**
-- Field palette with 9 field types (text, email, password, number, textarea, select, radio, checkbox, date)
+- Field palette with 18+ field types (text, email, password, number, textarea, select, multiselect, radio, checkbox, date, datetime, range, color, file, richtext, array, datatable, timeline)
 - Click-to-add field creation
 - Visual field tree showing all form fields
 - Reorder fields (move up/down)

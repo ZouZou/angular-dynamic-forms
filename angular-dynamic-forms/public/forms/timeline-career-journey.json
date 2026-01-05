@@ -1,0 +1,135 @@
+{
+  "title": "Professional Journey",
+  "description": "Career milestones and achievements timeline",
+  "fields": [
+    {
+      "type": "timeline",
+      "name": "careerTimeline",
+      "label": "Career & Achievements",
+      "timelineConfig": {
+        "items": [
+          {
+            "id": 1,
+            "title": "Published my article site build with Gatsbyjs",
+            "description": "Launched a personal blog using modern JAMstack architecture. Implemented static site generation, responsive design, and optimized for SEO.",
+            "timestamp": "2024-05-26",
+            "status": "completed",
+            "badge": {
+              "label": "PROJECT",
+              "color": "primary"
+            },
+            "link": {
+              "url": "#",
+              "label": "Check it out ▶",
+              "target": "_blank"
+            }
+          },
+          {
+            "id": 2,
+            "title": "Finished first MVP of passion project Project Name",
+            "description": "Successfully delivered the minimum viable product for a side project focused on productivity tools. Implemented core features including user authentication, data persistence, and real-time updates.",
+            "timestamp": "2024-02-04",
+            "status": "completed",
+            "badge": {
+              "label": "PROJECT",
+              "color": "primary"
+            },
+            "link": {
+              "url": "#",
+              "label": "Check it out ▶",
+              "target": "_blank"
+            }
+          },
+          {
+            "id": 3,
+            "title": "Acquired a desk in workspace to start my own setup",
+            "description": "Invested in a dedicated workspace to improve productivity and work-life balance. Set up ergonomic desk, dual monitors, and professional equipment.",
+            "timestamp": "2023-11-04",
+            "status": "completed",
+            "badge": {
+              "label": "OFFICE",
+              "color": "success"
+            }
+          },
+          {
+            "id": 4,
+            "title": "Awarded Top 7 badge for having at least one post featured in the weekly \"must-reads\" from Dev.to",
+            "description": "Recognized for technical writing contributions to the developer community. Article on microservices architecture was featured among the top weekly picks.",
+            "timestamp": "2021-03-17",
+            "status": "completed",
+            "badge": {
+              "label": "AWARD",
+              "color": "warning"
+            },
+            "link": {
+              "url": "#",
+              "label": "Profile link ▶",
+              "target": "_blank"
+            }
+          },
+          {
+            "id": 5,
+            "title": "Started working as MERN Stack Developer at Acme Lab",
+            "description": "Joined a dynamic startup as a full-stack developer. Responsible for building scalable web applications using MongoDB, Express.js, React, and Node.js. Led development of multiple client projects.",
+            "timestamp": "2020-10-08",
+            "status": "completed",
+            "badge": {
+              "label": "JOB",
+              "color": "danger"
+            },
+            "metadata": [
+              {
+                "key": "Company",
+                "value": "Acme Lab",
+                "icon": "🏢"
+              },
+              {
+                "key": "Role",
+                "value": "Full Stack Developer",
+                "icon": "💼"
+              }
+            ],
+            "link": {
+              "url": "#",
+              "label": "Check it out ▶",
+              "target": "_blank"
+            }
+          },
+          {
+            "id": 6,
+            "title": "Completed the freeCodeCamp.org Responsive Web Design Certification",
+            "description": "Successfully completed comprehensive web development certification covering HTML5, CSS3, responsive design principles, accessibility, and modern layout techniques including Flexbox and CSS Grid.",
+            "timestamp": "2018-08-01",
+            "status": "completed",
+            "badge": {
+              "label": "CERTIFICATION",
+              "color": "info"
+            },
+            "link": {
+              "url": "#",
+              "label": "Check it out here ▶",
+              "target": "_blank"
+            }
+          }
+        ],
+        "style": {
+          "layout": "vertical",
+          "alignment": "alternating",
+          "markerStyle": "dot",
+          "lineStyle": "solid",
+          "cardStyle": true,
+          "dense": false,
+          "animated": true
+        },
+        "interaction": {
+          "clickable": false,
+          "expandable": false,
+          "hoverable": true
+        },
+        "dateFormat": "MMM DD, YYYY",
+        "showConnector": true,
+        "sortOrder": "desc"
+      }
+    }
+  ]
+}

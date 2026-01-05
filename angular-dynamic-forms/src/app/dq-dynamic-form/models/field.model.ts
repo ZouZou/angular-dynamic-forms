@@ -122,6 +122,9 @@ export interface Field {
 
   // DataTable specific (for type 'datatable')
   tableConfig?: DataTableConfig; // DataTable configuration
+
+  // Timeline specific (for type 'timeline')
+  timelineConfig?: TimelineConfig; // Timeline configuration
 }
 
 // Field mask configuration
@@ -313,4 +316,87 @@ export interface DataTableConfig {
   // Actions
   onRowClick?: string;                 // Event handler for row click
   onSelectionChange?: string;          // Event handler for selection change
+}
+
+// Timeline item status types
+export type TimelineItemStatus = 'completed' | 'in-progress' | 'pending' | 'cancelled';
+
+// Timeline item configuration
+export interface TimelineItem {
+  id: string | number;                 // Unique item identifier
+  title: string;                       // Item title/heading
+  description?: string;                // Item description/details
+  timestamp?: string | Date;           // Item date/time
+  icon?: string;                       // Icon to display (emoji, icon class, or SVG)
+  status?: TimelineItemStatus;         // Item status (affects styling)
+  badge?: TimelineBadge;               // Optional badge/label
+  link?: TimelineLink;                 // Optional link
+  metadata?: TimelineMetadata[];       // Additional metadata fields
+  position?: 'left' | 'right' | 'center'; // For alternating layouts (auto if not specified)
+  expanded?: boolean;                  // Initial expanded state (for expandable items)
+}
+
+// Timeline badge configuration
+export interface TimelineBadge {
+  label: string;                       // Badge text
+  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'info'; // Badge color
+  outlined?: boolean;                  // Use outlined style (default: false)
+}
+
+// Timeline link configuration
+export interface TimelineLink {
+  url: string;                         // Link URL
+  label?: string;                      // Link text (default: 'View details')
+  target?: '_blank' | '_self';         // Link target (default: '_self')
+  icon?: string;                       // Optional icon for link
+}
+
+// Timeline metadata field
+export interface TimelineMetadata {
+  key: string;                         // Metadata key/label
+  value: string;                       // Metadata value
+  icon?: string;                       // Optional icon
+}
+
+// Timeline grouping configuration
+export interface TimelineGrouping {
+  enabled: boolean;                    // Enable grouping (default: false)
+  groupBy: 'year' | 'month' | 'custom'; // Grouping strategy
+  customGroupField?: string;           // Custom field to group by (for 'custom' groupBy)
+  showGroupLabels?: boolean;           // Show group labels (default: true)
+  groupLabelFormat?: string;           // Format for group labels (e.g., 'YYYY', 'MMMM YYYY')
+}
+
+// Timeline style/layout configuration
+export interface TimelineStyle {
+  layout?: 'vertical' | 'horizontal';  // Timeline orientation (default: 'vertical')
+  alignment?: 'left' | 'center' | 'right' | 'alternating'; // Item alignment (default: 'left')
+  markerStyle?: 'dot' | 'icon' | 'number' | 'none'; // Marker/connector style (default: 'dot')
+  lineStyle?: 'solid' | 'dashed' | 'dotted' | 'none'; // Connecting line style (default: 'solid')
+  cardStyle?: boolean;                 // Use card/box style for items (default: false)
+  dense?: boolean;                     // Compact spacing (default: false)
+  animated?: boolean;                  // Enable animations (default: true)
+}
+
+// Timeline interaction configuration
+export interface TimelineInteraction {
+  clickable?: boolean;                 // Items are clickable (default: false)
+  expandable?: boolean;                // Items can be expanded/collapsed (default: false)
+  hoverable?: boolean;                 // Highlight on hover (default: true)
+  onItemClick?: string;                // Event handler for item click
+  onItemExpand?: string;               // Event handler for item expand/collapse
+}
+
+// Complete Timeline configuration
+export interface TimelineConfig {
+  items?: TimelineItem[];              // Static timeline items
+  dataEndpoint?: string;               // API endpoint to fetch items dynamically
+  style?: TimelineStyle;               // Visual style/layout options
+  grouping?: TimelineGrouping;         // Grouping configuration
+  interaction?: TimelineInteraction;   // Interaction settings
+  emptyMessage?: string;               // Message when no items (default: 'No timeline items')
+  dateFormat?: string;                 // Date format for timestamps (default: 'MMM DD, YYYY')
+  showConnector?: boolean;             // Show connecting line between items (default: true)
+  maxItems?: number;                   // Maximum items to display (with load more option)
+  sortOrder?: 'asc' | 'desc';          // Sort order by timestamp (default: 'asc')
 }
