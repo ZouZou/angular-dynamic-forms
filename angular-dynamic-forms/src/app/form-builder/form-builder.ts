@@ -322,6 +322,78 @@ export class FormBuilder {
           emptyMessage: 'No data available'
         }
       }
+    },
+    {
+      type: 'timeline',
+      label: 'Timeline',
+      icon: '📅',
+      defaultConfig: {
+        type: 'timeline',
+        name: 'timelineField',
+        label: 'Timeline',
+        timelineConfig: {
+          items: [
+            {
+              id: 1,
+              title: 'Project Started',
+              description: 'Initial project kickoff and planning phase',
+              timestamp: '2025-01-01',
+              status: 'completed',
+              icon: '✓',
+              badge: {
+                label: 'MILESTONE',
+                color: 'primary'
+              }
+            },
+            {
+              id: 2,
+              title: 'Development Phase',
+              description: 'Core functionality implementation',
+              timestamp: '2025-02-01',
+              status: 'in-progress',
+              icon: '⚙️',
+              badge: {
+                label: 'IN PROGRESS',
+                color: 'warning'
+              }
+            },
+            {
+              id: 3,
+              title: 'Testing & QA',
+              description: 'Quality assurance and testing phase',
+              timestamp: '2025-03-01',
+              status: 'pending',
+              icon: '🧪'
+            },
+            {
+              id: 4,
+              title: 'Launch',
+              description: 'Production deployment',
+              timestamp: '2025-04-01',
+              status: 'pending',
+              icon: '🚀'
+            }
+          ],
+          style: {
+            layout: 'vertical',
+            alignment: 'left',
+            markerStyle: 'icon',
+            lineStyle: 'solid',
+            cardStyle: false,
+            dense: false,
+            animated: true
+          },
+          interaction: {
+            clickable: false,
+            expandable: false,
+            hoverable: true
+          },
+          dateFormat: 'MMM DD, YYYY',
+          showConnector: true,
+          sortOrder: 'asc',
+          emptyMessage: 'No timeline items'
+        }
+      }
     }
   ];
 

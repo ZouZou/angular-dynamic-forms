@@ -1,0 +1,172 @@
+{
+  "title": "Travel History",
+  "description": "My adventures around the world",
+  "fields": [
+    {
+      "type": "timeline",
+      "name": "travelTimeline",
+      "label": "Travel Timeline",
+      "timelineConfig": {
+        "items": [
+          {
+            "id": 1,
+            "title": "United States East Coast Tour",
+            "description": "Explored major cities including New York, Boston, and Washington D.C. Visited historical landmarks, museums, and experienced the vibrant cultural scene.",
+            "timestamp": "2007-02-27",
+            "status": "completed",
+            "icon": "🗽",
+            "badge": {
+              "label": "USA",
+              "color": "primary"
+            },
+            "metadata": [
+              {
+                "key": "Duration",
+                "value": "2 weeks",
+                "icon": "📅"
+              },
+              {
+                "key": "Cities",
+                "value": "3",
+                "icon": "🏙️"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "Barcelona & Tenerife",
+            "description": "Mediterranean adventure combining city culture and island relaxation. Experienced Gaudí's architecture in Barcelona and the volcanic landscapes of Tenerife.",
+            "timestamp": "2008-05-25",
+            "status": "completed",
+            "icon": "🏖️",
+            "badge": {
+              "label": "SPAIN",
+              "color": "warning"
+            },
+            "metadata": [
+              {
+                "key": "Duration",
+                "value": "10 days",
+                "icon": "📅"
+              },
+              {
+                "key": "Type",
+                "value": "City + Beach",
+                "icon": "🏝️"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Malta, a Country of Knights",
+            "description": "Explored the historic island nation with its ancient temples, medieval fortifications, and crystal-clear Mediterranean waters. Discovered rich history spanning thousands of years.",
+            "timestamp": "2008-06-15",
+            "status": "completed",
+            "icon": "🏰",
+            "badge": {
+              "label": "MALTA",
+              "color": "info"
+            },
+            "metadata": [
+              {
+                "key": "Duration",
+                "value": "5 days",
+                "icon": "📅"
+              },
+              {
+                "key": "Highlights",
+                "value": "Valletta, Mdina",
+                "icon": "⭐"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Wonders of Italy",
+            "description": "Grand tour of Italy visiting Rome, Florence, Venice, and the Amalfi Coast. Immersed in Renaissance art, ancient history, and world-class cuisine.",
+            "timestamp": "2008-07-06",
+            "status": "completed",
+            "icon": "🍝",
+            "badge": {
+              "label": "ITALY",
+              "color": "success"
+            },
+            "metadata": [
+              {
+                "key": "Duration",
+                "value": "3 weeks",
+                "icon": "📅"
+              },
+              {
+                "key": "Cities",
+                "value": "5",
+                "icon": "🏙️"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "The Best of Western Europe",
+            "description": "Multi-country European adventure through France, Germany, Switzerland, and Austria. Experienced diverse cultures, stunning Alpine scenery, and historic cities.",
+            "timestamp": "2009-08-11",
+            "status": "completed",
+            "icon": "🗼",
+            "badge": {
+              "label": "EUROPE",
+              "color": "primary"
+            },
+            "metadata": [
+              {
+                "key": "Duration",
+                "value": "4 weeks",
+                "icon": "📅"
+              },
+              {
+                "key": "Countries",
+                "value": "4",
+                "icon": "🌍"
+              }
+            ]
+          }
+        ],
+        "style": {
+          "layout": "vertical",
+          "alignment": "alternating",
+          "markerStyle": "icon",
+          "lineStyle": "solid",
+          "cardStyle": true,
+          "dense": false,
+          "animated": true
+        },
+        "grouping": {
+          "enabled": true,
+          "groupBy": "year",
+          "showGroupLabels": true,
+          "groupLabelFormat": "YYYY"
+        },
+        "interaction": {
+          "clickable": true,
+          "expandable": true,
+          "hoverable": true
+        },
+        "dateFormat": "MMM DD, YYYY",
+        "showConnector": true,
+        "sortOrder": "asc"
+      }
+    },
+    {
+      "type": "text",
+      "name": "totalTrips",
+      "label": "Total Trips",
+      "readonly": true,
+      "placeholder": "5 trips"
+    },
+    {
+      "type": "text",
+      "name": "countriesVisited",
+      "label": "Countries Visited",
+      "readonly": true,
+      "placeholder": "8 countries"
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "title": "Order Tracking",
+  "description": "Track your order status in real-time",
+  "fields": [
+    {
+      "type": "timeline",
+      "name": "orderTimeline",
+      "label": "Order Status",
+      "timelineConfig": {
+        "items": [
+          {
+            "id": 1,
+            "title": "Order Received",
+            "timestamp": "2025-01-05T18:45:00",
+            "status": "completed"
+          },
+          {
+            "id": 2,
+            "title": "Preparing Order",
+            "timestamp": "2025-01-05T18:50:00",
+            "status": "completed"
+          },
+          {
+            "id": 3,
+            "title": "On The Way",
+            "timestamp": "2025-01-05T19:05:00",
+            "status": "in-progress"
+          },
+          {
+            "id": 4,
+            "title": "Delivered!",
+            "timestamp": "2025-01-05T19:15:00",
+            "status": "pending"
+          }
+        ],
+        "style": {
+          "layout": "vertical",
+          "alignment": "left",
+          "markerStyle": "dot",
+          "lineStyle": "solid",
+          "cardStyle": false,
+          "dense": false
+        },
+        "dateFormat": "h:mm A",
+        "showConnector": true,
+        "sortOrder": "asc"
+      }
+    },
+    {
+      "type": "text",
+      "name": "orderNumber",
+      "label": "Order Number",
+      "readonly": true,
+      "placeholder": "ORD-2025-001234"
+    },
+    {
+      "type": "text",
+      "name": "deliveryAddress",
+      "label": "Delivery Address",
+      "readonly": true,
+      "placeholder": "123 Main St, City, State 12345"
+    }
+  ]
+}

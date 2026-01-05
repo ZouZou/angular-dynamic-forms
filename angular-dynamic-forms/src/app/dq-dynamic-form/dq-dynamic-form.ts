@@ -110,6 +110,16 @@ export class DqDynamicForm {
   // Store loading state for tables with API endpoints
   protected readonly tableLoading = signal<Record<string, boolean>>({});
 
+  // Timeline state
+  // Store all timeline items (original items before sorting/filtering)
+  protected readonly timelineData = signal<Record<string, any[]>>({});
+  // Store expanded item IDs for each timeline
+  protected readonly timelineExpanded = signal<Record<string, Set<string | number>>>({});
+  // Store loading state for timelines with API endpoints
+  protected readonly timelineLoading = signal<Record<string, boolean>>({});
+  // Store grouped timeline items (when grouping is enabled)
+  protected readonly timelineGroupedData = signal<Record<string, Map<string, any[]>>>({});
+
   // Expose Math for template (needed for multiselect size calculation and other calculations)
   protected readonly Math = Math;
 
@@ -440,6 +450,16 @@ export class DqDynamicForm {
           this.initializeDataTable(field);
           // Initialize empty array for selected rows
           initialValues[field.name] = [];
+          initialTouched[field.name] = false;
+          initialDirty[field.name] = false;
+        }
+      });
+
+      // Initialize timeline fields
+      allFields.forEach(field => {
+        if (field.type === 'timeline' && field.timelineConfig) {
+          this.initializeTimeline(field);
+          // Timeline is display-only, no form value needed
           initialTouched[field.name] = false;
           initialDirty[field.name] = false;
         }
@@ -2583,5 +2603,296 @@ export class DqDynamicForm {
    */
   protected getVisibleActionsCount(actions: DataTableAction[], row: DataTableRow): number {
     return this.getVisibleActions(actions, row).length;
+  }
+
+  // ==================== Timeline Methods ====================
+
+  /**
+   * Initialize timeline field
+   */
+  protected initializeTimeline(field: Field): void {
+    if (!field.timelineConfig) return;
+
+    const fieldName = field.name;
+    const config = field.timelineConfig;
+
+    // Initialize data
+    if (config.items) {
+      this.timelineData.update(data => ({
+        ...data,
+        [fieldName]: config.items || []
+      }));
+
+      // Process grouping if enabled
+      if (config.grouping?.enabled) {
+        this.groupTimelineItems(fieldName, config.items || [], config);
+      }
+    } else if (config.dataEndpoint) {
+      // Fetch data from API
+      this.fetchTimelineData(fieldName, config.dataEndpoint);
+    }
+
+    // Initialize expanded state
+    this.timelineExpanded.update(state => ({
+      ...state,
+      [fieldName]: new Set()
+    }));
+  }
+
+  /**
+   * Fetch timeline data from API
+   */
+  private fetchTimelineData(fieldName: string, endpoint: string): void {
+    this.timelineLoading.update(state => ({ ...state, [fieldName]: true }));
+
+    this._http.get<any[]>(endpoint).subscribe({
+      next: (data) => {
+        this.timelineData.update(state => ({
+          ...state,
+          [fieldName]: data
+        }));
+
+        // Process grouping if enabled
+        const field = this.fields().find(f => f.name === fieldName);
+        if (field?.timelineConfig?.grouping?.enabled) {
+          this.groupTimelineItems(fieldName, data, field.timelineConfig);
+        }
+
+        this.timelineLoading.update(state => ({ ...state, [fieldName]: false }));
+      },
+      error: (error) => {
+        console.error('Error fetching timeline data:', error);
+        this.timelineLoading.update(state => ({ ...state, [fieldName]: false }));
+      }
+    });
+  }
+
+  /**
+   * Get processed timeline items (sorted, filtered)
+   */
+  protected getTimelineItems(field: Field): any[] {
+    const fieldName = field.name;
+    const config = field.timelineConfig;
+    if (!config) return [];
+
+    let items = this.timelineData()[fieldName] || [];
+
+    // Apply sorting by timestamp
+    if (config.sortOrder && items.length > 0) {
+      items = [...items].sort((a, b) => {
+        const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+
+        return config.sortOrder === 'asc' ? aTime - bTime : bTime - aTime;
+      });
+    }
+
+    // Apply max items limit
+    if (config.maxItems && items.length > config.maxItems) {
+      items = items.slice(0, config.maxItems);
+    }
+
+    // Add position for alternating layout
+    if (config.style?.alignment === 'alternating') {
+      items = items.map((item, index) => ({
+        ...item,
+        position: item.position || (index % 2 === 0 ? 'left' : 'right')
+      }));
+    }
+
+    return items;
+  }
+
+  /**
+   * Group timeline items by year, month, or custom field
+   */
+  protected groupTimelineItems(fieldName: string, items: any[], config: any): void {
+    const grouping = config.grouping;
+    if (!grouping?.enabled) return;
+
+    const grouped = new Map<string, any[]>();
+
+    items.forEach(item => {
+      let groupKey = '';
+
+      if (grouping.groupBy === 'year' && item.timestamp) {
+        const date = new Date(item.timestamp);
+        groupKey = date.getFullYear().toString();
+      } else if (grouping.groupBy === 'month' && item.timestamp) {
+        const date = new Date(item.timestamp);
+        groupKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      } else if (grouping.groupBy === 'custom' && grouping.customGroupField) {
+        groupKey = item[grouping.customGroupField] || 'Other';
+      }
+
+      if (!grouped.has(groupKey)) {
+        grouped.set(groupKey, []);
+      }
+      grouped.get(groupKey)!.push(item);
+    });
+
+    this.timelineGroupedData.update(state => ({
+      ...state,
+      [fieldName]: grouped
+    }));
+  }
+
+  /**
+   * Get grouped timeline data
+   */
+  protected getGroupedTimelineItems(fieldName: string): Map<string, any[]> {
+    return this.timelineGroupedData()[fieldName] || new Map();
+  }
+
+  /**
+   * Format group label for display
+   */
+  protected formatGroupLabel(groupKey: string, config: any): string {
+    const grouping = config.grouping;
+
+    if (grouping?.groupBy === 'year') {
+      return groupKey;
+    } else if (grouping?.groupBy === 'month') {
+      const [year, month] = groupKey.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1);
+      const monthName = date.toLocaleDateString('en-US', { month: 'long' });
+      return grouping.groupLabelFormat?.includes('YYYY')
+        ? `${monthName} ${year}`
+        : monthName;
+    }
+
+    return groupKey;
+  }
+
+  /**
+   * Toggle timeline item expansion
+   */
+  protected toggleTimelineItem(fieldName: string, itemId: string | number): void {
+    this.timelineExpanded.update(state => {
+      const currentExpanded = new Set(state[fieldName] || []);
+
+      if (currentExpanded.has(itemId)) {
+        currentExpanded.delete(itemId);
+      } else {
+        currentExpanded.add(itemId);
+      }
+
+      return {
+        ...state,
+        [fieldName]: currentExpanded
+      };
+    });
+  }
+
+  /**
+   * Check if timeline item is expanded
+   */
+  protected isTimelineItemExpanded(fieldName: string, itemId: string | number): boolean {
+    return this.timelineExpanded()[fieldName]?.has(itemId) || false;
+  }
+
+  /**
+   * Format timeline timestamp
+   */
+  protected formatTimelineDate(timestamp: string | Date | undefined, format?: string): string {
+    if (!timestamp) return '';
+
+    const date = new Date(timestamp);
+    const defaultFormat = format || 'MMM DD, YYYY';
+
+    // Simple date formatting based on format string
+    if (defaultFormat === 'MMM DD, YYYY') {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    } else if (defaultFormat === 'YYYY') {
+      return date.getFullYear().toString();
+    } else if (defaultFormat === 'h:mm A') {
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    } else if (defaultFormat === 'MMM DD, YYYY h:mm A') {
+      return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+
+    // Fallback to default
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }
+
+  /**
+   * Get timeline item marker class based on status
+   */
+  protected getTimelineMarkerClass(item: any): string {
+    const status = item.status || 'pending';
+    return `timeline-marker-${status}`;
+  }
+
+  /**
+   * Get timeline badge color class
+   */
+  protected getTimelineBadgeClass(badge: any): string {
+    const color = badge.color || 'secondary';
+    const outlined = badge.outlined ? 'outlined-' : '';
+    return `badge-${outlined}${color}`;
+  }
+
+  /**
+   * Handle timeline item click
+   */
+  protected handleTimelineItemClick(field: Field, item: any): void {
+    const config = field.timelineConfig;
+
+    // If expandable, toggle expansion
+    if (config?.interaction?.expandable) {
+      this.toggleTimelineItem(field.name, item.id);
+    }
+
+    // Call custom click handler if provided
+    if (config?.interaction?.onItemClick) {
+      console.log('Timeline item clicked:', config.interaction.onItemClick, 'Item:', item);
+      // This can be extended to emit events or call custom handlers
+    }
+  }
+
+  /**
+   * Get timeline connector line class
+   */
+  protected getTimelineConnectorClass(config: any): string {
+    const lineStyle = config.style?.lineStyle || 'solid';
+    return `timeline-connector-${lineStyle}`;
+  }
+
+  /**
+   * Check if timeline should show connector
+   */
+  protected shouldShowTimelineConnector(config: any): boolean {
+    return config.showConnector !== false && config.style?.lineStyle !== 'none';
+  }
+
+  /**
+   * Get timeline layout classes
+   */
+  protected getTimelineLayoutClass(config: any): string {
+    const layout = config.style?.layout || 'vertical';
+    const alignment = config.style?.alignment || 'left';
+    const cardStyle = config.style?.cardStyle ? 'card-style' : '';
+    const dense = config.style?.dense ? 'dense' : '';
+
+    return `timeline-${layout} timeline-${alignment} ${cardStyle} ${dense}`.trim();
   }
 }

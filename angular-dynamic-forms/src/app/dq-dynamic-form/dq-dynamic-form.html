@@ -959,6 +959,249 @@
       </div>
       }
 
+      <!-- Timeline -->
+      @if (field.type === 'timeline' && field.timelineConfig) {
+      <div class="timeline-wrapper" [ngClass]="getTimelineLayoutClass(field.timelineConfig)">
+        <label class="form-label">{{ field.label }}</label>
+
+        <!-- Loading State -->
+        @if (timelineLoading()[field.name]) {
+        <div class="timeline-loading">
+          <div class="loading-spinner"></div>
+          <span>Loading timeline...</span>
+        </div>
+        } @else {
+          <!-- Non-grouped Timeline -->
+          @if (!field.timelineConfig.grouping?.enabled) {
+          <div class="timeline-container" [class.show-connector]="shouldShowTimelineConnector(field.timelineConfig)">
+            @for (item of getTimelineItems(field); track item.id; let isLast = $last) {
+            <div class="timeline-item"
+                 [class.expanded]="isTimelineItemExpanded(field.name, item.id)"
+                 [class.clickable]="field.timelineConfig.interaction?.clickable || field.timelineConfig.interaction?.expandable"
+                 [class.position-left]="item.position === 'left'"
+                 [class.position-right]="item.position === 'right'"
+                 [class.position-center]="item.position === 'center'"
+                 [class.status-completed]="item.status === 'completed'"
+                 [class.status-in-progress]="item.status === 'in-progress'"
+                 [class.status-pending]="item.status === 'pending'"
+                 [class.status-cancelled]="item.status === 'cancelled'"
+                 (click)="field.timelineConfig.interaction?.clickable || field.timelineConfig.interaction?.expandable ? handleTimelineItemClick(field, item) : null">
+
+              <!-- Timestamp (for left alignment) -->
+              @if (field.timelineConfig.style?.alignment === 'left' && item.timestamp) {
+              <div class="timeline-timestamp">
+                {{ formatTimelineDate(item.timestamp, field.timelineConfig.dateFormat) }}
+              </div>
+              }
+
+              <!-- Marker/Connector -->
+              <div class="timeline-marker-wrapper">
+                @if (!isLast && shouldShowTimelineConnector(field.timelineConfig)) {
+                <div class="timeline-connector" [ngClass]="getTimelineConnectorClass(field.timelineConfig)"></div>
+                }
+                <div class="timeline-marker" [ngClass]="getTimelineMarkerClass(item)">
+                  @if (field.timelineConfig.style?.markerStyle === 'icon' && item.icon) {
+                  <span class="timeline-marker-icon">{{ item.icon }}</span>
+                  } @else if (field.timelineConfig.style?.markerStyle === 'number') {
+                  <span class="timeline-marker-number">{{ $index + 1 }}</span>
+                  }
+                </div>
+              </div>
+
+              <!-- Content -->
+              <div class="timeline-content">
+                <!-- Card Header (for card style) -->
+                @if (field.timelineConfig.style?.cardStyle) {
+                <div class="timeline-card">
+                  <div class="timeline-card-header">
+                    <div class="timeline-card-title-row">
+                      <h4 class="timeline-title">{{ item.title }}</h4>
+                      @if (item.badge) {
+                      <span class="timeline-badge" [ngClass]="getTimelineBadgeClass(item.badge)">
+                        {{ item.badge.label }}
+                      </span>
+                      }
+                    </div>
+                    @if (item.timestamp && field.timelineConfig.style?.alignment !== 'left') {
+                    <div class="timeline-date">
+                      {{ formatTimelineDate(item.timestamp, field.timelineConfig.dateFormat) }}
+                    </div>
+                    }
+                  </div>
+
+                  @if (item.description) {
+                  <div class="timeline-card-body">
+                    <p class="timeline-description">{{ item.description }}</p>
+                  </div>
+                  }
+
+                  @if (item.metadata && item.metadata.length > 0) {
+                  <div class="timeline-metadata">
+                    @for (meta of item.metadata; track meta.key) {
+                    <div class="timeline-metadata-item">
+                      @if (meta.icon) {
+                      <span class="metadata-icon">{{ meta.icon }}</span>
+                      }
+                      <span class="metadata-key">{{ meta.key }}:</span>
+                      <span class="metadata-value">{{ meta.value }}</span>
+                    </div>
+                    }
+                  </div>
+                  }
+
+                  @if (item.link) {
+                  <div class="timeline-card-footer">
+                    <a [href]="item.link.url" [target]="item.link.target || '_self'" class="timeline-link">
+                      @if (item.link.icon) {
+                      <span class="link-icon">{{ item.link.icon }}</span>
+                      }
+                      {{ item.link.label || 'View details' }}
+                    </a>
+                  </div>
+                  }
+                </div>
+                } @else {
+                  <!-- Simple Content (non-card style) -->
+                  <div class="timeline-simple-content">
+                    <div class="timeline-header">
+                      <h4 class="timeline-title">{{ item.title }}</h4>
+                      @if (item.badge) {
+                      <span class="timeline-badge" [ngClass]="getTimelineBadgeClass(item.badge)">
+                        {{ item.badge.label }}
+                      </span>
+                      }
+                    </div>
+
+                    @if (item.timestamp && field.timelineConfig.style?.alignment !== 'left') {
+                    <div class="timeline-date">
+                      {{ formatTimelineDate(item.timestamp, field.timelineConfig.dateFormat) }}
+                    </div>
+                    }
+
+                    @if (item.description) {
+                    <p class="timeline-description">{{ item.description }}</p>
+                    }
+
+                    @if (item.metadata && item.metadata.length > 0) {
+                    <div class="timeline-metadata">
+                      @for (meta of item.metadata; track meta.key) {
+                      <div class="timeline-metadata-item">
+                        @if (meta.icon) {
+                        <span class="metadata-icon">{{ meta.icon }}</span>
+                        }
+                        <span class="metadata-key">{{ meta.key }}:</span>
+                        <span class="metadata-value">{{ meta.value }}</span>
+                      </div>
+                      }
+                    </div>
+                    }
+
+                    @if (item.link) {
+                    <a [href]="item.link.url" [target]="item.link.target || '_self'" class="timeline-link">
+                      @if (item.link.icon) {
+                      <span class="link-icon">{{ item.link.icon }}</span>
+                      }
+                      {{ item.link.label || 'View details' }}
+                    </a>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+            }
+
+            <!-- Empty State -->
+            @if (getTimelineItems(field).length === 0) {
+            <div class="timeline-empty">
+              <p>{{ field.timelineConfig.emptyMessage || 'No timeline items' }}</p>
+            </div>
+            }
+          </div>
+          }
+
+          <!-- Grouped Timeline -->
+          @if (field.timelineConfig.grouping?.enabled) {
+          <div class="timeline-grouped-container">
+            @for (group of getGroupedTimelineItems(field.name) | keyvalue; track group.key) {
+            <div class="timeline-group">
+              @if (field.timelineConfig.grouping?.showGroupLabels !== false) {
+              <div class="timeline-group-label">
+                {{ formatGroupLabel(group.key, field.timelineConfig) }}
+              </div>
+              }
+
+              <div class="timeline-container" [class.show-connector]="shouldShowTimelineConnector(field.timelineConfig)">
+                @for (item of group.value; track item.id; let isLast = $last) {
+                <div class="timeline-item"
+                     [class.expanded]="isTimelineItemExpanded(field.name, item.id)"
+                     [class.clickable]="field.timelineConfig.interaction?.clickable || field.timelineConfig.interaction?.expandable"
+                     [class.position-left]="item.position === 'left'"
+                     [class.position-right]="item.position === 'right'"
+                     [class.status-completed]="item.status === 'completed'"
+                     [class.status-in-progress]="item.status === 'in-progress'"
+                     [class.status-pending]="item.status === 'pending'"
+                     [class.status-cancelled]="item.status === 'cancelled'"
+                     (click)="field.timelineConfig.interaction?.clickable || field.timelineConfig.interaction?.expandable ? handleTimelineItemClick(field, item) : null">
+
+                  <!-- Timestamp (for left alignment) -->
+                  @if (field.timelineConfig.style?.alignment === 'left' && item.timestamp) {
+                  <div class="timeline-timestamp">
+                    {{ formatTimelineDate(item.timestamp, field.timelineConfig.dateFormat) }}
+                  </div>
+                  }
+
+                  <!-- Marker/Connector -->
+                  <div class="timeline-marker-wrapper">
+                    @if (!isLast && shouldShowTimelineConnector(field.timelineConfig)) {
+                    <div class="timeline-connector" [ngClass]="getTimelineConnectorClass(field.timelineConfig)"></div>
+                    }
+                    <div class="timeline-marker" [ngClass]="getTimelineMarkerClass(item)">
+                      @if (field.timelineConfig.style?.markerStyle === 'icon' && item.icon) {
+                      <span class="timeline-marker-icon">{{ item.icon }}</span>
+                      } @else if (field.timelineConfig.style?.markerStyle === 'number') {
+                      <span class="timeline-marker-number">{{ $index + 1 }}</span>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- Content (simplified for grouped view) -->
+                  <div class="timeline-content">
+                    <div class="timeline-header">
+                      <h4 class="timeline-title">{{ item.title }}</h4>
+                      @if (item.badge) {
+                      <span class="timeline-badge" [ngClass]="getTimelineBadgeClass(item.badge)">
+                        {{ item.badge.label }}
+                      </span>
+                      }
+                    </div>
+
+                    @if (item.timestamp) {
+                    <div class="timeline-date">
+                      {{ formatTimelineDate(item.timestamp, field.timelineConfig.dateFormat) }}
+                    </div>
+                    }
+
+                    @if (item.description) {
+                    <p class="timeline-description">{{ item.description }}</p>
+                    }
+
+                    @if (item.link) {
+                    <a [href]="item.link.url" [target]="item.link.target || '_self'" class="timeline-link">
+                      {{ item.link.label || 'View details' }}
+                    </a>
+                    }
+                  </div>
+                </div>
+                }
+              </div>
+            </div>
+            }
+          </div>
+          }
+        }
+      </div>
+      }
+
       <!-- Error -->
       @if (touched()[field.name] && errors()[field.name]) {
       <div [id]="'error-' + field.name" class="error" role="alert" aria-live="assertive">
