@@ -1,4 +1,5 @@
 import { Component, computed, effect, inject, signal, input } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { NgSelectModule } from '@ng-select/ng-select';
@@ -10,7 +11,7 @@ import { I18nService } from './i18n.service';
 
 @Component({
   selector: 'dq-dynamic-form',
-  imports: [NgSelectModule, FormsModule],
+  imports: [CommonModule, NgSelectModule, FormsModule],
   templateUrl: './dq-dynamic-form.html',
   styleUrl: './dq-dynamic-form.scss',
   providers: [DynamicFormsService],
