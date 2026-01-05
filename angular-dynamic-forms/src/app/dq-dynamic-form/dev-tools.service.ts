@@ -100,7 +100,7 @@ export class DevToolsService {
     const validTypes = [
       'text', 'email', 'password', 'number', 'date', 'datetime', 'textarea',
       'select', 'multiselect', 'radio', 'checkbox', 'array', 'range',
-      'color', 'file', 'richtext', 'datatable'
+      'color', 'file', 'richtext', 'datatable', 'timeline'
     ];
 
     if (field.type && !validTypes.includes(field.type)) {
@@ -192,6 +192,57 @@ export class DevToolsService {
           if (field.tableConfig.pagination.rowsPerPage !== undefined && field.tableConfig.pagination.rowsPerPage <= 0) {
             warnings.push(`${fieldRef}: "pagination.rowsPerPage" should be a positive number`);
           }
+        }
+      }
+    }
+
+    // Validate timeline fields
+    if (field.type === 'timeline') {
+      if (!field.timelineConfig) {
+        errors.push(`${fieldRef}: Timeline field must have "timelineConfig" property`);
+      } else {
+        // Validate items
+        if (!field.timelineConfig.items || field.timelineConfig.items.length === 0) {
+          warnings.push(`${fieldRef}: Timeline should have at least one item defined in "timelineConfig.items"`);
+        } else {
+          // Validate each timeline item
+          field.timelineConfig.items.forEach((item: any, idx: number) => {
+            if (!item.title) {
+              warnings.push(`${fieldRef}: Timeline item ${idx} should have a "title" property`);
+            }
+            if (!item.timestamp) {
+              warnings.push(`${fieldRef}: Timeline item ${idx} should have a "timestamp" property`);
+            }
+            // Validate status if specified
+            const validStatuses = ['completed', 'in-progress', 'pending', 'cancelled'];
+            if (item.status && !validStatuses.includes(item.status)) {
+              warnings.push(`${fieldRef}: Timeline item ${idx} has unknown status "${item.status}"`);
+            }
+          });
+        }
+        // Validate style configuration if specified
+        if (field.timelineConfig.style) {
+          const style = field.timelineConfig.style;
+          // Validate layout
+          if (style.layout && !['vertical', 'horizontal'].includes(style.layout)) {
+            warnings.push(`${fieldRef}: Timeline style.layout must be "vertical" or "horizontal"`);
+          }
+          // Validate alignment
+          if (style.alignment && !['left', 'right', 'center', 'alternate'].includes(style.alignment)) {
+            warnings.push(`${fieldRef}: Timeline style.alignment must be "left", "right", "center", or "alternate"`);
+          }
+          // Validate markerStyle
+          if (style.markerStyle && !['dot', 'icon', 'number', 'letter'].includes(style.markerStyle)) {
+            warnings.push(`${fieldRef}: Timeline style.markerStyle must be "dot", "icon", "number", or "letter"`);
+          }
+          // Validate lineStyle
+          if (style.lineStyle && !['solid', 'dashed', 'dotted'].includes(style.lineStyle)) {
+            warnings.push(`${fieldRef}: Timeline style.lineStyle must be "solid", "dashed", or "dotted"`);
+          }
+        }
+        // Validate sortOrder if specified
+        if (field.timelineConfig.sortOrder && !['asc', 'desc'].includes(field.timelineConfig.sortOrder)) {
+          warnings.push(`${fieldRef}: Timeline sortOrder must be "asc" or "desc"`);
         }
       }
     }
@@ -443,6 +494,8 @@ export class DevToolsService {
         return 'any[]'; // Could be improved with nested types
       case 'datatable':
         return 'any[]'; // Array of row objects
+      case 'timeline':
+        return 'any[]'; // Array of timeline items
       default:
         return 'any';
     }
