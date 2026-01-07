@@ -158,10 +158,7 @@ export class DqDynamicForm {
             );
 
             if (!isValidOption) {
-              this.formValues.update((current) => ({
-                ...current,
-                [field.name]: '',
-              }));
+              this._formState.updateFormValue(field.name, '');
             }
           }
         }
@@ -192,7 +189,6 @@ export class DqDynamicForm {
     effect(() => {
       const values = this.formValues();
       const fields = this.fields();
-      const updatingFields = this.isUpdatingProgrammatically();
 
       fields.forEach((field) => {
         // Only process checkbox dependencies (single dependency only)
@@ -206,7 +202,7 @@ export class DqDynamicForm {
           const dependentValue = values[field.dependsOn] as boolean;
 
           // Skip if this field is being updated programmatically to prevent loops
-          if (updatingFields.has(field.name)) {
+          if (this._formState.isProgrammaticUpdate(field.name)) {
             return;
           }
 
@@ -251,10 +247,7 @@ export class DqDynamicForm {
 
           // Only update if value changed to avoid infinite loops
           if (newValue !== currentValue) {
-            this.formValues.update(current => ({
-              ...current,
-              [field.name]: newValue
-            }));
+            this._formState.updateFormValue(field.name, newValue);
           }
         }
       });
@@ -297,10 +290,7 @@ export class DqDynamicForm {
 
           // Only update if value changed to avoid infinite loops
           if (newValue !== currentValue) {
-            this.formValues.update(current => ({
-              ...current,
-              [field.name]: newValue
-            }));
+            this._formState.updateFormValue(field.name, newValue);
           }
         }
       });
@@ -386,40 +376,21 @@ export class DqDynamicForm {
         }
       }
 
-      // Set array counts
-      this.arrayItemCounts.set(initialArrayCounts);
-
       // Check for autosave configuration
       if (schema.autosave?.enabled) {
-        this.autosaveConfig = schema.autosave;
-        this.autosaveKey = schema.autosave.key || `formDraft_${schema.title.replace(/\s+/g, '_')}`;
-        this.autosaveEnabled.set(true);
+        const autosaveKey = schema.autosave.key || `formDraft_${schema.title.replace(/\s+/g, '_')}`;
 
-        // Try to restore draft from storage
-        const draft = this.loadDraft();
-        if (draft) {
-          // Merge draft values with initial values
-          Object.keys(draft.values).forEach(key => {
-            if (initialValues.hasOwnProperty(key)) {
-              initialValues[key] = draft.values[key];
-            }
-          });
-          this.lastSaved.set(new Date(draft.timestamp));
-          console.log('Draft restored from', this.autosaveConfig.storage || 'localStorage');
-        }
-
-        // Set up periodic autosave if interval is configured
-        if (schema.autosave.intervalSeconds) {
-          this.autosaveTimer = setInterval(() => {
-            if (!this.pristine() && !this.submitted()) {
-              this.saveDraft();
-            }
-          }, schema.autosave.intervalSeconds * 1000);
-        }
+        // Enable autosave via SubmissionService
+        this._submission.enableAutosave(
+          schema.autosave,
+          autosaveKey,
+          () => this.saveDraft()
+        );
       }
 
-      // Store submission configuration
+      // Store submission configuration (will be used by SubmissionService later)
       if (schema.submission) {
+        // Store in private property for submit() method to access
         this.submissionConfig = schema.submission;
       }
 
@@ -449,19 +420,16 @@ export class DqDynamicForm {
         }
       });
 
-      this.formValues.set(initialValues);
-      this.touched.set(initialTouched);
-      this.dirty.set(initialDirty);
-      // Store initial values for comparison
-      this.initialValues.set({ ...initialValues });
-      this.loading.set(false);
+      // Initialize form state via FormStateService
+      this._formState.initializeForm(initialValues, initialTouched, initialDirty, initialArrayCounts);
   }
 
+  private submissionConfig: FormSubmission | null = null;
+
   ngOnDestroy(): void {
-    // Clear autosave timer
-    if (this.autosaveTimer) {
-      clearInterval(this.autosaveTimer);
-    }
+    // Cleanup services
+    this._submission.destroy();
+    this._validation.clearAllTimers();
   }
 
   updateFormValue(fieldName: string, value: unknown): void {
@@ -597,35 +565,15 @@ export class DqDynamicForm {
     value: boolean
   ): void {
     // Mark this field as being updated programmatically
-    this.isUpdatingProgrammatically.update((current) => {
-      const updated = new Set(current);
-      updated.add(fieldName);
-      return updated;
-    });
+    this._formState.setProgrammaticUpdate(fieldName, true);
 
-    // Update the value
-    this.formValues.update((current) => ({
-      ...current,
-      [fieldName]: value,
-    }));
-
-    // Track dirty state
-    const initialValue = this.initialValues()[fieldName];
-    const isDirty = value !== initialValue;
-
-    this.dirty.update((current) => ({
-      ...current,
-      [fieldName]: isDirty,
-    }));
+    // Update the value using FormStateService
+    this._formState.updateFormValue(fieldName, value);
 
     // Clear the programmatic update flag after a brief delay
     // This allows the effect to complete before allowing user updates again
     setTimeout(() => {
-      this.isUpdatingProgrammatically.update((current) => {
-        const updated = new Set(current);
-        updated.delete(fieldName);
-        return updated;
-      });
+      this._formState.setProgrammaticUpdate(fieldName, false);
     }, 0);
   }
 
@@ -740,14 +688,14 @@ export class DqDynamicForm {
    * Get the number of items for an array field
    */
   getArrayItemCount(fieldName: string): number {
-    return this.arrayItemCounts()[fieldName] || 0;
+    return this._formState.getArrayItemCount(fieldName);
   }
 
   /**
    * Get array of indices for an array field
    */
   getArrayIndices(fieldName: string): number[] {
-    const count = this.getArrayItemCount(fieldName);
+    const count = this._formState.getArrayItemCount(fieldName);
     return Array.from({ length: count }, (_, i) => i);
   }
 
@@ -757,7 +705,7 @@ export class DqDynamicForm {
   addArrayItem(field: Field): void {
     if (!field.arrayConfig) return;
 
-    const currentCount = this.getArrayItemCount(field.name);
+    const currentCount = this._formState.getArrayItemCount(field.name);
     const maxItems = field.arrayConfig.maxItems;
 
     // Check if we can add more items
@@ -766,36 +714,16 @@ export class DqDynamicForm {
     }
 
     // Increment count
-    this.arrayItemCounts.update(counts => ({
-      ...counts,
-      [field.name]: currentCount + 1
-    }));
+    this._formState.incrementArrayCount(field.name);
 
     // Initialize values for new array item's fields
     const newIndex = currentCount;
     field.arrayConfig.fields.forEach(subField => {
       const arrayFieldName = `${field.name}[${newIndex}].${subField.name}`;
+      const initialValue = this.getInitialValueForField(subField);
 
-      this.formValues.update(current => ({
-        ...current,
-        [arrayFieldName]: this.getInitialValueForField(subField)
-      }));
-
-      this.touched.update(current => ({
-        ...current,
-        [arrayFieldName]: false
-      }));
-
-      this.dirty.update(current => ({
-        ...current,
-        [arrayFieldName]: false
-      }));
-
-      // Store initial value
-      this.initialValues.update(current => ({
-        ...current,
-        [arrayFieldName]: this.getInitialValueForField(subField)
-      }));
+      // Add field with initial value
+      this._formState.addField(arrayFieldName, initialValue);
     });
   }
 
@@ -805,7 +733,7 @@ export class DqDynamicForm {
   removeArrayItem(field: Field, index: number): void {
     if (!field.arrayConfig) return;
 
-    const currentCount = this.getArrayItemCount(field.name);
+    const currentCount = this._formState.getArrayItemCount(field.name);
     const minItems = field.arrayConfig.minItems || 0;
 
     // Check if we can remove items
@@ -816,30 +744,7 @@ export class DqDynamicForm {
     // Remove values for this array item
     field.arrayConfig.fields.forEach(subField => {
       const arrayFieldName = `${field.name}[${index}].${subField.name}`;
-
-      this.formValues.update(current => {
-        const updated = { ...current };
-        delete updated[arrayFieldName];
-        return updated;
-      });
-
-      this.touched.update(current => {
-        const updated = { ...current };
-        delete updated[arrayFieldName];
-        return updated;
-      });
-
-      this.dirty.update(current => {
-        const updated = { ...current };
-        delete updated[arrayFieldName];
-        return updated;
-      });
-
-      this.initialValues.update(current => {
-        const updated = { ...current };
-        delete updated[arrayFieldName];
-        return updated;
-      });
+      this._formState.removeField(arrayFieldName);
     });
 
     // Shift all subsequent items down
@@ -847,47 +752,12 @@ export class DqDynamicForm {
       field.arrayConfig.fields.forEach(subField => {
         const oldKey = `${field.name}[${i}].${subField.name}`;
         const newKey = `${field.name}[${i - 1}].${subField.name}`;
-
-        const values = this.formValues();
-        const touchedState = this.touched();
-        const dirtyState = this.dirty();
-        const initialVals = this.initialValues();
-
-        this.formValues.update(current => {
-          const updated = { ...current };
-          updated[newKey] = values[oldKey];
-          delete updated[oldKey];
-          return updated;
-        });
-
-        this.touched.update(current => {
-          const updated = { ...current };
-          updated[newKey] = touchedState[oldKey];
-          delete updated[oldKey];
-          return updated;
-        });
-
-        this.dirty.update(current => {
-          const updated = { ...current };
-          updated[newKey] = dirtyState[oldKey];
-          delete updated[oldKey];
-          return updated;
-        });
-
-        this.initialValues.update(current => {
-          const updated = { ...current };
-          updated[newKey] = initialVals[oldKey];
-          delete updated[oldKey];
-          return updated;
-        });
+        this._formState.renameField(oldKey, newKey);
       });
     }
 
     // Decrement count
-    this.arrayItemCounts.update(counts => ({
-      ...counts,
-      [field.name]: currentCount - 1
-    }));
+    this._formState.decrementArrayCount(field.name);
   }
 
   /**

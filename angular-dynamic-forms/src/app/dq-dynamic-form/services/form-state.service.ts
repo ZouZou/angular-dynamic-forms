@@ -70,6 +70,23 @@ export class FormStateService {
   }
 
   /**
+   * Initialize form with all states at once (used during schema loading)
+   */
+  initializeForm(
+    values: Record<string, unknown>,
+    touched: Record<string, boolean>,
+    dirty: Record<string, boolean>,
+    arrayItemCounts: Record<string, number>
+  ): void {
+    this.formValues.set(values);
+    this.touched.set(touched);
+    this.dirty.set(dirty);
+    this.initialValues.set({ ...values });
+    this.arrayItemCounts.set(arrayItemCounts);
+    this.loading.set(false);
+  }
+
+  /**
    * Reset form to initial state
    */
   reset(): void {
@@ -185,5 +202,114 @@ export class FormStateService {
    */
   getArrayItemCount(fieldName: string): number {
     return this.arrayItemCounts()[fieldName] || 0;
+  }
+
+  /**
+   * Increment array item count
+   */
+  incrementArrayCount(fieldName: string): void {
+    const currentCount = this.getArrayItemCount(fieldName);
+    this.setArrayItemCount(fieldName, currentCount + 1);
+  }
+
+  /**
+   * Decrement array item count
+   */
+  decrementArrayCount(fieldName: string): void {
+    const currentCount = this.getArrayItemCount(fieldName);
+    this.setArrayItemCount(fieldName, Math.max(0, currentCount - 1));
+  }
+
+  /**
+   * Remove a field and its initial value from state
+   */
+  removeField(fieldName: string): void {
+    // Remove from formValues
+    this.formValues.update(current => {
+      const { [fieldName]: _, ...rest } = current;
+      return rest;
+    });
+
+    // Remove from touched
+    this.touched.update(current => {
+      const { [fieldName]: _, ...rest } = current;
+      return rest;
+    });
+
+    // Remove from dirty
+    this.dirty.update(current => {
+      const { [fieldName]: _, ...rest } = current;
+      return rest;
+    });
+
+    // Remove from initialValues
+    this.initialValues.update(current => {
+      const { [fieldName]: _, ...rest } = current;
+      return rest;
+    });
+  }
+
+  /**
+   * Rename a field (used for array item reordering)
+   */
+  renameField(oldName: string, newName: string): void {
+    const currentValues = this.formValues();
+    const currentTouched = this.touched();
+    const currentDirty = this.dirty();
+    const currentInitial = this.initialValues();
+
+    // Update all states
+    this.formValues.update(current => {
+      const updated = { ...current };
+      updated[newName] = currentValues[oldName];
+      delete updated[oldName];
+      return updated;
+    });
+
+    this.touched.update(current => {
+      const updated = { ...current };
+      updated[newName] = currentTouched[oldName];
+      delete updated[oldName];
+      return updated;
+    });
+
+    this.dirty.update(current => {
+      const updated = { ...current };
+      updated[newName] = currentDirty[oldName];
+      delete updated[oldName];
+      return updated;
+    });
+
+    this.initialValues.update(current => {
+      const updated = { ...current };
+      updated[newName] = currentInitial[oldName];
+      delete updated[oldName];
+      return updated;
+    });
+  }
+
+  /**
+   * Add a new field with initial value
+   */
+  addField(fieldName: string, initialValue: unknown): void {
+    this.formValues.update(current => ({
+      ...current,
+      [fieldName]: initialValue
+    }));
+
+    this.touched.update(current => ({
+      ...current,
+      [fieldName]: false
+    }));
+
+    this.dirty.update(current => ({
+      ...current,
+      [fieldName]: false
+    }));
+
+    this.initialValues.update(current => ({
+      ...current,
+      [fieldName]: initialValue
+    }));
   }
 }
