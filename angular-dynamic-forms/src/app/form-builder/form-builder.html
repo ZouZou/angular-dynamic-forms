@@ -1669,6 +1669,333 @@
                   </div>
                 </div>
               }
+
+              <!-- Timeline Configuration -->
+              @if (field.type === 'timeline' && field.timelineConfig) {
+                <div class="timeline-config-section config-section">
+                  <h4>📅 Timeline Configuration</h4>
+
+                  <!-- Timeline Items -->
+                  <div class="config-subsection">
+                    <h5>Timeline Items</h5>
+                    @for (item of field.timelineConfig.items || []; track itemIdx; let itemIdx = $index) {
+                      <div class="timeline-item-editor">
+                        <div class="item-header">
+                          <span class="item-number">Item {{ itemIdx + 1 }}</span>
+                          <button
+                            type="button"
+                            class="btn-icon-danger"
+                            (click)="removeTimelineItem(selectedFieldIndex()!, itemIdx)"
+                            title="Remove item"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+
+                        <div class="form-group">
+                          <label>Title</label>
+                          <input
+                            type="text"
+                            [value]="item.title"
+                            (input)="updateTimelineItem(selectedFieldIndex()!, itemIdx, 'title', $any($event.target).value)"
+                            class="form-control"
+                            placeholder="Item title"
+                          >
+                        </div>
+
+                        <div class="form-group">
+                          <label>Description</label>
+                          <textarea
+                            [value]="item.description || ''"
+                            (input)="updateTimelineItem(selectedFieldIndex()!, itemIdx, 'description', $any($event.target).value)"
+                            class="form-control"
+                            rows="2"
+                            placeholder="Item description"
+                          ></textarea>
+                        </div>
+
+                        <div class="form-group">
+                          <label>Timestamp</label>
+                          <input
+                            type="datetime-local"
+                            [value]="item.timestamp"
+                            (input)="updateTimelineItem(selectedFieldIndex()!, itemIdx, 'timestamp', $any($event.target).value)"
+                            class="form-control"
+                          >
+                        </div>
+
+                        <div class="form-row">
+                          <div class="form-group">
+                            <label>Icon</label>
+                            <input
+                              type="text"
+                              [value]="item.icon || ''"
+                              (input)="updateTimelineItem(selectedFieldIndex()!, itemIdx, 'icon', $any($event.target).value)"
+                              class="form-control"
+                              placeholder="📌"
+                            >
+                          </div>
+
+                          <div class="form-group">
+                            <label>Status</label>
+                            <select
+                              [value]="item.status || 'pending'"
+                              (change)="updateTimelineItem(selectedFieldIndex()!, itemIdx, 'status', $any($event.target).value)"
+                              class="form-control"
+                            >
+                              <option value="completed">Completed</option>
+                              <option value="in-progress">In Progress</option>
+                              <option value="pending">Pending</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    }
+
+                    <button
+                      type="button"
+                      class="btn-add"
+                      (click)="addTimelineItem(selectedFieldIndex()!)"
+                    >
+                      + Add Timeline Item
+                    </button>
+                  </div>
+
+                  <!-- Style Configuration -->
+                  <div class="config-subsection">
+                    <h5>Style Options</h5>
+
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Layout</label>
+                        <select
+                          [value]="field.timelineConfig.style?.layout || 'vertical'"
+                          (change)="updateTimelineStyle('layout', $any($event.target).value)"
+                          class="form-control"
+                        >
+                          <option value="vertical">Vertical</option>
+                          <option value="horizontal">Horizontal</option>
+                        </select>
+                      </div>
+
+                      <div class="form-group">
+                        <label>Alignment</label>
+                        <select
+                          [value]="field.timelineConfig.style?.alignment || 'left'"
+                          (change)="updateTimelineStyle('alignment', $any($event.target).value)"
+                          class="form-control"
+                        >
+                          <option value="left">Left</option>
+                          <option value="center">Center</option>
+                          <option value="right">Right</option>
+                          <option value="alternating">Alternating</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Marker Style</label>
+                        <select
+                          [value]="field.timelineConfig.style?.markerStyle || 'dot'"
+                          (change)="updateTimelineStyle('markerStyle', $any($event.target).value)"
+                          class="form-control"
+                        >
+                          <option value="dot">Dot</option>
+                          <option value="icon">Icon</option>
+                          <option value="number">Number</option>
+                          <option value="none">None</option>
+                        </select>
+                      </div>
+
+                      <div class="form-group">
+                        <label>Line Style</label>
+                        <select
+                          [value]="field.timelineConfig.style?.lineStyle || 'solid'"
+                          (change)="updateTimelineStyle('lineStyle', $any($event.target).value)"
+                          class="form-control"
+                        >
+                          <option value="solid">Solid</option>
+                          <option value="dashed">Dashed</option>
+                          <option value="dotted">Dotted</option>
+                          <option value="none">None</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="field.timelineConfig.style?.cardStyle || false"
+                          (change)="updateTimelineStyle('cardStyle', $any($event.target).checked)"
+                        >
+                        Card Style
+                      </label>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="field.timelineConfig.style?.dense || false"
+                          (change)="updateTimelineStyle('dense', $any($event.target).checked)"
+                        >
+                        Dense Layout
+                      </label>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="field.timelineConfig.style?.animated || false"
+                          (change)="updateTimelineStyle('animated', $any($event.target).checked)"
+                        >
+                        Animated
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Interaction Configuration -->
+                  <div class="config-subsection">
+                    <h5>Interaction Options</h5>
+
+                    <div class="form-group checkbox-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="field.timelineConfig.interaction?.clickable || false"
+                          (change)="updateTimelineInteraction('clickable', $any($event.target).checked)"
+                        >
+                        Clickable
+                      </label>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="field.timelineConfig.interaction?.expandable || false"
+                          (change)="updateTimelineInteraction('expandable', $any($event.target).checked)"
+                        >
+                        Expandable
+                      </label>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="field.timelineConfig.interaction?.hoverable || false"
+                          (change)="updateTimelineInteraction('hoverable', $any($event.target).checked)"
+                        >
+                        Hoverable
+                      </label>
+                    </div>
+
+                    @if (field.timelineConfig.interaction?.clickable) {
+                      <div class="form-group">
+                        <label>On Item Click (function name)</label>
+                        <input
+                          type="text"
+                          [value]="field.timelineConfig.interaction?.onItemClick || ''"
+                          (input)="updateTimelineInteraction('onItemClick', $any($event.target).value)"
+                          class="form-control"
+                          placeholder="handleItemClick"
+                        >
+                      </div>
+                    }
+
+                    @if (field.timelineConfig.interaction?.expandable) {
+                      <div class="form-group">
+                        <label>On Item Expand (function name)</label>
+                        <input
+                          type="text"
+                          [value]="field.timelineConfig.interaction?.onItemExpand || ''"
+                          (input)="updateTimelineInteraction('onItemExpand', $any($event.target).value)"
+                          class="form-control"
+                          placeholder="handleItemExpand"
+                        >
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Other Options -->
+                  <div class="config-subsection">
+                    <h5>Other Options</h5>
+
+                    <div class="form-group">
+                      <label>Date Format</label>
+                      <input
+                        type="text"
+                        [value]="field.timelineConfig.dateFormat || 'MMM d, yyyy'"
+                        (input)="updateTimelineConfig('dateFormat', $any($event.target).value)"
+                        class="form-control"
+                        placeholder="MMM d, yyyy"
+                      >
+                    </div>
+
+                    <div class="form-group">
+                      <label>Empty Message</label>
+                      <input
+                        type="text"
+                        [value]="field.timelineConfig.emptyMessage || 'No timeline items'"
+                        (input)="updateTimelineConfig('emptyMessage', $any($event.target).value)"
+                        class="form-control"
+                        placeholder="No timeline items"
+                      >
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                      <label>
+                        <input
+                          type="checkbox"
+                          [checked]="field.timelineConfig.showConnector !== false"
+                          (change)="updateTimelineConfig('showConnector', $any($event.target).checked)"
+                        >
+                        Show Connector Line
+                      </label>
+                    </div>
+
+                    <div class="form-group">
+                      <label>Max Items</label>
+                      <input
+                        type="number"
+                        [value]="field.timelineConfig.maxItems || ''"
+                        (input)="updateTimelineConfig('maxItems', $any($event.target).value ? Number($any($event.target).value) : undefined)"
+                        class="form-control"
+                        placeholder="No limit"
+                      >
+                    </div>
+
+                    <div class="form-group">
+                      <label>Sort Order</label>
+                      <select
+                        [value]="field.timelineConfig.sortOrder || 'desc'"
+                        (change)="updateTimelineConfig('sortOrder', $any($event.target).value)"
+                        class="form-control"
+                      >
+                        <option value="asc">Ascending (oldest first)</option>
+                        <option value="desc">Descending (newest first)</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group">
+                      <label>Data Endpoint</label>
+                      <input
+                        type="text"
+                        [value]="field.timelineConfig.dataEndpoint || ''"
+                        (input)="updateTimelineConfig('dataEndpoint', $any($event.target).value)"
+                        class="form-control"
+                        placeholder="/api/timeline"
+                      >
+                      <small class="form-text">API endpoint to fetch timeline items dynamically</small>
+                    </div>
+                  </div>
+                </div>
+              }
             </div>
           </section>
         }
