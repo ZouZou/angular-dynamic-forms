@@ -1165,7 +1165,7 @@ export class DqDynamicForm {
     return !hasValidating;
   });
 
-  saveUserData(): void {
+  async saveUserData(): Promise<void> {
     // Check if form is valid
     if (!this.isValid()) {
       // Focus on first field with error for better accessibility
@@ -1173,135 +1173,29 @@ export class DqDynamicForm {
       return;
     }
 
-    // Reset submission state
-    this.submitError.set(null);
-    this.submitSuccess.set(false);
-
-    // Determine endpoint: prioritize input endpoint over schema endpoint
-    const endpoint = this.submissionEndpoint() || this.submissionConfig?.endpoint;
-
-    // If no endpoint configured, just show data locally
-    if (!endpoint) {
-      this.submittedData.set(this.formValues());
-      this.submitted.set(true);
-      this.submitSuccess.set(true);
-      console.log('FORM VALUES (Signals):', this.formValues());
-
-      // Clear draft on successful submission
-      if (this.autosaveEnabled()) {
-        this.clearDraft();
-      }
-      return;
+    // Submit using SubmissionService
+    if (!this.submissionConfig) {
+      // No submission config - create default
+      this.submissionConfig = { endpoint: undefined };
     }
 
-    // Submit to API with retry logic
-    this.submitToApi(0);
-  }
-
-  /**
-   * Submit form data to API with retry logic
-   */
-  private submitToApi(attemptNumber: number): void {
-    // Determine endpoint: prioritize input endpoint over schema endpoint
-    const endpoint = this.submissionEndpoint() || this.submissionConfig?.endpoint;
-    if (!endpoint) return;
-
-    this.submitting.set(true);
-    this.submitRetryCount.set(attemptNumber);
-
-    const method = this.submissionConfig?.method || 'POST';
-    const headers = this.submissionConfig?.headers || {};
-    const formData = this.formValues();
-
-    // Make HTTP request
-    const request$ = method === 'POST'
-      ? this._http.post(endpoint, formData, { headers })
-      : method === 'PUT'
-        ? this._http.put(endpoint, formData, { headers })
-        : this._http.patch(endpoint, formData, { headers });
-
-    request$.subscribe({
-      next: (response) => {
-        this.handleSubmitSuccess(response);
-      },
-      error: (error: HttpErrorResponse) => {
-        this.handleSubmitError(error, attemptNumber);
-      }
-    });
-  }
-
-  /**
-   * Handle successful form submission
-   */
-  private handleSubmitSuccess(response: any): void {
-    this.submitting.set(false);
-    this.submitSuccess.set(true);
-    this.submitted.set(true);
-    this.submittedData.set(response);
+    await this._submission.submit(
+      this.formValues(),
+      this.submissionConfig,
+      this.submissionEndpoint()
+    );
 
     // Clear draft on successful submission
-    if (this.autosaveEnabled()) {
-      this.clearDraft();
-    }
-
-    console.log('Form submitted successfully:', response);
-
-    // Handle redirect if configured
-    if (this.submissionConfig?.redirectOnSuccess) {
-      setTimeout(() => {
-        window.location.href = this.submissionConfig!.redirectOnSuccess!;
-      }, 2000); // 2 second delay to show success message
-    }
-  }
-
-  /**
-   * Handle form submission error with retry logic
-   */
-  private handleSubmitError(error: HttpErrorResponse, attemptNumber: number): void {
-    console.error('Form submission error:', error);
-
-    // Check if we should retry
-    if (attemptNumber < this.MAX_RETRY_ATTEMPTS && (error.status === 0 || error.status >= 500)) {
-      // Network error or server error - retry after delay
-      const retryDelay = Math.pow(2, attemptNumber) * 1000; // Exponential backoff: 1s, 2s, 4s
-      console.log(`Retrying submission in ${retryDelay}ms (attempt ${attemptNumber + 1}/${this.MAX_RETRY_ATTEMPTS})`);
-
-      setTimeout(() => {
-        this.submitToApi(attemptNumber + 1);
-      }, retryDelay);
-    } else {
-      // Max retries reached or client error - show error
-      this.submitting.set(false);
-
-      // Extract error message
-      let errorMessage = this.submissionConfig?.errorMessage || 'Form submission failed. Please try again.';
-
-      if (error.error?.message) {
-        errorMessage = error.error.message;
-      } else if (error.error?.error) {
-        errorMessage = error.error.error;
-      } else if (error.message) {
-        errorMessage = `Error: ${error.message}`;
-      }
-
-      // Handle field-level errors from API
-      if (error.error?.errors && typeof error.error.errors === 'object') {
-        // Merge field-level errors into asyncErrors for display
-        this.asyncErrors.update(current => ({
-          ...current,
-          ...error.error.errors
-        }));
-      }
-
-      this.submitError.set(errorMessage);
+    if (this.submitSuccess() && this.autosaveEnabled()) {
+      this._submission.clearAutosavedData();
     }
   }
 
   /**
    * Retry form submission (called from template)
    */
-  retrySubmit(): void {
-    this.submitToApi(0);
+  async retrySubmit(): Promise<void> {
+    await this.saveUserData();
   }
 
   /**
@@ -1328,57 +1222,23 @@ export class DqDynamicForm {
    * Save current form state to storage
    */
   private saveDraft(): void {
-    if (!this.autosaveKey) return;
-
-    const draft = {
-      values: this.formValues(),
-      timestamp: new Date().toISOString(),
-      expiresAt: this.autosaveConfig?.expirationDays
-        ? new Date(Date.now() + this.autosaveConfig.expirationDays * 24 * 60 * 60 * 1000).toISOString()
-        : null
-    };
-
-    const storage = this.autosaveConfig?.storage === 'sessionStorage' ? sessionStorage : localStorage;
-    storage.setItem(this.autosaveKey, JSON.stringify(draft));
-    this.lastSaved.set(new Date());
+    this._submission.saveToStorage(this.formValues());
   }
 
   /**
-   * Load draft from storage
+   * Load draft from storage (returns null - handled by SubmissionService)
    */
   private loadDraft(): { values: Record<string, unknown>; timestamp: string } | null {
-    if (!this.autosaveKey) return null;
-
-    const storage = this.autosaveConfig?.storage === 'sessionStorage' ? sessionStorage : localStorage;
-    const draftStr = storage.getItem(this.autosaveKey);
-
-    if (!draftStr) return null;
-
-    try {
-      const draft = JSON.parse(draftStr);
-
-      // Check if draft has expired
-      if (draft.expiresAt && new Date(draft.expiresAt) < new Date()) {
-        this.clearDraft();
-        return null;
-      }
-
-      return draft;
-    } catch (e) {
-      console.error('Failed to parse draft:', e);
-      return null;
-    }
+    // This method is kept for compatibility but the actual restoration
+    // happens in SubmissionService.restoreAutosavedData() during enableAutosave()
+    return null;
   }
 
   /**
    * Clear draft from storage
    */
   private clearDraft(): void {
-    if (!this.autosaveKey) return;
-
-    const storage = this.autosaveConfig?.storage === 'sessionStorage' ? sessionStorage : localStorage;
-    storage.removeItem(this.autosaveKey);
-    this.lastSaved.set(null);
+    this._submission.clearAutosavedData();
   }
 
   /**
@@ -1711,7 +1571,10 @@ export class DqDynamicForm {
         }
       });
 
-      this.touched.update(current => ({ ...current, ...touchedUpdate }));
+      // Mark fields as touched using service
+      Object.keys(touchedUpdate).forEach(fieldName => {
+        this._formState.markTouched(fieldName);
+      });
 
       // Focus first error field
       this.focusFirstError();
@@ -2071,10 +1934,7 @@ export class DqDynamicForm {
 
     // Update form value with selected row IDs
     const selectedIds = Array.from(this.tableSelection()[fieldName] || []);
-    this.formValues.update(values => ({
-      ...values,
-      [fieldName]: selectedIds
-    }));
+    this._formState.updateFormValue(fieldName, selectedIds);
   }
 
   /**
@@ -2110,10 +1970,7 @@ export class DqDynamicForm {
 
     // Update form value
     const selectedIds = Array.from(this.tableSelection()[fieldName] || []);
-    this.formValues.update(values => ({
-      ...values,
-      [fieldName]: selectedIds
-    }));
+    this._formState.updateFormValue(fieldName, selectedIds);
   }
 
   /**
