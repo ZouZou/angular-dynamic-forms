@@ -2359,6 +2359,438 @@ export class FormBuilder {
     this.validateSchema();
   }
 
+  /**
+   * Update Timeline configuration (top-level properties)
+   */
+  protected updateTimelineConfig(property: string, value: any): void {
+    const index = this.selectedFieldIndex();
+    if (index === null) return;
+
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[index];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[index];
+    }
+
+    if (!field.timelineConfig) return;
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        timelineConfig: {
+          ...field.timelineConfig,
+          [property]: value
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        timelineConfig: {
+          ...field.timelineConfig,
+          [property]: value
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Update Timeline style configuration
+   */
+  protected updateTimelineStyle(property: string, value: any): void {
+    const index = this.selectedFieldIndex();
+    if (index === null) return;
+
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[index];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[index];
+    }
+
+    if (!field.timelineConfig) return;
+
+    const style = field.timelineConfig.style || {};
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        timelineConfig: {
+          ...field.timelineConfig,
+          style: {
+            ...style,
+            [property]: value
+          }
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        timelineConfig: {
+          ...field.timelineConfig,
+          style: {
+            ...style,
+            [property]: value
+          }
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Update Timeline interaction configuration
+   */
+  protected updateTimelineInteraction(property: string, value: any): void {
+    const index = this.selectedFieldIndex();
+    if (index === null) return;
+
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[index];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[index];
+    }
+
+    if (!field.timelineConfig) return;
+
+    const interaction = field.timelineConfig.interaction || {};
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        timelineConfig: {
+          ...field.timelineConfig,
+          interaction: {
+            ...interaction,
+            [property]: value
+          }
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[index] = {
+        ...field,
+        timelineConfig: {
+          ...field.timelineConfig,
+          interaction: {
+            ...interaction,
+            [property]: value
+          }
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Add a new timeline item
+   */
+  protected addTimelineItem(fieldIndex: number): void {
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
+
+    if (!field.timelineConfig) return;
+
+    const newItem = {
+      id: Date.now(),
+      title: 'New Item',
+      description: 'Item description',
+      timestamp: new Date().toISOString(),
+      icon: '📌',
+      status: 'pending' as const
+    };
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        timelineConfig: {
+          ...field.timelineConfig,
+          items: [...(field.timelineConfig.items || []), newItem]
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        timelineConfig: {
+          ...field.timelineConfig,
+          items: [...(field.timelineConfig.items || []), newItem]
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Remove a timeline item
+   */
+  protected removeTimelineItem(fieldIndex: number, itemIndex: number): void {
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
+
+    if (!field.timelineConfig || !field.timelineConfig.items) return;
+
+    const items = field.timelineConfig.items.filter((_: any, i: number) => i !== itemIndex);
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        timelineConfig: {
+          ...field.timelineConfig,
+          items
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        timelineConfig: {
+          ...field.timelineConfig,
+          items
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
+  /**
+   * Update a timeline item property
+   */
+  protected updateTimelineItem(fieldIndex: number, itemIndex: number, property: string, value: any): void {
+    const currentSchema = this.schema();
+    const multiStep = this.multiStepMode();
+
+    let field: Field;
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+      const sections = currentSchema.sections || [];
+      field = sections[sectionIndex].fields[fieldIndex];
+    } else {
+      const currentFields = currentSchema.fields || [];
+      field = currentFields[fieldIndex];
+    }
+
+    if (!field.timelineConfig?.items) return;
+
+    const items = [...field.timelineConfig.items];
+    items[itemIndex] = {
+      ...items[itemIndex],
+      [property]: value
+    };
+
+    if (multiStep) {
+      const sectionIndex = this.selectedSectionIndex();
+      if (sectionIndex === null) return;
+
+      const sections = [...(currentSchema.sections || [])];
+      const currentFields = sections[sectionIndex].fields;
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        timelineConfig: {
+          ...field.timelineConfig,
+          items
+        }
+      };
+
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        fields: updatedFields
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        sections
+      });
+    } else {
+      const currentFields = currentSchema.fields || [];
+      const updatedFields = [...currentFields];
+      updatedFields[fieldIndex] = {
+        ...field,
+        timelineConfig: {
+          ...field.timelineConfig,
+          items
+        }
+      };
+
+      this.schema.set({
+        ...currentSchema,
+        fields: updatedFields
+      });
+    }
+
+    this.updateJsonFromSchema();
+    this.validateSchema();
+  }
+
   // Clear form
   protected clearForm(): void {
     if (confirm('Are you sure you want to clear the entire form?')) {
