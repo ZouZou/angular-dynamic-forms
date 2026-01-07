@@ -8,13 +8,16 @@ import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, Com
 import { DynamicFormsService } from './dq-dynamic-form.service';
 import { MaskService } from './mask.service';
 import { I18nService } from './i18n.service';
+import { FormStateService } from './services/form-state.service';
+import { ValidationService } from './services/validation.service';
+import { SubmissionService } from './services/submission.service';
 
 @Component({
   selector: 'dq-dynamic-form',
   imports: [CommonModule, NgSelectModule, FormsModule],
   templateUrl: './dq-dynamic-form.html',
   styleUrl: './dq-dynamic-form.scss',
-  providers: [DynamicFormsService],
+  providers: [DynamicFormsService, FormStateService, ValidationService, SubmissionService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [
     trigger('fieldAnimation', [
@@ -35,60 +38,44 @@ export class DqDynamicForm {
   // Optional input for dynamically setting the submission endpoint
   submissionEndpoint = input<string | null>(null);
 
+  // Inject services
   private readonly _formService = inject(DynamicFormsService);
   private readonly _maskService = inject(MaskService);
   private readonly _http = inject(HttpClient);
   protected readonly _i18nService = inject(I18nService);
+  private readonly _formState = inject(FormStateService);
+  private readonly _validation = inject(ValidationService);
+  private readonly _submission = inject(SubmissionService);
+
+  // Component-specific state (not in services)
   protected readonly fields = signal<Field[]>([]);
   protected readonly title = signal<string>('');
-  protected readonly formValues = signal<Record<string, unknown>>({});
-  protected readonly touched = signal<Record<string, boolean>>({});
-  protected readonly submitted = signal(false);
-  protected readonly submittedData = signal<Record<string, unknown> | null>(
-    null
-  );
-  protected readonly loading = signal(true);
-  // Store dynamically fetched options per field
-  protected readonly dynamicOptions = signal<Record<string, FieldOption[]>>({});
-  // Track loading state per field (for API-driven dropdowns)
-  protected readonly fieldLoading = signal<Record<string, boolean>>({});
-  // Track errors per field (for API failures)
-  protected readonly fieldErrors = signal<Record<string, string>>({});
-  // Track dirty state per field (has value changed from initial?)
-  protected readonly dirty = signal<Record<string, boolean>>({});
-  // Store initial values for dirty tracking
-  private readonly initialValues = signal<Record<string, unknown>>({});
-  // Track programmatic updates to prevent infinite loops in checkbox dependencies
-  private readonly isUpdatingProgrammatically = signal<Set<string>>(new Set());
-  // Store file data for file uploads
-  protected readonly fileData = signal<Record<string, any>>({});
 
-  // Autosave state
-  protected readonly lastSaved = signal<Date | null>(null);
-  protected readonly autosaveEnabled = signal(false);
-  private autosaveTimer: any = null;
-  private autosaveKey = '';
-  private autosaveConfig: any = null;
+  // Expose service signals for template access
+  protected readonly formValues = this._formState.formValues;
+  protected readonly touched = this._formState.touched;
+  protected readonly loading = this._formState.loading;
+  protected readonly dynamicOptions = this._formState.dynamicOptions;
+  protected readonly fieldLoading = this._formState.fieldLoading;
+  protected readonly fieldErrors = this._formState.fieldErrors;
+  protected readonly dirty = this._formState.dirty;
+  protected readonly fileData = this._formState.fileData;
+  protected readonly arrayItemCounts = this._formState.arrayItemCounts;
+  protected readonly pristine = this._formState.pristine;
 
-  // Dynamic field arrays (repeaters) state
-  // Stores the count of items for each array field
-  protected readonly arrayItemCounts = signal<Record<string, number>>({});
+  // Expose validation service signals
+  protected readonly asyncValidationState = this._validation.asyncValidationState;
+  protected readonly asyncErrors = this._validation.asyncErrors;
 
-  // Async validation state
-  // Stores validation state per field: 'idle' | 'validating' | 'valid' | 'invalid'
-  protected readonly asyncValidationState = signal<Record<string, 'idle' | 'validating' | 'valid' | 'invalid'>>({});
-  // Stores async validation error messages
-  protected readonly asyncErrors = signal<Record<string, string>>({});
-  // Debounce timers for async validation
-  private asyncValidationTimers: Record<string, any> = {};
-
-  // Form submission state
-  protected readonly submitting = signal(false);
-  protected readonly submitSuccess = signal(false);
-  protected readonly submitError = signal<string | null>(null);
-  protected readonly submitRetryCount = signal(0);
-  private submissionConfig: FormSubmission | null = null;
-  private readonly MAX_RETRY_ATTEMPTS = 3;
+  // Expose submission service signals
+  protected readonly submitted = this._submission.submitted;
+  protected readonly submittedData = this._submission.submittedData;
+  protected readonly submitting = this._submission.submitting;
+  protected readonly submitSuccess = this._submission.submitSuccess;
+  protected readonly submitError = this._submission.submitError;
+  protected readonly submitRetryCount = this._submission.submitRetryCount;
+  protected readonly autosaveEnabled = this._submission.autosaveEnabled;
+  protected readonly lastSaved = this._submission.lastSaved;
 
   // Multi-step form state
   protected readonly sections = signal<FormSection[]>([]);
@@ -127,11 +114,6 @@ export class DqDynamicForm {
 
   // Expose Number for template (needed for numeric input conversions)
   protected readonly Number = Number;
-
-  // Computed: Check if entire form is pristine (no changes)
-  protected readonly pristine = computed<boolean>(() =>
-    !Object.values(this.dirty()).some(isDirty => isDirty)
-  );
 
   // Computed: Last saved time formatted
   protected readonly lastSavedText = computed<string>(() => {
@@ -483,33 +465,15 @@ export class DqDynamicForm {
   }
 
   updateFormValue(fieldName: string, value: unknown): void {
-    this.formValues.update((current) => ({
-      ...current,
-      [fieldName]: value,
-    }));
-
-    this.touched.update((current) => ({
-      ...current,
-      [fieldName]: true,
-    }));
-
-    // Track dirty state by comparing with initial value
-    const initialValue = this.initialValues()[fieldName];
-    const isDirty = value !== initialValue;
-
-    this.dirty.update((current) => ({
-      ...current,
-      [fieldName]: isDirty,
-    }));
+    // Use FormStateService to update form value
+    this._formState.updateFormValue(fieldName, value);
+    this._formState.markTouched(fieldName);
 
     // Trigger async validation if configured
     const field = this.fields().find(f => f.name === fieldName ||
       fieldName.startsWith(f.name + '['));
     if (field?.validations?.asyncValidator && value) {
-      this.triggerAsyncValidation(fieldName, value, field.validations.asyncValidator);
-    } else {
-      // Clear async validation if no value
-      this.clearAsyncValidation(fieldName);
+      this._validation.validateAsync(field, value);
     }
   }
 
@@ -534,32 +498,14 @@ export class DqDynamicForm {
     // Apply mask to display value
     const maskedValue = this._maskService.applyMask(truncatedValue, field.mask);
 
-    // Store masked value for display
-    this.formValues.update((current) => ({
-      ...current,
-      [fieldName]: maskedValue,
-    }));
-
-    this.touched.update((current) => ({
-      ...current,
-      [fieldName]: true,
-    }));
-
-    // Track dirty state
-    const initialValue = this.initialValues()[fieldName];
-    const isDirty = maskedValue !== initialValue;
-
-    this.dirty.update((current) => ({
-      ...current,
-      [fieldName]: isDirty,
-    }));
+    // Use FormStateService to update form value
+    this._formState.updateFormValue(fieldName, maskedValue);
+    this._formState.markTouched(fieldName);
 
     // For validation, use raw (unmasked) value
     const rawForValidation = this._maskService.getRawValue(maskedValue, field.mask);
     if (field.validations?.asyncValidator && rawForValidation) {
-      this.triggerAsyncValidation(fieldName, rawForValidation, field.validations.asyncValidator);
-    } else {
-      this.clearAsyncValidation(fieldName);
+      this._validation.validateAsync(field, rawForValidation);
     }
   }
 
@@ -640,109 +586,7 @@ export class DqDynamicForm {
   /**
    * Trigger async validation for a field
    */
-  private triggerAsyncValidation(fieldName: string, value: unknown, validator: AsyncValidator): void {
-    // Clear existing timer
-    if (this.asyncValidationTimers[fieldName]) {
-      clearTimeout(this.asyncValidationTimers[fieldName]);
-    }
-
-    // Set validating state
-    this.asyncValidationState.update(state => ({
-      ...state,
-      [fieldName]: 'validating'
-    }));
-
-    // Debounce the validation
-    const debounceMs = validator.debounceMs || 300;
-    this.asyncValidationTimers[fieldName] = setTimeout(() => {
-      this.performAsyncValidation(fieldName, value, validator);
-    }, debounceMs);
-  }
-
-  /**
-   * Perform async validation via API
-   */
-  private performAsyncValidation(fieldName: string, value: unknown, validator: AsyncValidator): void {
-    const method = validator.method || 'POST';
-    const validWhen = validator.validWhen || 'custom';
-
-    // Make API call
-    this._formService.validateFieldAsync(validator.endpoint, { value, fieldName }, method)
-      .subscribe({
-        next: (response: any) => {
-          let isValid = false;
-          let errorMessage = validator.errorMessage || 'Invalid value';
-
-          if (validWhen === 'exists') {
-            isValid = !!response.exists;
-          } else if (validWhen === 'notExists') {
-            isValid = !response.exists;
-          } else {
-            // 'custom' - expect { valid: boolean, message?: string }
-            isValid = response.valid === true;
-            if (response.message) {
-              errorMessage = response.message;
-            }
-          }
-
-          if (isValid) {
-            this.asyncValidationState.update(state => ({
-              ...state,
-              [fieldName]: 'valid'
-            }));
-            this.asyncErrors.update(errors => {
-              const updated = { ...errors };
-              delete updated[fieldName];
-              return updated;
-            });
-          } else {
-            this.asyncValidationState.update(state => ({
-              ...state,
-              [fieldName]: 'invalid'
-            }));
-            this.asyncErrors.update(errors => ({
-              ...errors,
-              [fieldName]: errorMessage
-            }));
-          }
-        },
-        error: (error) => {
-          console.error(`Async validation error for ${fieldName}:`, error);
-          this.asyncValidationState.update(state => ({
-            ...state,
-            [fieldName]: 'invalid'
-          }));
-          this.asyncErrors.update(errors => ({
-            ...errors,
-            [fieldName]: 'Validation failed. Please try again.'
-          }));
-        }
-      });
-  }
-
-  /**
-   * Clear async validation state for a field
-   */
-  private clearAsyncValidation(fieldName: string): void {
-    // Clear timer
-    if (this.asyncValidationTimers[fieldName]) {
-      clearTimeout(this.asyncValidationTimers[fieldName]);
-      delete this.asyncValidationTimers[fieldName];
-    }
-
-    // Reset state
-    this.asyncValidationState.update(state => {
-      const updated = { ...state };
-      delete updated[fieldName];
-      return updated;
-    });
-
-    this.asyncErrors.update(errors => {
-      const updated = { ...errors };
-      delete updated[fieldName];
-      return updated;
-    });
-  }
+  // Async validation methods moved to ValidationService
 
   /**
    * Update checkbox value programmatically (used for dependencies)
