@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal, input } from '@angular/core';
+import { Component, computed, effect, inject, signal, input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { trigger, transition, style, animate } from '@angular/animations';
@@ -15,6 +15,7 @@ import { I18nService } from './i18n.service';
   templateUrl: './dq-dynamic-form.html',
   styleUrl: './dq-dynamic-form.scss',
   providers: [DynamicFormsService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [
     trigger('fieldAnimation', [
       transition(':enter', [

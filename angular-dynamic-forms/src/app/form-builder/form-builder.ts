@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, signal, computed, inject, ChangeDetectionStrategy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -15,10 +15,10 @@ interface FieldTemplate {
 
 @Component({
   selector: 'app-form-builder',
-  standalone: true,
   imports: [CommonModule, FormsModule, DragDropModule, DqDynamicForm],
   templateUrl: './form-builder.html',
-  styleUrl: './form-builder.scss'
+  styleUrl: './form-builder.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FormBuilder {
   private readonly devTools = inject(DevToolsService);
@@ -442,7 +442,8 @@ export class FormBuilder {
     return JSON.stringify(schema, null, 2);
   });
 
-  constructor() {
+  // Initialization effect
+  private readonly initializationEffect = effect(() => {
     // Initialize JSON content
     this.updateJsonFromSchema();
     // Initial validation
@@ -453,7 +454,7 @@ export class FormBuilder {
       this.multiStepMode.set(true);
       this.selectedSectionIndex.set(0);
     }
-  }
+  });
 
   // Add field from palette
   protected addField(template: FieldTemplate): void {
