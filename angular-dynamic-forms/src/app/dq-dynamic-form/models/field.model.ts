@@ -179,6 +179,7 @@ export interface FormSubmission {
   errorMessage?: string;                   // Error message to display
   redirectOnSuccess?: string;              // URL to redirect after success
   showDataOnSuccess?: boolean;             // Show submitted data (default: true)
+  showSubmitButton?: boolean;              // Show submit button (default: true)
 }
 
 // Autosave configuration

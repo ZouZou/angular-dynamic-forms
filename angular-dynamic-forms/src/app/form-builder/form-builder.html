@@ -133,6 +133,17 @@
               </div>
 
               <div class="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="schema().submission?.showSubmitButton !== false"
+                    (change)="updateSubmissionProperty('showSubmitButton', $any($event.target).checked)"
+                  >
+                  Show submit button
+                </label>
+              </div>
+
+              <div class="form-group">
                 <label>Custom Headers (JSON)</label>
                 <textarea
                   [value]="schema().submission?.headers ? JSON.stringify(schema().submission?.headers, null, 2) : ''"
