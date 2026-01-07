@@ -996,9 +996,6 @@
 
               <!-- Marker/Connector -->
               <div class="timeline-marker-wrapper">
-                @if (!isLast && shouldShowTimelineConnector(field.timelineConfig)) {
-                <div class="timeline-connector" [ngClass]="getTimelineConnectorClass(field.timelineConfig)"></div>
-                }
                 <div class="timeline-marker" [ngClass]="getTimelineMarkerClass(item)">
                   @if (field.timelineConfig.style?.markerStyle === 'icon' && item.icon) {
                   <span class="timeline-marker-icon">{{ item.icon }}</span>
@@ -1152,9 +1149,6 @@
 
                   <!-- Marker/Connector -->
                   <div class="timeline-marker-wrapper">
-                    @if (!isLast && shouldShowTimelineConnector(field.timelineConfig)) {
-                    <div class="timeline-connector" [ngClass]="getTimelineConnectorClass(field.timelineConfig)"></div>
-                    }
                     <div class="timeline-marker" [ngClass]="getTimelineMarkerClass(item)">
                       @if (field.timelineConfig.style?.markerStyle === 'icon' && item.icon) {
                       <span class="timeline-marker-icon">{{ item.icon }}</span>
