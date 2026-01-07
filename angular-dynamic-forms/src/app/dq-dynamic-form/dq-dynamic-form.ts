@@ -2086,6 +2086,14 @@ export class DqDynamicForm {
   }
 
   /**
+   * Check if submit button should be shown
+   */
+  shouldShowSubmitButton(): boolean {
+    // Default to true if not explicitly set to false
+    return this.submissionConfig?.showSubmitButton !== false;
+  }
+
+  /**
    * Get progress percentage
    */
   getProgressPercentage(): number {

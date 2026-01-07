@@ -1320,7 +1320,7 @@
         }
 
         <!-- Submit Button (shown only on last step) -->
-        @if (isLastStep()) {
+        @if (isLastStep() && shouldShowSubmitButton()) {
         <button
           class="submit-btn"
           type="submit"
@@ -1341,6 +1341,7 @@
       </div>
     } @else {
       <!-- Single-step Submit Button -->
+      @if (shouldShowSubmitButton()) {
       <button
         class="submit-btn"
         type="submit"
@@ -1357,6 +1358,7 @@
         Submit
         }
       </button>
+      }
     }
   </form>
 </div>
