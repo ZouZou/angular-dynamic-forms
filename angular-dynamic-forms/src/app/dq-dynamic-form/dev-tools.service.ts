@@ -228,8 +228,8 @@ export class DevToolsService {
             warnings.push(`${fieldRef}: Timeline style.layout must be "vertical" or "horizontal"`);
           }
           // Validate alignment
-          if (style.alignment && !['left', 'right', 'center', 'alternate'].includes(style.alignment)) {
-            warnings.push(`${fieldRef}: Timeline style.alignment must be "left", "right", "center", or "alternate"`);
+          if (style.alignment && !['left', 'right', 'center', 'alternating'].includes(style.alignment)) {
+            warnings.push(`${fieldRef}: Timeline style.alignment must be "left", "right", "center", or "alternating"`);
           }
           // Validate markerStyle
           if (style.markerStyle && !['dot', 'icon', 'number', 'letter'].includes(style.markerStyle)) {
