@@ -1684,11 +1684,11 @@
                           <span class="item-number">Item {{ itemIdx + 1 }}</span>
                           <button
                             type="button"
-                            class="btn-icon-danger"
+                            class="btn btn-danger btn-sm"
                             (click)="removeTimelineItem(selectedFieldIndex()!, itemIdx)"
-                            title="Remove item"
+                            style="width: 100%; margin-top: 0.5rem;"
                           >
-                            🗑️
+                            🗑️ Remove Timeline Item
                           </button>
                         </div>
 
@@ -1755,10 +1755,11 @@
 
                     <button
                       type="button"
-                      class="btn-add"
+                      class="btn btn-primary"
                       (click)="addTimelineItem(selectedFieldIndex()!)"
+                      style="width: 100%; margin-top: 0.5rem;"
                     >
-                      + Add Timeline Item
+                      ➕ Add Timeline Item
                     </button>
                   </div>
 
