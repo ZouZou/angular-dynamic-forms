@@ -66,97 +66,53 @@
     <div class="form-group" [@fieldAnimation] [class]="'width-' + (field.width || 'full') + (field.cssClass ? ' ' + field.cssClass : '')" role="group" [attr.aria-labelledby]="'label-' + field.name">
       <!-- Text / Email / Password -->
       @if (field.type === 'text' || field.type === 'email' || field.type === 'password') {
-      <label class="form-label" [id]="'label-' + field.name" [attr.for]="field.name">
-        {{ field.label }}
-        @if (field.validations?.required || field.validations?.requiredIf) {
-        <span class="required" aria-label="required">*</span>
-        }
-        @if (field.mask) {
-        <span class="mask-hint" [title]="'Format: ' + getMaskPattern(field)">
-          ({{ getMaskPattern(field) }})
-        </span>
-        }
-        @if (field.validations?.asyncValidator) {
-        @if (asyncValidationState()[field.name] === 'validating') {
-        <span class="async-validation-indicator validating" role="status" aria-live="polite">⏳ Validating...</span>
-        }
-        @if (asyncValidationState()[field.name] === 'valid') {
-        <span class="async-validation-indicator valid" role="status" aria-live="polite">✓ Valid</span>
-        }
-        }
-      </label>
-      <input
-        [type]="field.type"
-        [id]="field.name"
-        [name]="field.name"
-        class="form-control"
-        [class.masked-input]="!!field.mask"
-        [value]="formValues()[field.name]"
-        [placeholder]="field.placeholder || (field.mask ? getMaskPattern(field) : 'Enter ' + field.label.toLowerCase())"
-        [readonly]="field.readonly || !!field.computed || false"
-        [disabled]="field.disabled || false"
-        [attr.maxlength]="field.mask ? getMaxLength(field) : null"
-        [attr.aria-required]="field.validations?.required || field.validations?.requiredIf || null"
-        [attr.aria-invalid]="touched()[field.name] && errors()[field.name] ? 'true' : null"
-        [attr.aria-describedby]="errors()[field.name] ? 'error-' + field.name : null"
-        [attr.title]="field.mask ? 'Format: ' + getMaskPattern(field) : null"
-        (input)="field.mask ? updateMaskedFormValue(field.name, $any($event.target).value, field) : updateFormValue(field.name, $any($event.target).value)"
-      />
+        <dq-text-field
+          [field]="field"
+          [value]="formValues()[field.name]"
+          [touched]="touched()[field.name] || false"
+          [error]="errors()[field.name] || null"
+          [asyncValidationState]="asyncValidationState()[field.name] || 'idle'"
+          [maskPattern]="getMaskPattern(field)"
+          [maxLength]="getMaxLength(field)"
+          (valueChange)="onFieldValueChange($event)"
+          (blur)="onFieldBlur($event)"
+        />
       }
 
       <!-- Textarea -->
       @if (field.type === 'textarea') {
-      <label class="form-label">
-        {{ field.label }}
-        @if (field.validations?.required) {
-        <span class="required">*</span>
-        }
-      </label>
-      <textarea
-        class="form-control"
-        [value]="formValues()[field.name]"
-        [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()"
-        [rows]="field.rows || 4"
-        (input)="updateFormValue(field.name, $any($event.target).value)"
-      ></textarea>
+        <dq-textarea-field
+          [field]="field"
+          [value]="formValues()[field.name]"
+          [touched]="touched()[field.name] || false"
+          [error]="errors()[field.name] || null"
+          (valueChange)="onFieldValueChange($event)"
+          (blur)="onFieldBlur($event)"
+        />
       }
 
       <!-- Number -->
       @if (field.type === 'number') {
-      <label class="form-label">
-        {{ field.label }}
-        @if (field.validations?.required) {
-        <span class="required">*</span>
-        }
-      </label>
-      <input
-        type="number"
-        class="form-control"
-        [value]="formValues()[field.name]"
-        [placeholder]="field.placeholder || 'Enter ' + field.label.toLowerCase()"
-        [min]="field.min"
-        [max]="field.max"
-        [step]="field.step || 1"
-        (input)="updateFormValue(field.name, $any($event.target).valueAsNumber)"
-      />
+        <dq-number-field
+          [field]="field"
+          [value]="formValues()[field.name]"
+          [touched]="touched()[field.name] || false"
+          [error]="errors()[field.name] || null"
+          (valueChange)="onFieldValueChange($event)"
+          (blur)="onFieldBlur($event)"
+        />
       }
 
       <!-- Date -->
       @if (field.type === 'date') {
-      <label class="form-label">
-        {{ field.label }}
-        @if (field.validations?.required) {
-        <span class="required">*</span>
-        }
-      </label>
-      <input
-        type="date"
-        class="form-control"
-        [value]="formValues()[field.name]"
-        [min]="field.min"
-        [max]="field.max"
-        (input)="updateFormValue(field.name, $any($event.target).value)"
-      />
+        <dq-date-field
+          [field]="field"
+          [value]="formValues()[field.name]"
+          [touched]="touched()[field.name] || false"
+          [error]="errors()[field.name] || null"
+          (valueChange)="onFieldValueChange($event)"
+          (blur)="onFieldBlur($event)"
+        />
       }
 
       <!-- Radio Buttons -->
@@ -252,63 +208,38 @@
 
       <!-- Checkbox -->
       @if (field.type === 'checkbox') {
-      <div class="checkbox-wrapper">
-        <input
-          type="checkbox"
-          class="form-checkbox"
-          [checked]="formValues()[field.name]"
-          (change)="updateFormValue(field.name, $any($event.target).checked)"
+        <dq-checkbox-field
+          [field]="field"
+          [value]="formValues()[field.name]"
+          [touched]="touched()[field.name] || false"
+          [error]="errors()[field.name] || null"
+          (valueChange)="onFieldValueChange($event)"
+          (blur)="onFieldBlur($event)"
         />
-        <label class="form-label" style="margin: 0; text-transform: none;">
-          {{ field.label }}
-          @if (field.validations?.requiredTrue) {
-          <span class="required">*</span>
-          }
-        </label>
-      </div>
       }
 
       <!-- Range Slider -->
       @if (field.type === 'range') {
-      <label class="form-label">
-        {{ field.label }}
-        @if (field.validations?.required) {
-        <span class="required">*</span>
-        }
-        <span class="range-value">{{ formValues()[field.name] || field.min || 0 }}</span>
-      </label>
-      <input
-        type="range"
-        class="form-range"
-        [min]="field.min || 0"
-        [max]="field.max || 100"
-        [step]="field.step || 1"
-        [value]="formValues()[field.name] || field.min || 0"
-        (input)="updateFormValue(field.name, Number($any($event.target).value))"
-      />
-      <div class="range-labels">
-        <small>{{ field.min || 0 }}</small>
-        <small>{{ field.max || 100 }}</small>
-      </div>
+        <dq-range-field
+          [field]="field"
+          [value]="formValues()[field.name]"
+          [touched]="touched()[field.name] || false"
+          [error]="errors()[field.name] || null"
+          (valueChange)="onFieldValueChange($event)"
+          (blur)="onFieldBlur($event)"
+        />
       }
 
       <!-- Color Picker -->
       @if (field.type === 'color') {
-      <label class="form-label">
-        {{ field.label }}
-        @if (field.validations?.required) {
-        <span class="required">*</span>
-        }
-      </label>
-      <div class="color-picker-wrapper">
-        <input
-          type="color"
-          class="form-color"
-          [value]="formValues()[field.name] || '#000000'"
-          (input)="updateFormValue(field.name, $any($event.target).value)"
+        <dq-color-field
+          [field]="field"
+          [value]="formValues()[field.name]"
+          [touched]="touched()[field.name] || false"
+          [error]="errors()[field.name] || null"
+          (valueChange)="onFieldValueChange($event)"
+          (blur)="onFieldBlur($event)"
         />
-        <span class="color-hex">{{ formValues()[field.name] || '#000000' }}</span>
-      </div>
       }
 
       <!-- Multi-Select -->

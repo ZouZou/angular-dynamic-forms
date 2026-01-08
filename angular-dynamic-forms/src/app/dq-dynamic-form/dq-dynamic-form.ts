@@ -11,10 +11,28 @@ import { I18nService } from './i18n.service';
 import { FormStateService } from './services/form-state.service';
 import { ValidationService } from './services/validation.service';
 import { SubmissionService } from './services/submission.service';
+import { TextFieldComponent } from './components/field-renderers/text-field.component';
+import { TextareaFieldComponent } from './components/field-renderers/textarea-field.component';
+import { NumberFieldComponent } from './components/field-renderers/number-field.component';
+import { DateFieldComponent } from './components/field-renderers/date-field.component';
+import { CheckboxFieldComponent } from './components/field-renderers/checkbox-field.component';
+import { RangeFieldComponent } from './components/field-renderers/range-field.component';
+import { ColorFieldComponent } from './components/field-renderers/color-field.component';
 
 @Component({
   selector: 'dq-dynamic-form',
-  imports: [CommonModule, NgSelectModule, FormsModule],
+  imports: [
+    CommonModule,
+    NgSelectModule,
+    FormsModule,
+    TextFieldComponent,
+    TextareaFieldComponent,
+    NumberFieldComponent,
+    DateFieldComponent,
+    CheckboxFieldComponent,
+    RangeFieldComponent,
+    ColorFieldComponent
+  ],
   templateUrl: './dq-dynamic-form.html',
   styleUrl: './dq-dynamic-form.scss',
   providers: [DynamicFormsService, FormStateService, ValidationService, SubmissionService],
@@ -478,6 +496,27 @@ export class DqDynamicForm {
   }
 
   /**
+   * Handle value change from field renderer components
+   */
+  protected onFieldValueChange(event: { fieldName: string; value: unknown; isMasked?: boolean }): void {
+    const field = this.fields().find(f => f.name === event.fieldName);
+    if (!field) return;
+
+    if (event.isMasked && field.mask) {
+      this.updateMaskedFormValue(event.fieldName, event.value as string, field);
+    } else {
+      this.updateFormValue(event.fieldName, event.value);
+    }
+  }
+
+  /**
+   * Handle blur from field renderer components
+   */
+  protected onFieldBlur(fieldName: string): void {
+    this._formState.markTouched(fieldName);
+  }
+
+  /**
    * Get mask pattern for display
    */
   getMaskPattern(field: Field): string {
@@ -488,9 +527,9 @@ export class DqDynamicForm {
   /**
    * Get max length for masked input field
    */
-  getMaxLength(field: Field): number | undefined {
-    if (!field.mask) return undefined;
-    return this._maskService.getMaxLength(field.mask);
+  getMaxLength(field: Field): number | null {
+    if (!field.mask) return null;
+    return this._maskService.getMaxLength(field.mask) ?? null;
   }
 
   /**
