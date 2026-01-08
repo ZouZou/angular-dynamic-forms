@@ -25,6 +25,9 @@ import { DateTimeFieldComponent } from './components/field-renderers/datetime-fi
 import { FileFieldComponent } from './components/field-renderers/file-field.component';
 import { RichtextFieldComponent } from './components/field-renderers/richtext-field.component';
 import { ArrayFieldComponent } from './components/field-renderers/array-field.component';
+import { MultiStepNavigationComponent } from './components/ui/multi-step-navigation.component';
+import { AutosaveIndicatorComponent } from './components/ui/autosave-indicator.component';
+import { FieldValidationDisplayComponent } from './components/ui/field-validation-display.component';
 
 @Component({
   selector: 'dq-dynamic-form',
@@ -45,7 +48,10 @@ import { ArrayFieldComponent } from './components/field-renderers/array-field.co
     DateTimeFieldComponent,
     FileFieldComponent,
     RichtextFieldComponent,
-    ArrayFieldComponent
+    ArrayFieldComponent,
+    MultiStepNavigationComponent,
+    AutosaveIndicatorComponent,
+    FieldValidationDisplayComponent
   ],
   templateUrl: './dq-dynamic-form.html',
   styleUrl: './dq-dynamic-form.scss',

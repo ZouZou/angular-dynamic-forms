@@ -12,50 +12,27 @@
   <h2>{{ title() }}</h2>
 
   <!-- Autosave indicator -->
-  @if (autosaveEnabled() && lastSaved()) {
-  <div class="autosave-indicator">
-    <span class="autosave-icon">💾</span>
-    <span class="autosave-text">{{ lastSavedText() }}</span>
-  </div>
-  }
+  <dq-autosave-indicator
+    [enabled]="autosaveEnabled()"
+    [lastSaved]="lastSaved()"
+  />
 
   <!-- Multi-step progress indicator -->
   @if (multiStepEnabled()) {
-  <div class="multi-step-progress">
-    <div class="progress-bar">
-      <div class="progress-fill" [style.width.%]="getProgressPercentage()"></div>
-    </div>
-    <div class="step-indicators">
-      @for (section of sections(); track $index) {
-      <div class="step-indicator"
-           [class.active]="$index === currentStep()"
-           [class.completed]="isStepComplete($index)"
-           (click)="goToStep($index)">
-        <div class="step-number">
-          @if (isStepComplete($index)) {
-            <span class="checkmark">✓</span>
-          } @else {
-            {{ $index + 1 }}
-          }
-        </div>
-        <div class="step-label">{{ section.title }}</div>
-      </div>
-      }
-    </div>
-  </div>
-
-  <!-- Current step info -->
-  <div class="current-step-header">
-    <h3 class="step-title">
-      @if (sections()[currentStep()]?.icon) {
-        <span class="step-icon">{{ sections()[currentStep()].icon }}</span>
-      }
-      {{ sections()[currentStep()]?.title }}
-    </h3>
-    @if (sections()[currentStep()]?.description) {
-      <p class="step-description">{{ sections()[currentStep()].description }}</p>
-    }
-  </div>
+    <dq-multi-step-navigation
+      [sections]="sections()"
+      [currentStep]="currentStep()"
+      [completedSteps]="completedSteps()"
+      [showProgress]="true"
+      [showNavigation]="false"
+      [showSubmitButton]="false"
+      [isValid]="isValid()"
+      [submitting]="submitting()"
+      (stepClick)="goToStep($event)"
+      (nextClick)="goToNextStep()"
+      (previousClick)="goToPreviousStep()"
+      (submitClick)="saveUserData()"
+    />
   }
 
   <form role="form" aria-label="{{ title() }}">
@@ -142,12 +119,11 @@
           (blur)="onFieldBlur($event)"
         />
 
-        @if (isFieldDisabled(field)) {
-          <small class="text-muted">Please fill in required dependencies first</small>
-        }
-        @if (fieldErrors()[field.name]) {
-          <small class="text-error">{{ fieldErrors()[field.name] }}</small>
-        }
+        <dq-field-validation-display
+          [fieldName]="field.name"
+          [disabled]="isFieldDisabled(field)"
+          [fieldError]="fieldErrors()[field.name]"
+        />
       }
 
       <!-- Checkbox -->
@@ -968,73 +944,21 @@
     }
 
     <!-- Navigation Buttons -->
-    @if (multiStepEnabled()) {
-      <div class="multi-step-navigation">
-        <!-- Previous Button -->
-        @if (canGoToPreviousStep()) {
-        <button
-          type="button"
-          class="nav-btn prev-btn"
-          (click)="goToPreviousStep()"
-          aria-label="Go to previous step"
-        >
-          ← Previous
-        </button>
-        }
-
-        <!-- Next Button (shown on all steps except last) -->
-        @if (canGoToNextStep()) {
-        <button
-          type="button"
-          class="nav-btn next-btn"
-          (click)="goToNextStep()"
-          aria-label="Go to next step"
-        >
-          Next →
-        </button>
-        }
-
-        <!-- Submit Button (shown only on last step) -->
-        @if (isLastStep() && shouldShowSubmitButton()) {
-        <button
-          class="submit-btn"
-          type="submit"
-          [disabled]="!isValid() || submitting()"
-          [attr.aria-disabled]="!isValid() || submitting()"
-          [attr.aria-busy]="submitting()"
-          (click)="saveUserData()"
-          aria-label="Submit form"
-        >
-          @if (submitting()) {
-          <span class="spinner"></span>
-          Submitting{{ submitRetryCount() > 0 ? ' (Retry ' + submitRetryCount() + ')' : '' }}...
-          } @else {
-          Submit
-          }
-        </button>
-        }
-      </div>
-    } @else {
-      <!-- Single-step Submit Button -->
-      @if (shouldShowSubmitButton()) {
-      <button
-        class="submit-btn"
-        type="submit"
-        [disabled]="!isValid() || submitting()"
-        [attr.aria-disabled]="!isValid() || submitting()"
-        [attr.aria-busy]="submitting()"
-        (click)="saveUserData()"
-        aria-label="Submit form"
-      >
-        @if (submitting()) {
-        <span class="spinner"></span>
-        Submitting{{ submitRetryCount() > 0 ? ' (Retry ' + submitRetryCount() + ')' : '' }}...
-        } @else {
-        Submit
-        }
-      </button>
-      }
-    }
+    <dq-multi-step-navigation
+      [sections]="sections()"
+      [currentStep]="currentStep()"
+      [completedSteps]="completedSteps()"
+      [showProgress]="false"
+      [showNavigation]="multiStepEnabled()"
+      [showSubmitButton]="shouldShowSubmitButton()"
+      [isValid]="isValid()"
+      [submitting]="submitting()"
+      [retryCount]="submitRetryCount()"
+      (stepClick)="goToStep($event)"
+      (nextClick)="goToNextStep()"
+      (previousClick)="goToPreviousStep()"
+      (submitClick)="saveUserData()"
+    />
   </form>
 </div>
 }
