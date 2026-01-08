@@ -13,6 +13,39 @@ import { Component, input, computed, ChangeDetectionStrategy } from '@angular/co
       </div>
     }
   `,
+  styles: [`
+    .autosave-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-xs);
+      margin-bottom: var(--spacing-lg);
+      padding: var(--spacing-sm);
+      background: var(--color-gray-50);
+      border-radius: var(--radius-md);
+      font-size: 0.8125rem;
+      color: var(--color-gray-600);
+      animation: fadeIn var(--transition-base) ease-out;
+    }
+
+    .autosave-icon {
+      font-size: 1rem;
+      opacity: 0.7;
+    }
+
+    .autosave-text {
+      font-weight: 500;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+  `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AutosaveIndicatorComponent {
