@@ -18,6 +18,13 @@ import { DateFieldComponent } from './components/field-renderers/date-field.comp
 import { CheckboxFieldComponent } from './components/field-renderers/checkbox-field.component';
 import { RangeFieldComponent } from './components/field-renderers/range-field.component';
 import { ColorFieldComponent } from './components/field-renderers/color-field.component';
+import { RadioFieldComponent } from './components/field-renderers/radio-field.component';
+import { SelectFieldComponent } from './components/field-renderers/select-field.component';
+import { MultiselectFieldComponent } from './components/field-renderers/multiselect-field.component';
+import { DateTimeFieldComponent } from './components/field-renderers/datetime-field.component';
+import { FileFieldComponent } from './components/field-renderers/file-field.component';
+import { RichtextFieldComponent } from './components/field-renderers/richtext-field.component';
+import { ArrayFieldComponent } from './components/field-renderers/array-field.component';
 
 @Component({
   selector: 'dq-dynamic-form',
@@ -31,7 +38,14 @@ import { ColorFieldComponent } from './components/field-renderers/color-field.co
     DateFieldComponent,
     CheckboxFieldComponent,
     RangeFieldComponent,
-    ColorFieldComponent
+    ColorFieldComponent,
+    RadioFieldComponent,
+    SelectFieldComponent,
+    MultiselectFieldComponent,
+    DateTimeFieldComponent,
+    FileFieldComponent,
+    RichtextFieldComponent,
+    ArrayFieldComponent
   ],
   templateUrl: './dq-dynamic-form.html',
   styleUrl: './dq-dynamic-form.scss',
@@ -513,6 +527,47 @@ export class DqDynamicForm {
    * Handle blur from field renderer components
    */
   protected onFieldBlur(fieldName: string): void {
+    this._formState.markTouched(fieldName);
+  }
+
+  /**
+   * Handle file upload from file field component
+   */
+  protected onFileChange(event: { fieldName: string; files: FileList | null }): void {
+    const field = this.fields().find(f => f.name === event.fieldName);
+    if (!field) return;
+    this.handleFileUpload(event.fieldName, event.files, field);
+  }
+
+  /**
+   * Handle array item addition from array field component
+   */
+  protected onArrayAddItem(fieldName: string): void {
+    const field = this.fields().find(f => f.name === fieldName);
+    if (!field) return;
+    this.addArrayItem(field);
+  }
+
+  /**
+   * Handle array item removal from array field component
+   */
+  protected onArrayRemoveItem(event: { fieldName: string; index: number }): void {
+    const field = this.fields().find(f => f.name === event.fieldName);
+    if (!field) return;
+    this.removeArrayItem(field, event.index);
+  }
+
+  /**
+   * Handle array sub-field value change from array field component
+   */
+  protected onArraySubFieldChange(event: { fieldName: string; value: unknown }): void {
+    this.updateFormValue(event.fieldName, event.value);
+  }
+
+  /**
+   * Handle array sub-field blur from array field component
+   */
+  protected onArraySubFieldBlur(fieldName: string): void {
     this._formState.markTouched(fieldName);
   }
 
