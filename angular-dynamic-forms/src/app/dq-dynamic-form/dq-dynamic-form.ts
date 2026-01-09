@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal, input } from '@angular/core';
+import { Component, computed, effect, inject, signal, input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { trigger, transition, style, animate } from '@angular/animations';
@@ -8,13 +8,55 @@ import { Field, FieldOption, VisibilityCondition, SimpleVisibilityCondition, Com
 import { DynamicFormsService } from './dq-dynamic-form.service';
 import { MaskService } from './mask.service';
 import { I18nService } from './i18n.service';
+import { FormStateService } from './services/form-state.service';
+import { ValidationService } from './services/validation.service';
+import { SubmissionService } from './services/submission.service';
+import { TextFieldComponent } from './components/field-renderers/text-field.component';
+import { TextareaFieldComponent } from './components/field-renderers/textarea-field.component';
+import { NumberFieldComponent } from './components/field-renderers/number-field.component';
+import { DateFieldComponent } from './components/field-renderers/date-field.component';
+import { CheckboxFieldComponent } from './components/field-renderers/checkbox-field.component';
+import { RangeFieldComponent } from './components/field-renderers/range-field.component';
+import { ColorFieldComponent } from './components/field-renderers/color-field.component';
+import { RadioFieldComponent } from './components/field-renderers/radio-field.component';
+import { SelectFieldComponent } from './components/field-renderers/select-field.component';
+import { MultiselectFieldComponent } from './components/field-renderers/multiselect-field.component';
+import { DateTimeFieldComponent } from './components/field-renderers/datetime-field.component';
+import { FileFieldComponent } from './components/field-renderers/file-field.component';
+import { RichtextFieldComponent } from './components/field-renderers/richtext-field.component';
+import { ArrayFieldComponent } from './components/field-renderers/array-field.component';
+import { MultiStepNavigationComponent } from './components/ui/multi-step-navigation.component';
+import { AutosaveIndicatorComponent } from './components/ui/autosave-indicator.component';
+import { FieldValidationDisplayComponent } from './components/ui/field-validation-display.component';
 
 @Component({
   selector: 'dq-dynamic-form',
-  imports: [CommonModule, NgSelectModule, FormsModule],
+  imports: [
+    CommonModule,
+    NgSelectModule,
+    FormsModule,
+    TextFieldComponent,
+    TextareaFieldComponent,
+    NumberFieldComponent,
+    DateFieldComponent,
+    CheckboxFieldComponent,
+    RangeFieldComponent,
+    ColorFieldComponent,
+    RadioFieldComponent,
+    SelectFieldComponent,
+    MultiselectFieldComponent,
+    DateTimeFieldComponent,
+    FileFieldComponent,
+    RichtextFieldComponent,
+    ArrayFieldComponent,
+    MultiStepNavigationComponent,
+    AutosaveIndicatorComponent,
+    FieldValidationDisplayComponent
+  ],
   templateUrl: './dq-dynamic-form.html',
   styleUrl: './dq-dynamic-form.scss',
-  providers: [DynamicFormsService],
+  providers: [DynamicFormsService, FormStateService, ValidationService, SubmissionService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [
     trigger('fieldAnimation', [
       transition(':enter', [
@@ -34,60 +76,44 @@ export class DqDynamicForm {
   // Optional input for dynamically setting the submission endpoint
   submissionEndpoint = input<string | null>(null);
 
+  // Inject services
   private readonly _formService = inject(DynamicFormsService);
   private readonly _maskService = inject(MaskService);
   private readonly _http = inject(HttpClient);
   protected readonly _i18nService = inject(I18nService);
+  private readonly _formState = inject(FormStateService);
+  private readonly _validation = inject(ValidationService);
+  private readonly _submission = inject(SubmissionService);
+
+  // Component-specific state (not in services)
   protected readonly fields = signal<Field[]>([]);
   protected readonly title = signal<string>('');
-  protected readonly formValues = signal<Record<string, unknown>>({});
-  protected readonly touched = signal<Record<string, boolean>>({});
-  protected readonly submitted = signal(false);
-  protected readonly submittedData = signal<Record<string, unknown> | null>(
-    null
-  );
-  protected readonly loading = signal(true);
-  // Store dynamically fetched options per field
-  protected readonly dynamicOptions = signal<Record<string, FieldOption[]>>({});
-  // Track loading state per field (for API-driven dropdowns)
-  protected readonly fieldLoading = signal<Record<string, boolean>>({});
-  // Track errors per field (for API failures)
-  protected readonly fieldErrors = signal<Record<string, string>>({});
-  // Track dirty state per field (has value changed from initial?)
-  protected readonly dirty = signal<Record<string, boolean>>({});
-  // Store initial values for dirty tracking
-  private readonly initialValues = signal<Record<string, unknown>>({});
-  // Track programmatic updates to prevent infinite loops in checkbox dependencies
-  private readonly isUpdatingProgrammatically = signal<Set<string>>(new Set());
-  // Store file data for file uploads
-  protected readonly fileData = signal<Record<string, any>>({});
 
-  // Autosave state
-  protected readonly lastSaved = signal<Date | null>(null);
-  protected readonly autosaveEnabled = signal(false);
-  private autosaveTimer: any = null;
-  private autosaveKey = '';
-  private autosaveConfig: any = null;
+  // Expose service signals for template access
+  protected readonly formValues = this._formState.formValues;
+  protected readonly touched = this._formState.touched;
+  protected readonly loading = this._formState.loading;
+  protected readonly dynamicOptions = this._formState.dynamicOptions;
+  protected readonly fieldLoading = this._formState.fieldLoading;
+  protected readonly fieldErrors = this._formState.fieldErrors;
+  protected readonly dirty = this._formState.dirty;
+  protected readonly fileData = this._formState.fileData;
+  protected readonly arrayItemCounts = this._formState.arrayItemCounts;
+  protected readonly pristine = this._formState.pristine;
 
-  // Dynamic field arrays (repeaters) state
-  // Stores the count of items for each array field
-  protected readonly arrayItemCounts = signal<Record<string, number>>({});
+  // Expose validation service signals
+  protected readonly asyncValidationState = this._validation.asyncValidationState;
+  protected readonly asyncErrors = this._validation.asyncErrors;
 
-  // Async validation state
-  // Stores validation state per field: 'idle' | 'validating' | 'valid' | 'invalid'
-  protected readonly asyncValidationState = signal<Record<string, 'idle' | 'validating' | 'valid' | 'invalid'>>({});
-  // Stores async validation error messages
-  protected readonly asyncErrors = signal<Record<string, string>>({});
-  // Debounce timers for async validation
-  private asyncValidationTimers: Record<string, any> = {};
-
-  // Form submission state
-  protected readonly submitting = signal(false);
-  protected readonly submitSuccess = signal(false);
-  protected readonly submitError = signal<string | null>(null);
-  protected readonly submitRetryCount = signal(0);
-  private submissionConfig: FormSubmission | null = null;
-  private readonly MAX_RETRY_ATTEMPTS = 3;
+  // Expose submission service signals
+  protected readonly submitted = this._submission.submitted;
+  protected readonly submittedData = this._submission.submittedData;
+  protected readonly submitting = this._submission.submitting;
+  protected readonly submitSuccess = this._submission.submitSuccess;
+  protected readonly submitError = this._submission.submitError;
+  protected readonly submitRetryCount = this._submission.submitRetryCount;
+  protected readonly autosaveEnabled = this._submission.autosaveEnabled;
+  protected readonly lastSaved = this._submission.lastSaved;
 
   // Multi-step form state
   protected readonly sections = signal<FormSection[]>([]);
@@ -126,11 +152,6 @@ export class DqDynamicForm {
 
   // Expose Number for template (needed for numeric input conversions)
   protected readonly Number = Number;
-
-  // Computed: Check if entire form is pristine (no changes)
-  protected readonly pristine = computed<boolean>(() =>
-    !Object.values(this.dirty()).some(isDirty => isDirty)
-  );
 
   // Computed: Last saved time formatted
   protected readonly lastSavedText = computed<string>(() => {
@@ -175,10 +196,7 @@ export class DqDynamicForm {
             );
 
             if (!isValidOption) {
-              this.formValues.update((current) => ({
-                ...current,
-                [field.name]: '',
-              }));
+              this._formState.updateFormValue(field.name, '');
             }
           }
         }
@@ -209,7 +227,6 @@ export class DqDynamicForm {
     effect(() => {
       const values = this.formValues();
       const fields = this.fields();
-      const updatingFields = this.isUpdatingProgrammatically();
 
       fields.forEach((field) => {
         // Only process checkbox dependencies (single dependency only)
@@ -223,7 +240,7 @@ export class DqDynamicForm {
           const dependentValue = values[field.dependsOn] as boolean;
 
           // Skip if this field is being updated programmatically to prevent loops
-          if (updatingFields.has(field.name)) {
+          if (this._formState.isProgrammaticUpdate(field.name)) {
             return;
           }
 
@@ -268,10 +285,7 @@ export class DqDynamicForm {
 
           // Only update if value changed to avoid infinite loops
           if (newValue !== currentValue) {
-            this.formValues.update(current => ({
-              ...current,
-              [field.name]: newValue
-            }));
+            this._formState.updateFormValue(field.name, newValue);
           }
         }
       });
@@ -314,10 +328,7 @@ export class DqDynamicForm {
 
           // Only update if value changed to avoid infinite loops
           if (newValue !== currentValue) {
-            this.formValues.update(current => ({
-              ...current,
-              [field.name]: newValue
-            }));
+            this._formState.updateFormValue(field.name, newValue);
           }
         }
       });
@@ -403,40 +414,21 @@ export class DqDynamicForm {
         }
       }
 
-      // Set array counts
-      this.arrayItemCounts.set(initialArrayCounts);
-
       // Check for autosave configuration
       if (schema.autosave?.enabled) {
-        this.autosaveConfig = schema.autosave;
-        this.autosaveKey = schema.autosave.key || `formDraft_${schema.title.replace(/\s+/g, '_')}`;
-        this.autosaveEnabled.set(true);
+        const autosaveKey = schema.autosave.key || `formDraft_${schema.title.replace(/\s+/g, '_')}`;
 
-        // Try to restore draft from storage
-        const draft = this.loadDraft();
-        if (draft) {
-          // Merge draft values with initial values
-          Object.keys(draft.values).forEach(key => {
-            if (initialValues.hasOwnProperty(key)) {
-              initialValues[key] = draft.values[key];
-            }
-          });
-          this.lastSaved.set(new Date(draft.timestamp));
-          console.log('Draft restored from', this.autosaveConfig.storage || 'localStorage');
-        }
-
-        // Set up periodic autosave if interval is configured
-        if (schema.autosave.intervalSeconds) {
-          this.autosaveTimer = setInterval(() => {
-            if (!this.pristine() && !this.submitted()) {
-              this.saveDraft();
-            }
-          }, schema.autosave.intervalSeconds * 1000);
-        }
+        // Enable autosave via SubmissionService
+        this._submission.enableAutosave(
+          schema.autosave,
+          autosaveKey,
+          () => this.saveDraft()
+        );
       }
 
-      // Store submission configuration
+      // Store submission configuration (will be used by SubmissionService later)
       if (schema.submission) {
+        // Store in private property for submit() method to access
         this.submissionConfig = schema.submission;
       }
 
@@ -466,49 +458,28 @@ export class DqDynamicForm {
         }
       });
 
-      this.formValues.set(initialValues);
-      this.touched.set(initialTouched);
-      this.dirty.set(initialDirty);
-      // Store initial values for comparison
-      this.initialValues.set({ ...initialValues });
-      this.loading.set(false);
+      // Initialize form state via FormStateService
+      this._formState.initializeForm(initialValues, initialTouched, initialDirty, initialArrayCounts);
   }
 
+  private submissionConfig: FormSubmission | null = null;
+
   ngOnDestroy(): void {
-    // Clear autosave timer
-    if (this.autosaveTimer) {
-      clearInterval(this.autosaveTimer);
-    }
+    // Cleanup services
+    this._submission.destroy();
+    this._validation.clearAllTimers();
   }
 
   updateFormValue(fieldName: string, value: unknown): void {
-    this.formValues.update((current) => ({
-      ...current,
-      [fieldName]: value,
-    }));
-
-    this.touched.update((current) => ({
-      ...current,
-      [fieldName]: true,
-    }));
-
-    // Track dirty state by comparing with initial value
-    const initialValue = this.initialValues()[fieldName];
-    const isDirty = value !== initialValue;
-
-    this.dirty.update((current) => ({
-      ...current,
-      [fieldName]: isDirty,
-    }));
+    // Use FormStateService to update form value
+    this._formState.updateFormValue(fieldName, value);
+    this._formState.markTouched(fieldName);
 
     // Trigger async validation if configured
     const field = this.fields().find(f => f.name === fieldName ||
       fieldName.startsWith(f.name + '['));
     if (field?.validations?.asyncValidator && value) {
-      this.triggerAsyncValidation(fieldName, value, field.validations.asyncValidator);
-    } else {
-      // Clear async validation if no value
-      this.clearAsyncValidation(fieldName);
+      this._validation.validateAsync(field, value);
     }
   }
 
@@ -533,33 +504,77 @@ export class DqDynamicForm {
     // Apply mask to display value
     const maskedValue = this._maskService.applyMask(truncatedValue, field.mask);
 
-    // Store masked value for display
-    this.formValues.update((current) => ({
-      ...current,
-      [fieldName]: maskedValue,
-    }));
-
-    this.touched.update((current) => ({
-      ...current,
-      [fieldName]: true,
-    }));
-
-    // Track dirty state
-    const initialValue = this.initialValues()[fieldName];
-    const isDirty = maskedValue !== initialValue;
-
-    this.dirty.update((current) => ({
-      ...current,
-      [fieldName]: isDirty,
-    }));
+    // Use FormStateService to update form value
+    this._formState.updateFormValue(fieldName, maskedValue);
+    this._formState.markTouched(fieldName);
 
     // For validation, use raw (unmasked) value
     const rawForValidation = this._maskService.getRawValue(maskedValue, field.mask);
     if (field.validations?.asyncValidator && rawForValidation) {
-      this.triggerAsyncValidation(fieldName, rawForValidation, field.validations.asyncValidator);
-    } else {
-      this.clearAsyncValidation(fieldName);
+      this._validation.validateAsync(field, rawForValidation);
     }
+  }
+
+  /**
+   * Handle value change from field renderer components
+   */
+  protected onFieldValueChange(event: { fieldName: string; value: unknown; isMasked?: boolean }): void {
+    const field = this.fields().find(f => f.name === event.fieldName);
+    if (!field) return;
+
+    if (event.isMasked && field.mask) {
+      this.updateMaskedFormValue(event.fieldName, event.value as string, field);
+    } else {
+      this.updateFormValue(event.fieldName, event.value);
+    }
+  }
+
+  /**
+   * Handle blur from field renderer components
+   */
+  protected onFieldBlur(fieldName: string): void {
+    this._formState.markTouched(fieldName);
+  }
+
+  /**
+   * Handle file upload from file field component
+   */
+  protected onFileChange(event: { fieldName: string; files: FileList | null }): void {
+    const field = this.fields().find(f => f.name === event.fieldName);
+    if (!field) return;
+    this.handleFileUpload(event.fieldName, event.files, field);
+  }
+
+  /**
+   * Handle array item addition from array field component
+   */
+  protected onArrayAddItem(fieldName: string): void {
+    const field = this.fields().find(f => f.name === fieldName);
+    if (!field) return;
+    this.addArrayItem(field);
+  }
+
+  /**
+   * Handle array item removal from array field component
+   */
+  protected onArrayRemoveItem(event: { fieldName: string; index: number }): void {
+    const field = this.fields().find(f => f.name === event.fieldName);
+    if (!field) return;
+    this.removeArrayItem(field, event.index);
+  }
+
+  /**
+   * Handle array sub-field value change from array field component
+   */
+  protected onArraySubFieldChange(event: { fieldName: string; value: unknown }): void {
+    this.updateFormValue(event.fieldName, event.value);
+  }
+
+  /**
+   * Handle array sub-field blur from array field component
+   */
+  protected onArraySubFieldBlur(fieldName: string): void {
+    this._formState.markTouched(fieldName);
   }
 
   /**
@@ -573,9 +588,9 @@ export class DqDynamicForm {
   /**
    * Get max length for masked input field
    */
-  getMaxLength(field: Field): number | undefined {
-    if (!field.mask) return undefined;
-    return this._maskService.getMaxLength(field.mask);
+  getMaxLength(field: Field): number | null {
+    if (!field.mask) return null;
+    return this._maskService.getMaxLength(field.mask) ?? null;
   }
 
   /**
@@ -639,109 +654,7 @@ export class DqDynamicForm {
   /**
    * Trigger async validation for a field
    */
-  private triggerAsyncValidation(fieldName: string, value: unknown, validator: AsyncValidator): void {
-    // Clear existing timer
-    if (this.asyncValidationTimers[fieldName]) {
-      clearTimeout(this.asyncValidationTimers[fieldName]);
-    }
-
-    // Set validating state
-    this.asyncValidationState.update(state => ({
-      ...state,
-      [fieldName]: 'validating'
-    }));
-
-    // Debounce the validation
-    const debounceMs = validator.debounceMs || 300;
-    this.asyncValidationTimers[fieldName] = setTimeout(() => {
-      this.performAsyncValidation(fieldName, value, validator);
-    }, debounceMs);
-  }
-
-  /**
-   * Perform async validation via API
-   */
-  private performAsyncValidation(fieldName: string, value: unknown, validator: AsyncValidator): void {
-    const method = validator.method || 'POST';
-    const validWhen = validator.validWhen || 'custom';
-
-    // Make API call
-    this._formService.validateFieldAsync(validator.endpoint, { value, fieldName }, method)
-      .subscribe({
-        next: (response: any) => {
-          let isValid = false;
-          let errorMessage = validator.errorMessage || 'Invalid value';
-
-          if (validWhen === 'exists') {
-            isValid = !!response.exists;
-          } else if (validWhen === 'notExists') {
-            isValid = !response.exists;
-          } else {
-            // 'custom' - expect { valid: boolean, message?: string }
-            isValid = response.valid === true;
-            if (response.message) {
-              errorMessage = response.message;
-            }
-          }
-
-          if (isValid) {
-            this.asyncValidationState.update(state => ({
-              ...state,
-              [fieldName]: 'valid'
-            }));
-            this.asyncErrors.update(errors => {
-              const updated = { ...errors };
-              delete updated[fieldName];
-              return updated;
-            });
-          } else {
-            this.asyncValidationState.update(state => ({
-              ...state,
-              [fieldName]: 'invalid'
-            }));
-            this.asyncErrors.update(errors => ({
-              ...errors,
-              [fieldName]: errorMessage
-            }));
-          }
-        },
-        error: (error) => {
-          console.error(`Async validation error for ${fieldName}:`, error);
-          this.asyncValidationState.update(state => ({
-            ...state,
-            [fieldName]: 'invalid'
-          }));
-          this.asyncErrors.update(errors => ({
-            ...errors,
-            [fieldName]: 'Validation failed. Please try again.'
-          }));
-        }
-      });
-  }
-
-  /**
-   * Clear async validation state for a field
-   */
-  private clearAsyncValidation(fieldName: string): void {
-    // Clear timer
-    if (this.asyncValidationTimers[fieldName]) {
-      clearTimeout(this.asyncValidationTimers[fieldName]);
-      delete this.asyncValidationTimers[fieldName];
-    }
-
-    // Reset state
-    this.asyncValidationState.update(state => {
-      const updated = { ...state };
-      delete updated[fieldName];
-      return updated;
-    });
-
-    this.asyncErrors.update(errors => {
-      const updated = { ...errors };
-      delete updated[fieldName];
-      return updated;
-    });
-  }
+  // Async validation methods moved to ValidationService
 
   /**
    * Update checkbox value programmatically (used for dependencies)
@@ -752,35 +665,15 @@ export class DqDynamicForm {
     value: boolean
   ): void {
     // Mark this field as being updated programmatically
-    this.isUpdatingProgrammatically.update((current) => {
-      const updated = new Set(current);
-      updated.add(fieldName);
-      return updated;
-    });
+    this._formState.setProgrammaticUpdate(fieldName, true);
 
-    // Update the value
-    this.formValues.update((current) => ({
-      ...current,
-      [fieldName]: value,
-    }));
-
-    // Track dirty state
-    const initialValue = this.initialValues()[fieldName];
-    const isDirty = value !== initialValue;
-
-    this.dirty.update((current) => ({
-      ...current,
-      [fieldName]: isDirty,
-    }));
+    // Update the value using FormStateService
+    this._formState.updateFormValue(fieldName, value);
 
     // Clear the programmatic update flag after a brief delay
     // This allows the effect to complete before allowing user updates again
     setTimeout(() => {
-      this.isUpdatingProgrammatically.update((current) => {
-        const updated = new Set(current);
-        updated.delete(fieldName);
-        return updated;
-      });
+      this._formState.setProgrammaticUpdate(fieldName, false);
     }, 0);
   }
 
@@ -895,14 +788,14 @@ export class DqDynamicForm {
    * Get the number of items for an array field
    */
   getArrayItemCount(fieldName: string): number {
-    return this.arrayItemCounts()[fieldName] || 0;
+    return this._formState.getArrayItemCount(fieldName);
   }
 
   /**
    * Get array of indices for an array field
    */
   getArrayIndices(fieldName: string): number[] {
-    const count = this.getArrayItemCount(fieldName);
+    const count = this._formState.getArrayItemCount(fieldName);
     return Array.from({ length: count }, (_, i) => i);
   }
 
@@ -912,7 +805,7 @@ export class DqDynamicForm {
   addArrayItem(field: Field): void {
     if (!field.arrayConfig) return;
 
-    const currentCount = this.getArrayItemCount(field.name);
+    const currentCount = this._formState.getArrayItemCount(field.name);
     const maxItems = field.arrayConfig.maxItems;
 
     // Check if we can add more items
@@ -921,36 +814,16 @@ export class DqDynamicForm {
     }
 
     // Increment count
-    this.arrayItemCounts.update(counts => ({
-      ...counts,
-      [field.name]: currentCount + 1
-    }));
+    this._formState.incrementArrayCount(field.name);
 
     // Initialize values for new array item's fields
     const newIndex = currentCount;
     field.arrayConfig.fields.forEach(subField => {
       const arrayFieldName = `${field.name}[${newIndex}].${subField.name}`;
+      const initialValue = this.getInitialValueForField(subField);
 
-      this.formValues.update(current => ({
-        ...current,
-        [arrayFieldName]: this.getInitialValueForField(subField)
-      }));
-
-      this.touched.update(current => ({
-        ...current,
-        [arrayFieldName]: false
-      }));
-
-      this.dirty.update(current => ({
-        ...current,
-        [arrayFieldName]: false
-      }));
-
-      // Store initial value
-      this.initialValues.update(current => ({
-        ...current,
-        [arrayFieldName]: this.getInitialValueForField(subField)
-      }));
+      // Add field with initial value
+      this._formState.addField(arrayFieldName, initialValue);
     });
   }
 
@@ -960,7 +833,7 @@ export class DqDynamicForm {
   removeArrayItem(field: Field, index: number): void {
     if (!field.arrayConfig) return;
 
-    const currentCount = this.getArrayItemCount(field.name);
+    const currentCount = this._formState.getArrayItemCount(field.name);
     const minItems = field.arrayConfig.minItems || 0;
 
     // Check if we can remove items
@@ -971,30 +844,7 @@ export class DqDynamicForm {
     // Remove values for this array item
     field.arrayConfig.fields.forEach(subField => {
       const arrayFieldName = `${field.name}[${index}].${subField.name}`;
-
-      this.formValues.update(current => {
-        const updated = { ...current };
-        delete updated[arrayFieldName];
-        return updated;
-      });
-
-      this.touched.update(current => {
-        const updated = { ...current };
-        delete updated[arrayFieldName];
-        return updated;
-      });
-
-      this.dirty.update(current => {
-        const updated = { ...current };
-        delete updated[arrayFieldName];
-        return updated;
-      });
-
-      this.initialValues.update(current => {
-        const updated = { ...current };
-        delete updated[arrayFieldName];
-        return updated;
-      });
+      this._formState.removeField(arrayFieldName);
     });
 
     // Shift all subsequent items down
@@ -1002,47 +852,12 @@ export class DqDynamicForm {
       field.arrayConfig.fields.forEach(subField => {
         const oldKey = `${field.name}[${i}].${subField.name}`;
         const newKey = `${field.name}[${i - 1}].${subField.name}`;
-
-        const values = this.formValues();
-        const touchedState = this.touched();
-        const dirtyState = this.dirty();
-        const initialVals = this.initialValues();
-
-        this.formValues.update(current => {
-          const updated = { ...current };
-          updated[newKey] = values[oldKey];
-          delete updated[oldKey];
-          return updated;
-        });
-
-        this.touched.update(current => {
-          const updated = { ...current };
-          updated[newKey] = touchedState[oldKey];
-          delete updated[oldKey];
-          return updated;
-        });
-
-        this.dirty.update(current => {
-          const updated = { ...current };
-          updated[newKey] = dirtyState[oldKey];
-          delete updated[oldKey];
-          return updated;
-        });
-
-        this.initialValues.update(current => {
-          const updated = { ...current };
-          updated[newKey] = initialVals[oldKey];
-          delete updated[oldKey];
-          return updated;
-        });
+        this._formState.renameField(oldKey, newKey);
       });
     }
 
     // Decrement count
-    this.arrayItemCounts.update(counts => ({
-      ...counts,
-      [field.name]: currentCount - 1
-    }));
+    this._formState.decrementArrayCount(field.name);
   }
 
   /**
@@ -1450,7 +1265,7 @@ export class DqDynamicForm {
     return !hasValidating;
   });
 
-  saveUserData(): void {
+  async saveUserData(): Promise<void> {
     // Check if form is valid
     if (!this.isValid()) {
       // Focus on first field with error for better accessibility
@@ -1458,135 +1273,29 @@ export class DqDynamicForm {
       return;
     }
 
-    // Reset submission state
-    this.submitError.set(null);
-    this.submitSuccess.set(false);
-
-    // Determine endpoint: prioritize input endpoint over schema endpoint
-    const endpoint = this.submissionEndpoint() || this.submissionConfig?.endpoint;
-
-    // If no endpoint configured, just show data locally
-    if (!endpoint) {
-      this.submittedData.set(this.formValues());
-      this.submitted.set(true);
-      this.submitSuccess.set(true);
-      console.log('FORM VALUES (Signals):', this.formValues());
-
-      // Clear draft on successful submission
-      if (this.autosaveEnabled()) {
-        this.clearDraft();
-      }
-      return;
+    // Submit using SubmissionService
+    if (!this.submissionConfig) {
+      // No submission config - create default
+      this.submissionConfig = { endpoint: undefined };
     }
 
-    // Submit to API with retry logic
-    this.submitToApi(0);
-  }
-
-  /**
-   * Submit form data to API with retry logic
-   */
-  private submitToApi(attemptNumber: number): void {
-    // Determine endpoint: prioritize input endpoint over schema endpoint
-    const endpoint = this.submissionEndpoint() || this.submissionConfig?.endpoint;
-    if (!endpoint) return;
-
-    this.submitting.set(true);
-    this.submitRetryCount.set(attemptNumber);
-
-    const method = this.submissionConfig?.method || 'POST';
-    const headers = this.submissionConfig?.headers || {};
-    const formData = this.formValues();
-
-    // Make HTTP request
-    const request$ = method === 'POST'
-      ? this._http.post(endpoint, formData, { headers })
-      : method === 'PUT'
-        ? this._http.put(endpoint, formData, { headers })
-        : this._http.patch(endpoint, formData, { headers });
-
-    request$.subscribe({
-      next: (response) => {
-        this.handleSubmitSuccess(response);
-      },
-      error: (error: HttpErrorResponse) => {
-        this.handleSubmitError(error, attemptNumber);
-      }
-    });
-  }
-
-  /**
-   * Handle successful form submission
-   */
-  private handleSubmitSuccess(response: any): void {
-    this.submitting.set(false);
-    this.submitSuccess.set(true);
-    this.submitted.set(true);
-    this.submittedData.set(response);
+    await this._submission.submit(
+      this.formValues(),
+      this.submissionConfig,
+      this.submissionEndpoint()
+    );
 
     // Clear draft on successful submission
-    if (this.autosaveEnabled()) {
-      this.clearDraft();
-    }
-
-    console.log('Form submitted successfully:', response);
-
-    // Handle redirect if configured
-    if (this.submissionConfig?.redirectOnSuccess) {
-      setTimeout(() => {
-        window.location.href = this.submissionConfig!.redirectOnSuccess!;
-      }, 2000); // 2 second delay to show success message
-    }
-  }
-
-  /**
-   * Handle form submission error with retry logic
-   */
-  private handleSubmitError(error: HttpErrorResponse, attemptNumber: number): void {
-    console.error('Form submission error:', error);
-
-    // Check if we should retry
-    if (attemptNumber < this.MAX_RETRY_ATTEMPTS && (error.status === 0 || error.status >= 500)) {
-      // Network error or server error - retry after delay
-      const retryDelay = Math.pow(2, attemptNumber) * 1000; // Exponential backoff: 1s, 2s, 4s
-      console.log(`Retrying submission in ${retryDelay}ms (attempt ${attemptNumber + 1}/${this.MAX_RETRY_ATTEMPTS})`);
-
-      setTimeout(() => {
-        this.submitToApi(attemptNumber + 1);
-      }, retryDelay);
-    } else {
-      // Max retries reached or client error - show error
-      this.submitting.set(false);
-
-      // Extract error message
-      let errorMessage = this.submissionConfig?.errorMessage || 'Form submission failed. Please try again.';
-
-      if (error.error?.message) {
-        errorMessage = error.error.message;
-      } else if (error.error?.error) {
-        errorMessage = error.error.error;
-      } else if (error.message) {
-        errorMessage = `Error: ${error.message}`;
-      }
-
-      // Handle field-level errors from API
-      if (error.error?.errors && typeof error.error.errors === 'object') {
-        // Merge field-level errors into asyncErrors for display
-        this.asyncErrors.update(current => ({
-          ...current,
-          ...error.error.errors
-        }));
-      }
-
-      this.submitError.set(errorMessage);
+    if (this.submitSuccess() && this.autosaveEnabled()) {
+      this._submission.clearAutosavedData();
     }
   }
 
   /**
    * Retry form submission (called from template)
    */
-  retrySubmit(): void {
-    this.submitToApi(0);
+  async retrySubmit(): Promise<void> {
+    await this.saveUserData();
   }
 
   /**
@@ -1613,57 +1322,23 @@ export class DqDynamicForm {
    * Save current form state to storage
    */
   private saveDraft(): void {
-    if (!this.autosaveKey) return;
-
-    const draft = {
-      values: this.formValues(),
-      timestamp: new Date().toISOString(),
-      expiresAt: this.autosaveConfig?.expirationDays
-        ? new Date(Date.now() + this.autosaveConfig.expirationDays * 24 * 60 * 60 * 1000).toISOString()
-        : null
-    };
-
-    const storage = this.autosaveConfig?.storage === 'sessionStorage' ? sessionStorage : localStorage;
-    storage.setItem(this.autosaveKey, JSON.stringify(draft));
-    this.lastSaved.set(new Date());
+    this._submission.saveToStorage(this.formValues());
   }
 
   /**
-   * Load draft from storage
+   * Load draft from storage (returns null - handled by SubmissionService)
    */
   private loadDraft(): { values: Record<string, unknown>; timestamp: string } | null {
-    if (!this.autosaveKey) return null;
-
-    const storage = this.autosaveConfig?.storage === 'sessionStorage' ? sessionStorage : localStorage;
-    const draftStr = storage.getItem(this.autosaveKey);
-
-    if (!draftStr) return null;
-
-    try {
-      const draft = JSON.parse(draftStr);
-
-      // Check if draft has expired
-      if (draft.expiresAt && new Date(draft.expiresAt) < new Date()) {
-        this.clearDraft();
-        return null;
-      }
-
-      return draft;
-    } catch (e) {
-      console.error('Failed to parse draft:', e);
-      return null;
-    }
+    // This method is kept for compatibility but the actual restoration
+    // happens in SubmissionService.restoreAutosavedData() during enableAutosave()
+    return null;
   }
 
   /**
    * Clear draft from storage
    */
   private clearDraft(): void {
-    if (!this.autosaveKey) return;
-
-    const storage = this.autosaveConfig?.storage === 'sessionStorage' ? sessionStorage : localStorage;
-    storage.removeItem(this.autosaveKey);
-    this.lastSaved.set(null);
+    this._submission.clearAutosavedData();
   }
 
   /**
@@ -1996,7 +1671,10 @@ export class DqDynamicForm {
         }
       });
 
-      this.touched.update(current => ({ ...current, ...touchedUpdate }));
+      // Mark fields as touched using service
+      Object.keys(touchedUpdate).forEach(fieldName => {
+        this._formState.markTouched(fieldName);
+      });
 
       // Focus first error field
       this.focusFirstError();
@@ -2356,10 +2034,7 @@ export class DqDynamicForm {
 
     // Update form value with selected row IDs
     const selectedIds = Array.from(this.tableSelection()[fieldName] || []);
-    this.formValues.update(values => ({
-      ...values,
-      [fieldName]: selectedIds
-    }));
+    this._formState.updateFormValue(fieldName, selectedIds);
   }
 
   /**
@@ -2395,10 +2070,7 @@ export class DqDynamicForm {
 
     // Update form value
     const selectedIds = Array.from(this.tableSelection()[fieldName] || []);
-    this.formValues.update(values => ({
-      ...values,
-      [fieldName]: selectedIds
-    }));
+    this._formState.updateFormValue(fieldName, selectedIds);
   }
 
   /**
