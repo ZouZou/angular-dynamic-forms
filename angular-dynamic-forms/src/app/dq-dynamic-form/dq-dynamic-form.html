@@ -612,7 +612,7 @@
 
       <!-- Timeline -->
       @if (field.type === 'timeline' && field.timelineConfig) {
-      <div class="timeline-wrapper" [ngClass]="getTimelineLayoutClass(field.timelineConfig)">
+      <div class="timeline-wrapper {{ getTimelineLayoutClass(field.timelineConfig) }}">
         <label class="form-label">{{ field.label }}</label>
 
         <!-- Loading State -->
@@ -647,7 +647,7 @@
 
               <!-- Marker/Connector -->
               <div class="timeline-marker-wrapper">
-                <div class="timeline-marker" [ngClass]="getTimelineMarkerClass(item)">
+                <div class="timeline-marker {{ getTimelineMarkerClass(item) }}">
                   @if (field.timelineConfig.style?.markerStyle === 'icon' && item.icon) {
                   <span class="timeline-marker-icon">{{ item.icon }}</span>
                   } @else if (field.timelineConfig.style?.markerStyle === 'number') {
@@ -665,7 +665,7 @@
                     <div class="timeline-card-title-row">
                       <h4 class="timeline-title">{{ item.title }}</h4>
                       @if (item.badge) {
-                      <span class="timeline-badge" [ngClass]="getTimelineBadgeClass(item.badge)">
+                      <span class="timeline-badge {{ getTimelineBadgeClass(item.badge) }}">
                         {{ item.badge.label }}
                       </span>
                       }
@@ -714,7 +714,7 @@
                     <div class="timeline-header">
                       <h4 class="timeline-title">{{ item.title }}</h4>
                       @if (item.badge) {
-                      <span class="timeline-badge" [ngClass]="getTimelineBadgeClass(item.badge)">
+                      <span class="timeline-badge {{ getTimelineBadgeClass(item.badge) }}">
                         {{ item.badge.label }}
                       </span>
                       }
@@ -800,7 +800,7 @@
 
                   <!-- Marker/Connector -->
                   <div class="timeline-marker-wrapper">
-                    <div class="timeline-marker" [ngClass]="getTimelineMarkerClass(item)">
+                    <div class="timeline-marker {{ getTimelineMarkerClass(item) }}">
                       @if (field.timelineConfig.style?.markerStyle === 'icon' && item.icon) {
                       <span class="timeline-marker-icon">{{ item.icon }}</span>
                       } @else if (field.timelineConfig.style?.markerStyle === 'number') {
@@ -818,7 +818,7 @@
                         <div class="timeline-card-title-row">
                           <h4 class="timeline-title">{{ item.title }}</h4>
                           @if (item.badge) {
-                          <span class="timeline-badge" [ngClass]="getTimelineBadgeClass(item.badge)">
+                          <span class="timeline-badge {{ getTimelineBadgeClass(item.badge) }}">
                             {{ item.badge.label }}
                           </span>
                           }
@@ -867,7 +867,7 @@
                         <div class="timeline-header">
                           <h4 class="timeline-title">{{ item.title }}</h4>
                           @if (item.badge) {
-                          <span class="timeline-badge" [ngClass]="getTimelineBadgeClass(item.badge)">
+                          <span class="timeline-badge {{ getTimelineBadgeClass(item.badge) }}">
                             {{ item.badge.label }}
                           </span>
                           }
