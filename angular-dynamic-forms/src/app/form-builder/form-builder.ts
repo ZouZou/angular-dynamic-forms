@@ -31,10 +31,11 @@ import { TimelineConfigEditorComponent } from './components/property-editors/tim
     JsonEditorPanelComponent,
     FormSettingsEditorComponent,
     SectionEditorComponent,
-    BasicFieldEditorComponent
-    // ValidationEditorComponent, AdvancedFieldEditorComponent, ArrayConfigEditorComponent,
-    // DatatableConfigEditorComponent, TimelineConfigEditorComponent
-    // ^ Created but not yet integrated - ready for future use
+    BasicFieldEditorComponent,
+    ValidationEditorComponent,
+    AdvancedFieldEditorComponent
+    // ArrayConfigEditorComponent, DatatableConfigEditorComponent, TimelineConfigEditorComponent
+    // ^ Created but incomplete - only handle basic config, not sub-items (columns, actions, timeline items)
   ],
   templateUrl: './form-builder.html',
   styleUrl: './form-builder.scss',
