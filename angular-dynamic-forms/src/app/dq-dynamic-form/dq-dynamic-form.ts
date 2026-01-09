@@ -28,7 +28,7 @@ import { ArrayFieldComponent } from './components/field-renderers/array-field.co
 import { MultiStepNavigationComponent } from './components/ui/multi-step-navigation.component';
 import { AutosaveIndicatorComponent } from './components/ui/autosave-indicator.component';
 import { FieldValidationDisplayComponent } from './components/ui/field-validation-display.component';
-import { Parser } from 'expr-eval';
+import { evaluate } from 'mathjs';
 
 @Component({
   selector: 'dq-dynamic-form',
@@ -595,13 +595,10 @@ export class DqDynamicForm {
   }
 
   /**
-   * Evaluate computed field formula using safe expression parser
+   * Evaluate computed field formula using safe mathjs library
    */
   private evaluateComputed(config: ComputedFieldConfig, values: Record<string, unknown>): unknown {
     try {
-      // Create a parser instance
-      const parser = new Parser();
-
       // Build variables object for the expression
       const variables: Record<string, number> = {};
 
@@ -620,9 +617,8 @@ export class DqDynamicForm {
         }
       });
 
-      // Parse and evaluate the formula safely
-      const expr = parser.parse(config.formula);
-      let result = expr.evaluate(variables);
+      // Evaluate the formula safely using mathjs
+      let result = evaluate(config.formula, variables);
 
       // Format result based on configuration
       if (config.formatAs === 'number' || (typeof result === 'number' && config.formatAs !== 'text')) {
