@@ -28,6 +28,7 @@ import { ArrayFieldComponent } from './components/field-renderers/array-field.co
 import { MultiStepNavigationComponent } from './components/ui/multi-step-navigation.component';
 import { AutosaveIndicatorComponent } from './components/ui/autosave-indicator.component';
 import { FieldValidationDisplayComponent } from './components/ui/field-validation-display.component';
+import { Parser } from 'expr-eval';
 
 @Component({
   selector: 'dq-dynamic-form',
@@ -594,31 +595,34 @@ export class DqDynamicForm {
   }
 
   /**
-   * Evaluate computed field formula
+   * Evaluate computed field formula using safe expression parser
    */
   private evaluateComputed(config: ComputedFieldConfig, values: Record<string, unknown>): unknown {
     try {
-      // Replace field names in formula with their values
-      let formula = config.formula;
+      // Create a parser instance
+      const parser = new Parser();
 
-      // Sort dependencies by length (longest first) to avoid partial replacements
-      const sortedDeps = [...config.dependencies].sort((a, b) => b.length - a.length);
+      // Build variables object for the expression
+      const variables: Record<string, number> = {};
 
-      sortedDeps.forEach(dep => {
+      config.dependencies.forEach(dep => {
         const value = values[dep];
-        // Handle different value types
-        if (typeof value === 'string') {
-          formula = formula.replace(new RegExp(`\\b${dep}\\b`, 'g'), `"${value}"`);
+        // Convert value to number for mathematical operations
+        if (typeof value === 'number') {
+          variables[dep] = value;
+        } else if (typeof value === 'string') {
+          const numValue = parseFloat(value);
+          variables[dep] = isNaN(numValue) ? 0 : numValue;
         } else if (value === null || value === undefined || value === '') {
-          formula = formula.replace(new RegExp(`\\b${dep}\\b`, 'g'), '0');
+          variables[dep] = 0;
         } else {
-          formula = formula.replace(new RegExp(`\\b${dep}\\b`, 'g'), String(value));
+          variables[dep] = Number(value) || 0;
         }
       });
 
-      // Evaluate the formula
-      // eslint-disable-next-line no-eval
-      let result = eval(formula);
+      // Parse and evaluate the formula safely
+      const expr = parser.parse(config.formula);
+      let result = expr.evaluate(variables);
 
       // Format result based on configuration
       if (config.formatAs === 'number' || (typeof result === 'number' && config.formatAs !== 'text')) {

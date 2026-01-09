@@ -1,4 +1,5 @@
-import { Component, input, output, ChangeDetectionStrategy, signal, computed } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy, signal, computed, inject } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Field } from '../../models/field.model';
 import { SHARED_FIELD_STYLES } from './shared-field-styles';
 
@@ -28,7 +29,7 @@ import { SHARED_FIELD_STYLES } from './shared-field-styles';
       [attr.aria-required]="field().validations?.required || null"
       [attr.aria-invalid]="touched() && error() ? 'true' : null"
       [attr.aria-describedby]="error() ? 'error-' + field().name : null"
-      [innerHTML]="value() || ''"
+      [innerHTML]="sanitizedValue()"
       (input)="onInput($any($event.target).innerHTML)"
       (blur)="onBlur()"
     ></div>
@@ -108,6 +109,8 @@ import { SHARED_FIELD_STYLES } from './shared-field-styles';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RichtextFieldComponent {
+  private readonly sanitizer = inject(DomSanitizer);
+
   // Inputs
   field = input.required<Field>();
   value = input<unknown>('');
@@ -117,6 +120,13 @@ export class RichtextFieldComponent {
   // Outputs
   valueChange = output<{ fieldName: string; value: unknown }>();
   blur = output<string>();
+
+  // Sanitized HTML value to prevent XSS
+  protected readonly sanitizedValue = computed(() => {
+    const val = this.value();
+    if (!val || typeof val !== 'string') return '';
+    return this.sanitizer.sanitize(1, val) || ''; // 1 = SecurityContext.HTML
+  });
 
   // Computed current text length (strips HTML)
   protected readonly currentLength = computed(() => {
@@ -140,8 +150,11 @@ export class RichtextFieldComponent {
 
   private getRichTextLength(html: unknown): number {
     if (!html || typeof html !== 'string') return 0;
+    // Sanitize HTML before using innerHTML to prevent XSS
+    const sanitized = this.sanitizer.sanitize(1, html); // 1 = SecurityContext.HTML
+    if (!sanitized) return 0;
     const div = document.createElement('div');
-    div.innerHTML = html;
+    div.innerHTML = sanitized;
     return div.textContent?.length || 0;
   }
 }
