@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { Field, FieldOption } from '../../models/field.model';
+import { SHARED_FIELD_STYLES } from './shared-field-styles';
 
 /**
  * Renders select dropdown fields (both native and searchable)
@@ -77,6 +78,17 @@ import { Field, FieldOption } from '../../models/field.model';
       </select>
     }
   `,
+  styles: [
+    SHARED_FIELD_STYLES,
+    `
+      .loading-indicator {
+        margin-left: auto;
+        font-size: 0.75rem;
+        color: var(--color-gray-500);
+        font-weight: 400;
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SelectFieldComponent {

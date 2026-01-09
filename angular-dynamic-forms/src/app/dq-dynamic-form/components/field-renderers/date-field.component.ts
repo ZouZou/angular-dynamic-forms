@@ -1,5 +1,6 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { Field } from '../../models/field.model';
+import { SHARED_FIELD_STYLES } from './shared-field-styles';
 
 /**
  * Renders date input fields
@@ -28,6 +29,7 @@ import { Field } from '../../models/field.model';
       (blur)="onBlur()"
     />
   `,
+  styles: [SHARED_FIELD_STYLES],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DateFieldComponent {

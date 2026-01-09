@@ -5,6 +5,7 @@ import { TextFieldComponent } from './text-field.component';
 import { NumberFieldComponent } from './number-field.component';
 import { TextareaFieldComponent } from './textarea-field.component';
 import { SelectFieldComponent } from './select-field.component';
+import { SHARED_FIELD_STYLES } from './shared-field-styles';
 
 /**
  * Renders repeating array fields with add/remove functionality
@@ -114,6 +115,131 @@ import { SelectFieldComponent } from './select-field.component';
       </button>
     </div>
   `,
+  styles: [
+    SHARED_FIELD_STYLES,
+    `
+      .array-field-container {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-md);
+      }
+
+      .array-item {
+        padding: var(--spacing-md);
+        border: 2px solid var(--color-gray-300);
+        border-radius: var(--radius-md);
+        background-color: var(--color-gray-50);
+      }
+
+      .array-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-md);
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 1px solid var(--color-gray-300);
+      }
+
+      .array-item-label {
+        font-weight: 600;
+        font-size: 0.9375rem;
+        color: var(--color-gray-700);
+      }
+
+      .array-remove-btn {
+        padding: 6px 12px;
+        background-color: white;
+        border: 1px solid var(--color-danger);
+        color: var(--color-danger);
+        border-radius: var(--radius-sm);
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+      }
+
+      .array-remove-btn:hover:not(:disabled) {
+        background-color: var(--color-danger);
+        color: white;
+      }
+
+      .array-remove-btn:focus,
+      .array-remove-btn:focus-visible {
+        outline: 2px solid var(--color-danger);
+        outline-offset: 2px;
+      }
+
+      .array-remove-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .array-item-fields {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: var(--spacing-md);
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+      }
+
+      .form-group.width-full {
+        grid-column: span 12;
+      }
+
+      .form-group.width-half {
+        grid-column: span 6;
+      }
+
+      .form-group.width-third {
+        grid-column: span 4;
+      }
+
+      .form-group.width-quarter {
+        grid-column: span 3;
+      }
+
+      .error {
+        color: var(--color-danger);
+        font-size: 0.8125rem;
+        margin-top: var(--spacing-xs);
+      }
+
+      .array-add-btn {
+        padding: 10px 16px;
+        background-color: var(--color-primary);
+        color: white;
+        border: none;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        font-size: 0.9375rem;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        align-self: flex-start;
+      }
+
+      .array-add-btn:hover:not(:disabled) {
+        background-color: var(--color-primary-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .array-add-btn:focus,
+      .array-add-btn:focus-visible {
+        outline: 3px solid var(--color-primary);
+        outline-offset: 2px;
+      }
+
+      .array-add-btn:disabled {
+        background-color: var(--color-gray-300);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ArrayFieldComponent {

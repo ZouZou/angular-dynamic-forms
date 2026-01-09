@@ -35,13 +35,13 @@ import { FormSection } from '../../models/field.model';
       <!-- Current step header -->
       <div class="current-step-header">
         <h3 class="step-title">
-          @if (currentSection()?.icon) {
-            <span class="step-icon">{{ currentSection()?.icon }}</span>
+          @if (currentSection().icon) {
+            <span class="step-icon">{{ currentSection().icon }}</span>
           }
-          {{ currentSection()?.title }}
+          {{ currentSection().title }}
         </h3>
-        @if (currentSection()?.description) {
-          <p class="step-description">{{ currentSection()?.description }}</p>
+        @if (currentSection().description) {
+          <p class="step-description">{{ currentSection().description }}</p>
         }
       </div>
     }

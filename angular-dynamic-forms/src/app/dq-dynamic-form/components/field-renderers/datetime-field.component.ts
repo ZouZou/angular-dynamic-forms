@@ -1,5 +1,6 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { Field } from '../../models/field.model';
+import { SHARED_FIELD_STYLES } from './shared-field-styles';
 
 /**
  * Renders datetime-local fields
@@ -31,6 +32,17 @@ import { Field } from '../../models/field.model';
       <small class="text-muted">Timezone: {{ field().timezone }}</small>
     }
   `,
+  styles: [
+    SHARED_FIELD_STYLES,
+    `
+      .text-muted {
+        display: block;
+        font-size: 0.8125rem;
+        color: var(--color-gray-500);
+        margin-top: var(--spacing-xs);
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DateTimeFieldComponent {

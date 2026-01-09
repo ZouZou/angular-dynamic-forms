@@ -1,5 +1,6 @@
 import { Component, input, output, ChangeDetectionStrategy, signal, computed } from '@angular/core';
 import { Field } from '../../models/field.model';
+import { SHARED_FIELD_STYLES } from './shared-field-styles';
 
 /**
  * Renders rich text editor fields with toolbar
@@ -37,6 +38,73 @@ import { Field } from '../../models/field.model';
       </small>
     }
   `,
+  styles: [
+    SHARED_FIELD_STYLES,
+    `
+      .richtext-toolbar {
+        display: flex;
+        gap: var(--spacing-xs);
+        padding: var(--spacing-sm);
+        background-color: var(--color-gray-100);
+        border: 2px solid var(--color-gray-300);
+        border-bottom: none;
+        border-radius: var(--radius-md) var(--radius-md) 0 0;
+      }
+
+      .richtext-toolbar button {
+        padding: 6px 12px;
+        background-color: white;
+        border: 1px solid var(--color-gray-300);
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+      }
+
+      .richtext-toolbar button:hover {
+        background-color: var(--color-gray-50);
+        border-color: var(--color-primary);
+      }
+
+      .richtext-toolbar button:focus,
+      .richtext-toolbar button:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+      }
+
+      .richtext-editor {
+        min-height: 150px;
+        padding: 12px 16px;
+        border: 2px solid var(--color-gray-300);
+        border-radius: 0 0 var(--radius-md) var(--radius-md);
+        background-color: white;
+        font-size: 1rem;
+        line-height: 1.6;
+        overflow-y: auto;
+        transition: border-color var(--transition-fast);
+      }
+
+      .richtext-editor:focus,
+      .richtext-editor:focus-visible {
+        outline: none;
+        border-color: var(--color-primary);
+      }
+
+      .richtext-editor:empty:before {
+        content: attr(placeholder);
+        color: var(--color-gray-400);
+        font-style: italic;
+      }
+
+      .text-muted {
+        display: block;
+        font-size: 0.8125rem;
+        color: var(--color-gray-500);
+        margin-top: var(--spacing-xs);
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RichtextFieldComponent {

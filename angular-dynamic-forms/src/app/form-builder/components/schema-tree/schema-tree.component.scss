@@ -1,0 +1,228 @@
+.tree-section {
+  h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-gray-700);
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 2px solid var(--color-gray-200);
+  }
+
+  .btn-sm {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.75rem;
+  }
+}
+
+.sections-tree,
+.field-tree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.section-item {
+  background: white;
+  border: 2px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+
+  &.selected {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  }
+
+  &.cdk-drag-preview {
+    opacity: 0.8;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: var(--color-gray-50);
+  }
+}
+
+.section-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+}
+
+.section-icon {
+  font-size: 1.25rem;
+}
+
+.section-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.section-title {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--color-gray-800);
+}
+
+.section-meta {
+  font-size: 0.75rem;
+  color: var(--color-gray-500);
+}
+
+.section-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.section-fields {
+  padding: var(--spacing-md);
+  background: var(--color-gray-50);
+  border-top: 2px solid var(--color-gray-200);
+}
+
+.section-fields-header {
+  margin-bottom: var(--spacing-sm);
+
+  h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-600);
+    margin: 0;
+  }
+}
+
+.field-item {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: white;
+  border: 2px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-bottom: var(--spacing-sm);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &:hover {
+    border-color: var(--color-gray-400);
+    background: var(--color-gray-50);
+  }
+
+  &.selected {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+  }
+
+  &.cdk-drag-preview {
+    opacity: 0.8;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.drag-handle {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--spacing-sm);
+  cursor: grab;
+  color: var(--color-gray-400);
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.drag-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.field-item-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+}
+
+.field-icon {
+  font-size: 1.25rem;
+}
+
+.field-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.field-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--color-gray-800);
+}
+
+.field-label {
+  font-size: 0.75rem;
+  color: var(--color-gray-500);
+}
+
+.field-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  padding: var(--spacing-xs);
+  cursor: pointer;
+  font-size: 1rem;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--color-gray-100);
+  }
+
+  &.btn-danger:hover {
+    background: var(--color-error);
+    color: white;
+  }
+}
+
+.empty-state,
+.empty-state-small {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--color-gray-500);
+  font-size: 0.875rem;
+
+  p {
+    margin: 0;
+  }
+}
+
+.empty-state-small {
+  padding: var(--spacing-md);
+  background: white;
+  border: 2px dashed var(--color-gray-300);
+  border-radius: var(--radius-md);
+}
+
+.drag-placeholder {
+  background: var(--color-primary-light);
+  border: 2px dashed var(--color-primary);
+  border-radius: var(--radius-md);
+  min-height: 60px;
+}

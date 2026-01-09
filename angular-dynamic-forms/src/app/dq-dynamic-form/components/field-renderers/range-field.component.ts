@@ -1,5 +1,6 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { Field } from '../../models/field.model';
+import { SHARED_FIELD_STYLES } from './shared-field-styles';
 
 /**
  * Renders range slider fields
@@ -32,6 +33,73 @@ import { Field } from '../../models/field.model';
       (blur)="onBlur()"
     />
   `,
+  styles: [
+    SHARED_FIELD_STYLES,
+    `
+      .range-value {
+        margin-left: auto;
+        font-weight: 700;
+        color: var(--color-primary);
+        font-size: 0.875rem;
+      }
+
+      .form-range {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--color-gray-200);
+        outline: none;
+        cursor: pointer;
+        transition: opacity var(--transition-fast);
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      .form-range:hover {
+        opacity: 0.9;
+      }
+
+      .form-range:focus,
+      .form-range:focus-visible {
+        outline: 3px solid var(--color-primary);
+        outline-offset: 2px;
+      }
+
+      .form-range:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .form-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        cursor: pointer;
+        transition: transform var(--transition-fast);
+      }
+
+      .form-range::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+      }
+
+      .form-range::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border: none;
+        border-radius: 50%;
+        background: var(--color-primary);
+        cursor: pointer;
+        transition: transform var(--transition-fast);
+      }
+
+      .form-range::-moz-range-thumb:hover {
+        transform: scale(1.2);
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RangeFieldComponent {

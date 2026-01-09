@@ -1,5 +1,6 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { Field } from '../../models/field.model';
+import { SHARED_FIELD_STYLES } from './shared-field-styles';
 
 /**
  * Renders checkbox fields
@@ -28,6 +29,34 @@ import { Field } from '../../models/field.model';
       </label>
     </div>
   `,
+  styles: [
+    SHARED_FIELD_STYLES,
+    `
+      .checkbox-container {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+      }
+
+      input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        accent-color: var(--color-primary);
+        transition: transform var(--transition-fast);
+      }
+
+      input[type="checkbox"]:hover {
+        transform: scale(1.1);
+      }
+
+      input[type="checkbox"]:focus,
+      input[type="checkbox"]:focus-visible {
+        outline: 3px solid var(--color-primary);
+        outline-offset: 2px;
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CheckboxFieldComponent {

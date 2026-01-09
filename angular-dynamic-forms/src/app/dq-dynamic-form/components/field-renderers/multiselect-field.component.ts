@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { Field, FieldOption } from '../../models/field.model';
+import { SHARED_FIELD_STYLES } from './shared-field-styles';
 
 /**
  * Renders multi-select fields (both native and searchable)
@@ -84,6 +85,21 @@ import { Field, FieldOption } from '../../models/field.model';
       </small>
     }
   `,
+  styles: [
+    SHARED_FIELD_STYLES,
+    `
+      .text-muted {
+        display: block;
+        font-size: 0.8125rem;
+        color: var(--color-gray-500);
+        margin-top: var(--spacing-xs);
+      }
+
+      select[multiple] {
+        min-height: 150px;
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MultiselectFieldComponent {

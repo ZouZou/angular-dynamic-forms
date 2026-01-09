@@ -5,45 +5,57 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 import { DqDynamicForm } from '../dq-dynamic-form/dq-dynamic-form';
 import { DevToolsService, ValidationResult } from '../dq-dynamic-form/dev-tools.service';
 import { FormSchema, Field, FormSection } from '../dq-dynamic-form/models/field.model';
-
-interface FieldTemplate {
-  type: string;
-  label: string;
-  icon: string;
-  defaultConfig: Partial<Field>;
-}
+import { SchemaStateService } from './services/schema-state.service';
+import { SchemaIOService } from './services/schema-io.service';
+import { FieldPaletteComponent, FieldTemplate } from './components/palette/field-palette.component';
+import { SchemaTreeComponent } from './components/schema-tree/schema-tree.component';
+import { JsonEditorPanelComponent } from './components/json-editor/json-editor-panel.component';
+import { FormSettingsEditorComponent } from './components/property-editors/form-settings-editor.component';
+import { SectionEditorComponent } from './components/property-editors/section-editor.component';
+import { BasicFieldEditorComponent } from './components/property-editors/basic-field-editor.component';
+import { ValidationEditorComponent } from './components/property-editors/validation-editor.component';
+import { AdvancedFieldEditorComponent } from './components/property-editors/advanced-field-editor.component';
+import { ArrayConfigEditorComponent } from './components/property-editors/array-config-editor.component';
+import { DatatableConfigEditorComponent } from './components/property-editors/datatable-config-editor.component';
+import { TimelineConfigEditorComponent } from './components/property-editors/timeline-config-editor.component';
 
 @Component({
   selector: 'app-form-builder',
-  imports: [CommonModule, FormsModule, DragDropModule, DqDynamicForm],
+  imports: [
+    CommonModule,
+    FormsModule,
+    DragDropModule,
+    DqDynamicForm,
+    FieldPaletteComponent,
+    SchemaTreeComponent,
+    JsonEditorPanelComponent,
+    FormSettingsEditorComponent,
+    SectionEditorComponent,
+    BasicFieldEditorComponent,
+    ValidationEditorComponent,
+    AdvancedFieldEditorComponent,
+    ArrayConfigEditorComponent,
+    DatatableConfigEditorComponent,
+    TimelineConfigEditorComponent
+  ],
   templateUrl: './form-builder.html',
   styleUrl: './form-builder.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FormBuilder {
   private readonly devTools = inject(DevToolsService);
+  protected readonly schemaState = inject(SchemaStateService);
+  protected readonly schemaIO = inject(SchemaIOService);
 
-  // Current form schema being built
-  protected readonly schema = signal<FormSchema>({
-    title: 'New Form',
-    description: 'Build your form by adding fields from the palette',
-    fields: []
-  });
+  // Expose schema signals from service
+  protected readonly schema = this.schemaState.schema;
+  protected readonly selectedFieldIndex = this.schemaState.selectedFieldIndex;
+  protected readonly multiStepMode = this.schemaState.multiStepMode;
+  protected readonly selectedSectionIndex = this.schemaState.selectedSectionIndex;
 
-  // JSON editor content
-  protected readonly jsonContent = signal<string>('');
-
-  // Validation results
-  protected readonly validationResult = signal<ValidationResult | null>(null);
-
-  // Selected field for editing
-  protected readonly selectedFieldIndex = signal<number | null>(null);
-
-  // Multi-step mode
-  protected readonly multiStepMode = signal<boolean>(false);
-
-  // Selected section index (for multi-step mode)
-  protected readonly selectedSectionIndex = signal<number | null>(null);
+  // Expose IO signals from service
+  protected readonly jsonContent = this.schemaIO.jsonContent;
+  protected readonly validationResult = this.schemaIO.validationResult;
 
   // Active tab in property editor
   protected readonly activePropertyTab = signal<string>('basic');
@@ -403,30 +415,11 @@ export class FormBuilder {
     return schema.sections || [];
   });
 
-  // Computed: current fields (based on mode)
-  protected readonly currentFields = computed(() => {
-    const schema = this.schema();
-    const multiStep = this.multiStepMode();
-    const sectionIndex = this.selectedSectionIndex();
+  // Computed: current fields (use service)
+  protected readonly currentFields = this.schemaState.currentFields;
 
-    if (multiStep && sectionIndex !== null) {
-      // In multi-step mode with a section selected, return fields from that section
-      const sections = schema.sections || [];
-      return sections[sectionIndex]?.fields || [];
-    } else if (!multiStep) {
-      // In single-step mode, return all fields
-      return schema.fields || [];
-    }
-    return [];
-  });
-
-  // Computed: selected field
-  protected readonly selectedField = computed(() => {
-    const index = this.selectedFieldIndex();
-    if (index === null) return null;
-    const fields = this.currentFields();
-    return fields[index];
-  });
+  // Computed: selected field (use service)
+  protected readonly selectedField = this.schemaState.selectedField;
 
   // Computed: selected section
   protected readonly selectedSection = computed(() => {
@@ -436,10 +429,18 @@ export class FormBuilder {
     return sections[index];
   });
 
-  // Computed: formatted JSON with syntax highlighting
+  // Computed: formatted JSON
   protected readonly formattedJson = computed(() => {
-    const schema = this.schema();
-    return JSON.stringify(schema, null, 2);
+    return this.schemaIO.formatSchema(this.schema());
+  });
+
+  // Computed: field icon map for schema tree
+  protected readonly fieldIconMap = computed(() => {
+    const map = new Map<string, string>();
+    this.fieldTemplates.forEach(template => {
+      map.set(template.type, template.icon);
+    });
+    return map;
   });
 
   // Initialization effect
@@ -448,29 +449,12 @@ export class FormBuilder {
     this.updateJsonFromSchema();
     // Initial validation
     this.validateSchema();
-    // Check if schema is multi-step
-    const schema = this.schema();
-    if (schema.multiStep && schema.sections && schema.sections.length > 0) {
-      this.multiStepMode.set(true);
-      this.selectedSectionIndex.set(0);
-    }
   });
 
   // Add field from palette
   protected addField(template: FieldTemplate): void {
-    const currentSchema = this.schema();
-    const multiStep = this.multiStepMode();
-
-    if (multiStep) {
-      // Multi-step mode: add to selected section
-      const sectionIndex = this.selectedSectionIndex();
-      if (sectionIndex === null) {
-        alert('Please select a section first');
-        return;
-      }
-
-      const sections = [...(currentSchema.sections || [])];
-      const currentFields = sections[sectionIndex].fields;
+    try {
+      const currentFields = this.currentFields();
       const fieldCount = currentFields.length;
 
       // Create unique field name
@@ -479,87 +463,21 @@ export class FormBuilder {
         name: `${template.type}Field${fieldCount + 1}`
       };
 
-      // Update section with new field
-      sections[sectionIndex] = {
-        ...sections[sectionIndex],
-        fields: [...currentFields, newField]
-      };
+      // Add field using service
+      this.schemaState.addField(newField);
 
-      this.schema.set({
-        ...currentSchema,
-        sections
-      });
-
-      // Select the newly added field
-      this.selectedFieldIndex.set(currentFields.length);
-    } else {
-      // Single-step mode: add to fields array
-      const currentFields = currentSchema.fields || [];
-      const fieldCount = currentFields.length;
-
-      // Create unique field name
-      const newField: Field = {
-        ...template.defaultConfig as Field,
-        name: `${template.type}Field${fieldCount + 1}`
-      };
-
-      // Add field to schema
-      const updatedSchema = {
-        ...currentSchema,
-        fields: [...currentFields, newField]
-      };
-
-      this.schema.set(updatedSchema);
-
-      // Select the newly added field
-      this.selectedFieldIndex.set(currentFields.length);
+      this.updateJsonFromSchema();
+      this.validateSchema();
+    } catch (error) {
+      alert((error as Error).message);
     }
-
-    this.updateJsonFromSchema();
-    this.validateSchema();
   }
 
   // Remove field
   protected removeField(index: number): void {
-    const currentSchema = this.schema();
-    const multiStep = this.multiStepMode();
-
-    if (multiStep) {
-      // Multi-step mode: remove from selected section
-      const sectionIndex = this.selectedSectionIndex();
-      if (sectionIndex === null) return;
-
-      const sections = [...(currentSchema.sections || [])];
-      const currentFields = sections[sectionIndex].fields;
-      const updatedFields = currentFields.filter((_, i) => i !== index);
-
-      sections[sectionIndex] = {
-        ...sections[sectionIndex],
-        fields: updatedFields
-      };
-
-      this.schema.set({
-        ...currentSchema,
-        sections
-      });
-    } else {
-      // Single-step mode: remove from fields array
-      const currentFields = currentSchema.fields || [];
-      const updatedFields = currentFields.filter((_, i) => i !== index);
-
-      this.schema.set({
-        ...currentSchema,
-        fields: updatedFields
-      });
-    }
-
+    this.schemaState.removeField(index);
     this.updateJsonFromSchema();
     this.validateSchema();
-
-    // Clear selection if removed field was selected
-    if (this.selectedFieldIndex() === index) {
-      this.selectedFieldIndex.set(null);
-    }
   }
 
   // Move field up
@@ -738,9 +656,6 @@ export class FormBuilder {
 
   // Update field property
   protected updateFieldProperty(property: string, value: any): void {
-    const index = this.selectedFieldIndex();
-    if (index === null) return;
-
     // Special handling for dependsOn - convert comma-separated string to array if multiple values
     if (property === 'dependsOn' && typeof value === 'string' && value.trim()) {
       const dependencies = value.split(',').map(d => d.trim()).filter(d => d.length > 0);
@@ -753,46 +668,7 @@ export class FormBuilder {
       }
     }
 
-    const currentSchema = this.schema();
-    const multiStep = this.multiStepMode();
-
-    if (multiStep) {
-      // Multi-step mode: update field in selected section
-      const sectionIndex = this.selectedSectionIndex();
-      if (sectionIndex === null) return;
-
-      const sections = [...(currentSchema.sections || [])];
-      const currentFields = sections[sectionIndex].fields;
-      const updatedFields = [...currentFields];
-      updatedFields[index] = {
-        ...updatedFields[index],
-        [property]: value
-      };
-
-      sections[sectionIndex] = {
-        ...sections[sectionIndex],
-        fields: updatedFields
-      };
-
-      this.schema.set({
-        ...currentSchema,
-        sections
-      });
-    } else {
-      // Single-step mode: update field in fields array
-      const currentFields = currentSchema.fields || [];
-      const updatedFields = [...currentFields];
-      updatedFields[index] = {
-        ...updatedFields[index],
-        [property]: value
-      };
-
-      this.schema.set({
-        ...currentSchema,
-        fields: updatedFields
-      });
-    }
-
+    this.schemaState.updateFieldProperty(property, value);
     this.updateJsonFromSchema();
     this.validateSchema();
   }
@@ -813,83 +689,42 @@ export class FormBuilder {
     }
   }
 
+  // Handle JSON content change from editor component
+  protected onJsonContentChanged(newContent: string): void {
+    this.schemaIO.setJsonContent(newContent);
+    this.onJsonChange();
+  }
+
   // Update JSON from schema
   private updateJsonFromSchema(): void {
-    this.jsonContent.set(this.formattedJson());
+    this.schemaIO.setJsonContent(this.formattedJson());
   }
 
   // Validate current schema
   private validateSchema(): void {
-    try {
-      const schemaToValidate = this.jsonContent()
-        ? JSON.parse(this.jsonContent())
-        : this.schema();
-
-      const result = this.devTools.validateSchema(schemaToValidate);
-      this.validationResult.set(result);
-    } catch (e) {
-      this.validationResult.set({
-        isValid: false,
-        errors: [`JSON Parse Error: ${(e as Error).message}`],
-        warnings: [],
-        summary: {
-          totalFields: 0,
-          requiredFields: 0,
-          optionalFields: 0,
-          fieldTypes: {},
-          hasAutosave: false,
-          hasSubmission: false,
-          hasI18n: false,
-          errorCount: 1,
-          warningCount: 0
-        }
-      });
-    }
+    this.schemaIO.validateSchema(this.schema(), this.jsonContent());
   }
 
   // Export schema
   protected exportSchema(): void {
-    const jsonString = this.devTools.exportSchema(this.schema());
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'form-schema.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    this.schemaIO.exportSchema(this.schema());
   }
 
   // Import schema
-  protected importSchema(event: Event): void {
+  protected async importSchema(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      const importResult = this.devTools.importSchema(content);
+    const importResult = await this.schemaIO.importSchemaFromFile(file);
 
-      if (importResult.schema) {
-        this.schema.set(importResult.schema);
-
-        // Check if imported schema is multi-step
-        if (importResult.schema.multiStep && importResult.schema.sections && importResult.schema.sections.length > 0) {
-          this.multiStepMode.set(true);
-          this.selectedSectionIndex.set(0);
-        } else {
-          this.multiStepMode.set(false);
-          this.selectedSectionIndex.set(null);
-        }
-
-        this.updateJsonFromSchema();
-        this.validateSchema();
-        this.selectedFieldIndex.set(null);
-      } else {
-        alert(`Import failed: ${importResult.error}`);
-      }
-    };
-    reader.readAsText(file);
+    if (importResult.schema) {
+      this.schemaState.setSchema(importResult.schema);
+      this.updateJsonFromSchema();
+      this.validateSchema();
+    } else {
+      alert(`Import failed: ${importResult.error}`);
+    }
   }
 
   // Get field icon from palette
@@ -924,57 +759,7 @@ export class FormBuilder {
 
   // Update validation property
   protected updateValidationProperty(property: string, value: any): void {
-    const index = this.selectedFieldIndex();
-    if (index === null) return;
-
-    const currentSchema = this.schema();
-    const multiStep = this.multiStepMode();
-
-    if (multiStep) {
-      const sectionIndex = this.selectedSectionIndex();
-      if (sectionIndex === null) return;
-
-      const sections = [...(currentSchema.sections || [])];
-      const currentFields = sections[sectionIndex].fields;
-      const updatedFields = [...currentFields];
-      const field = updatedFields[index];
-
-      updatedFields[index] = {
-        ...field,
-        validations: {
-          ...field.validations,
-          [property]: value
-        }
-      };
-
-      sections[sectionIndex] = {
-        ...sections[sectionIndex],
-        fields: updatedFields
-      };
-
-      this.schema.set({
-        ...currentSchema,
-        sections
-      });
-    } else {
-      const currentFields = currentSchema.fields || [];
-      const updatedFields = [...currentFields];
-      const field = updatedFields[index];
-
-      updatedFields[index] = {
-        ...field,
-        validations: {
-          ...field.validations,
-          [property]: value
-        }
-      };
-
-      this.schema.set({
-        ...currentSchema,
-        fields: updatedFields
-      });
-    }
-
+    this.schemaState.updateValidationProperty(property, value);
     this.updateJsonFromSchema();
     this.validateSchema();
   }
@@ -1136,13 +921,9 @@ export class FormBuilder {
   }
 
   // Generate TypeScript interface
-  protected generateTypeScript(): void {
-    const tsCode = this.devTools.generateTypeScriptInterface(this.schema(), 'FormData');
-
-    // Copy to clipboard
-    navigator.clipboard.writeText(tsCode).then(() => {
-      alert('TypeScript interface copied to clipboard!');
-    });
+  protected async generateTypeScript(): Promise<void> {
+    await this.schemaIO.copyTypeScriptToClipboard(this.schema());
+    alert('TypeScript interface copied to clipboard!');
   }
 
   // Array field helpers
@@ -2810,173 +2591,43 @@ export class FormBuilder {
 
   // Toggle multi-step mode
   protected toggleMultiStepMode(): void {
-    const currentMode = this.multiStepMode();
-    const newMode = !currentMode;
-
-    if (newMode) {
-      // Switching to multi-step mode
-      const currentSchema = this.schema();
-      const currentFields = currentSchema.fields || [];
-
-      if (currentFields.length > 0) {
-        // Convert existing fields to a single section
-        const sections: FormSection[] = [{
-          title: 'Step 1',
-          description: 'Complete this section',
-          icon: '📋',
-          fields: [...currentFields]
-        }];
-
-        this.schema.set({
-          ...currentSchema,
-          multiStep: true,
-          sections,
-          fields: undefined
-        });
-
-        this.selectedSectionIndex.set(0);
-      } else {
-        // No fields, just enable multi-step mode with one empty section
-        this.schema.set({
-          ...currentSchema,
-          multiStep: true,
-          sections: [{
-            title: 'Step 1',
-            description: 'Complete this section',
-            icon: '📋',
-            fields: []
-          }],
-          fields: undefined
-        });
-
-        this.selectedSectionIndex.set(0);
-      }
-    } else {
-      // Switching to single-step mode
-      const currentSchema = this.schema();
-      const sections = currentSchema.sections || [];
-
-      // Flatten all fields from all sections
-      const allFields: Field[] = [];
-      sections.forEach(section => {
-        allFields.push(...section.fields);
-      });
-
-      this.schema.set({
-        ...currentSchema,
-        multiStep: false,
-        sections: undefined,
-        fields: allFields
-      });
-
-      this.selectedSectionIndex.set(null);
-    }
-
-    this.multiStepMode.set(newMode);
-    this.selectedFieldIndex.set(null);
+    this.schemaState.toggleMultiStepMode();
     this.updateJsonFromSchema();
     this.validateSchema();
   }
 
   // Add new section
   protected addSection(): void {
-    const currentSchema = this.schema();
-    const sections = currentSchema.sections || [];
-    const sectionNumber = sections.length + 1;
-
-    const newSection: FormSection = {
-      title: `Step ${sectionNumber}`,
-      description: 'Complete this section',
-      icon: '📋',
-      fields: []
-    };
-
-    this.schema.set({
-      ...currentSchema,
-      sections: [...sections, newSection]
-    });
-
+    this.schemaState.addSection();
     this.updateJsonFromSchema();
     this.validateSchema();
-
-    // Select the new section
-    this.selectedSectionIndex.set(sections.length);
   }
 
   // Remove section
   protected removeSection(index: number): void {
-    const currentSchema = this.schema();
-    const sections = currentSchema.sections || [];
-
-    if (sections.length <= 1) {
-      alert('Cannot remove the last section. Switch to single-step mode instead.');
-      return;
-    }
-
     if (!confirm('Are you sure you want to remove this section and all its fields?')) {
       return;
     }
 
-    const updatedSections = sections.filter((_, i) => i !== index);
-
-    this.schema.set({
-      ...currentSchema,
-      sections: updatedSections
-    });
-
-    this.updateJsonFromSchema();
-    this.validateSchema();
-
-    // Clear selection if removed section was selected
-    if (this.selectedSectionIndex() === index) {
-      this.selectedSectionIndex.set(null);
-    } else if (this.selectedSectionIndex() !== null && this.selectedSectionIndex()! > index) {
-      // Adjust selection if it was after the removed section
-      this.selectedSectionIndex.set(this.selectedSectionIndex()! - 1);
+    try {
+      this.schemaState.removeSection(index);
+      this.updateJsonFromSchema();
+      this.validateSchema();
+    } catch (error) {
+      alert((error as Error).message);
     }
   }
 
   // Move section up
   protected moveSectionUp(index: number): void {
-    if (index === 0) return;
-
-    const currentSchema = this.schema();
-    const sections = [...(currentSchema.sections || [])];
-    [sections[index - 1], sections[index]] = [sections[index], sections[index - 1]];
-
-    this.schema.set({
-      ...currentSchema,
-      sections
-    });
-
+    this.schemaState.moveSectionUp(index);
     this.updateJsonFromSchema();
-
-    // Update selection
-    if (this.selectedSectionIndex() === index) {
-      this.selectedSectionIndex.set(index - 1);
-    }
   }
 
   // Move section down
   protected moveSectionDown(index: number): void {
-    const currentSchema = this.schema();
-    const sections = currentSchema.sections || [];
-    if (index === sections.length - 1) return;
-
-    const updatedSections = [...sections];
-    [updatedSections[index], updatedSections[index + 1]] = [updatedSections[index + 1], updatedSections[index]];
-
-    this.schema.set({
-      ...currentSchema,
-      sections: updatedSections
-    });
-
+    this.schemaState.moveSectionDown(index);
     this.updateJsonFromSchema();
-
-    // Update selection
-    if (this.selectedSectionIndex() === index) {
-      this.selectedSectionIndex.set(index + 1);
-    }
   }
 
   // Select section
@@ -2990,18 +2641,7 @@ export class FormBuilder {
     const index = this.selectedSectionIndex();
     if (index === null) return;
 
-    const currentSchema = this.schema();
-    const sections = [...(currentSchema.sections || [])];
-    sections[index] = {
-      ...sections[index],
-      [property]: value
-    };
-
-    this.schema.set({
-      ...currentSchema,
-      sections
-    });
-
+    this.schemaState.updateSectionProperty(index, property, value);
     this.updateJsonFromSchema();
     this.validateSchema();
   }

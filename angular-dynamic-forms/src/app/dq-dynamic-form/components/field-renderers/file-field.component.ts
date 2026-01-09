@@ -1,5 +1,6 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { Field } from '../../models/field.model';
+import { SHARED_FIELD_STYLES } from './shared-field-styles';
 
 /**
  * Renders file upload fields with preview
@@ -41,6 +42,76 @@ import { Field } from '../../models/field.model';
       </div>
     }
   `,
+  styles: [
+    SHARED_FIELD_STYLES,
+    `
+      .form-file {
+        padding: 8px 12px;
+        border: 2px solid var(--color-gray-300);
+        border-radius: var(--radius-md);
+        background-color: white;
+        font-size: 0.9375rem;
+        width: 100%;
+        cursor: pointer;
+        transition: border-color var(--transition-fast);
+      }
+
+      .form-file:hover {
+        border-color: var(--color-primary);
+      }
+
+      .form-file:focus,
+      .form-file:focus-visible {
+        outline: 3px solid var(--color-primary);
+        outline-offset: 2px;
+        border-color: var(--color-primary);
+      }
+
+      .form-file:disabled {
+        background-color: var(--color-gray-100);
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .text-muted {
+        display: block;
+        font-size: 0.8125rem;
+        color: var(--color-gray-500);
+        margin-top: var(--spacing-xs);
+      }
+
+      .file-preview {
+        margin-top: var(--spacing-md);
+        padding: var(--spacing-md);
+        border: 2px dashed var(--color-gray-300);
+        border-radius: var(--radius-md);
+        background-color: var(--color-gray-50);
+      }
+
+      .image-preview {
+        max-width: 100%;
+        max-height: 300px;
+        border-radius: var(--radius-sm);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .file-info {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-xs);
+      }
+
+      .file-info strong {
+        color: var(--color-gray-800);
+        font-size: 0.9375rem;
+      }
+
+      .file-info small {
+        color: var(--color-gray-500);
+        font-size: 0.8125rem;
+      }
+    `
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FileFieldComponent {
