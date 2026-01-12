@@ -1,5 +1,6 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { lastValueFrom } from 'rxjs';
 import { FormSubmission } from '../models/field.model';
 
 /**
@@ -21,7 +22,7 @@ export class SubmissionService {
   readonly autosaveEnabled = signal(false);
   readonly lastSaved = signal<Date | null>(null);
 
-  private autosaveTimer: any = null;
+  private autosaveTimer: ReturnType<typeof setInterval> | null = null;
   private autosaveKey = '';
   private autosaveConfig: any = null;
   private submissionConfig: FormSubmission | null = null;
@@ -87,11 +88,11 @@ export class SubmissionService {
       const headers = config.headers || {};
 
       if (method === 'POST') {
-        return await this.http.post(endpoint, formData, { headers }).toPromise();
+        return await lastValueFrom(this.http.post(endpoint, formData, { headers }));
       } else if (method === 'PUT') {
-        return await this.http.put(endpoint, formData, { headers }).toPromise();
+        return await lastValueFrom(this.http.put(endpoint, formData, { headers }));
       } else if (method === 'PATCH') {
-        return await this.http.patch(endpoint, formData, { headers }).toPromise();
+        return await lastValueFrom(this.http.patch(endpoint, formData, { headers }));
       }
     } catch (error) {
       // Retry logic for network errors
@@ -161,20 +162,27 @@ export class SubmissionService {
   saveToStorage(formData: Record<string, unknown>): void {
     if (!this.autosaveConfig || !this.autosaveKey) return;
 
-    const storage = this.autosaveConfig.storage === 'sessionStorage'
-      ? sessionStorage
-      : localStorage;
+    try {
+      const storage = this.autosaveConfig.storage === 'sessionStorage'
+        ? sessionStorage
+        : localStorage;
 
-    const expirationMs = (this.autosaveConfig.expirationDays || 7) * 24 * 60 * 60 * 1000;
-    const expiresAt = Date.now() + expirationMs;
+      const expirationMs = (this.autosaveConfig.expirationDays || 7) * 24 * 60 * 60 * 1000;
+      const expiresAt = Date.now() + expirationMs;
 
-    const saveData = {
-      formData,
-      expiresAt
-    };
+      const saveData = {
+        formData,
+        expiresAt
+      };
 
-    storage.setItem(this.autosaveKey, JSON.stringify(saveData));
-    this.lastSaved.set(new Date());
+      storage.setItem(this.autosaveKey, JSON.stringify(saveData));
+      this.lastSaved.set(new Date());
+    } catch (error) {
+      // Handle quota exceeded or privacy mode errors
+      console.error('Failed to save form data to storage:', error);
+      // Storage failed, but don't break the application
+      // User can still submit the form manually
+    }
   }
 
   /**
@@ -183,14 +191,14 @@ export class SubmissionService {
   private restoreAutosavedData(): Record<string, unknown> | null {
     if (!this.autosaveConfig || !this.autosaveKey) return null;
 
-    const storage = this.autosaveConfig.storage === 'sessionStorage'
-      ? sessionStorage
-      : localStorage;
-
-    const saved = storage.getItem(this.autosaveKey);
-    if (!saved) return null;
-
     try {
+      const storage = this.autosaveConfig.storage === 'sessionStorage'
+        ? sessionStorage
+        : localStorage;
+
+      const saved = storage.getItem(this.autosaveKey);
+      if (!saved) return null;
+
       const { formData, expiresAt } = JSON.parse(saved);
 
       // Check if data has expired
@@ -200,7 +208,9 @@ export class SubmissionService {
       }
 
       return formData;
-    } catch {
+    } catch (error) {
+      // Handle JSON parse errors or storage access errors
+      console.error('Failed to restore autosaved data:', error);
       return null;
     }
   }
@@ -211,11 +221,16 @@ export class SubmissionService {
   clearAutosavedData(): void {
     if (!this.autosaveConfig || !this.autosaveKey) return;
 
-    const storage = this.autosaveConfig.storage === 'sessionStorage'
-      ? sessionStorage
-      : localStorage;
+    try {
+      const storage = this.autosaveConfig.storage === 'sessionStorage'
+        ? sessionStorage
+        : localStorage;
 
-    storage.removeItem(this.autosaveKey);
+      storage.removeItem(this.autosaveKey);
+    } catch (error) {
+      // Handle storage access errors (e.g., privacy mode)
+      console.error('Failed to clear autosaved data:', error);
+    }
   }
 
   /**

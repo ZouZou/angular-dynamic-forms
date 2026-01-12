@@ -466,6 +466,12 @@ export class DqDynamicForm {
   private submissionConfig: FormSubmission | null = null;
 
   ngOnDestroy(): void {
+    // Clear debounce timer
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
+
     // Cleanup services
     this._submission.destroy();
     this._validation.clearAllTimers();
@@ -1344,7 +1350,7 @@ export class DqDynamicForm {
   /**
    * Debounced autosave to avoid excessive writes
    */
-  private debounceTimer: any = null;
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private debouncedAutosave(): void {
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);

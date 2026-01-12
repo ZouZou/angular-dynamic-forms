@@ -1,5 +1,6 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { lastValueFrom } from 'rxjs';
 import { Field, AsyncValidator } from '../models/field.model';
 
 /**
@@ -14,7 +15,7 @@ export class ValidationService {
   readonly asyncErrors = signal<Record<string, string>>({});
 
   // Debounce timers for async validation
-  private asyncValidationTimers: Record<string, any> = {};
+  private asyncValidationTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
   /**
    * Validate a field value asynchronously
@@ -69,12 +70,12 @@ export class ValidationService {
     const endpoint = validator.endpoint;
 
     if (method === 'GET') {
-      const response = await this.http.get<any>(endpoint, {
+      const response = await lastValueFrom(this.http.get<any>(endpoint, {
         params: { value: String(value) }
-      }).toPromise();
+      }));
       return this.interpretValidationResponse(response, validator.validWhen);
     } else {
-      const response = await this.http.post<any>(endpoint, { value }).toPromise();
+      const response = await lastValueFrom(this.http.post<any>(endpoint, { value }));
       return this.interpretValidationResponse(response, validator.validWhen);
     }
   }
