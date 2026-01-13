@@ -11,14 +11,24 @@
       "Edit(./**)",
       "Glob(./**)",
       "Grep(./**)",
+      "Read(D:\\Github\\angular-dynamic-forms/**)",
+      "Write(D:\\Github\\angular-dynamic-forms/**)",
+      "Edit(D:\\Github\\angular-dynamic-forms/**)",
+      "Glob(D:\\Github\\angular-dynamic-forms/**)",
+      "Grep(D:\\Github\\angular-dynamic-forms/**)",
+      "Read(D:\\Github\\angular-dynamic-forms\\.auto-claude\\specs\\001-analysis-of-dynamic-forms/**)",
+      "Write(D:\\Github\\angular-dynamic-forms\\.auto-claude\\specs\\001-analysis-of-dynamic-forms/**)",
+      "Edit(D:\\Github\\angular-dynamic-forms\\.auto-claude\\specs\\001-analysis-of-dynamic-forms/**)",
       "Bash(*)",
-      "mcp__context7__resolve-library-id",
-      "mcp__context7__get-library-docs",
-      "mcp__graphiti-memory__search_nodes",
-      "mcp__graphiti-memory__search_facts",
-      "mcp__graphiti-memory__add_episode",
-      "mcp__graphiti-memory__get_episodes",
-      "mcp__graphiti-memory__get_entity_edge"
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "mcp__context7__resolve-library-id(*)",
+      "mcp__context7__get-library-docs(*)",
+      "mcp__graphiti-memory__search_nodes(*)",
+      "mcp__graphiti-memory__search_facts(*)",
+      "mcp__graphiti-memory__add_episode(*)",
+      "mcp__graphiti-memory__get_episodes(*)",
+      "mcp__graphiti-memory__get_entity_edge(*)"
     ]
   }
 }

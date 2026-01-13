@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(npm test:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix type safety and memory management issues\n\n- Replace any types with proper timer types \\(ReturnType<typeof setTimeout/setInterval>\\)\n- Add cleanup for debounce timer in ngOnDestroy to prevent memory leaks\n- Replace deprecated .toPromise\\(\\) with lastValueFrom\\(\\) from RxJS\n- Add error handling for localStorage/sessionStorage operations to handle quota exceeded and privacy mode scenarios\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+    ]
+  }
+}
