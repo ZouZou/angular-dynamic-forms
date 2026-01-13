@@ -328,6 +328,7 @@ describe('DevToolsService', () => {
         i18n: {
           enabled: true,
           defaultLocale: 'en-US',
+          availableLocales: ['en-US'],
           translations: {}
         },
         fields: [

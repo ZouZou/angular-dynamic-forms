@@ -19,6 +19,7 @@ describe('I18nService', () => {
       const config: I18nConfig = {
         enabled: true,
         defaultLocale: 'en-US',
+        availableLocales: ['en-US'],
         translations: {
           'en-US': {
             greeting: 'Hello'
@@ -34,6 +35,7 @@ describe('I18nService', () => {
       const config: I18nConfig = {
         enabled: false,
         defaultLocale: 'en-US',
+        availableLocales: ['en-US'],
         translations: {}
       };
 
@@ -48,6 +50,7 @@ describe('I18nService', () => {
       const config: I18nConfig = {
         enabled: true,
         defaultLocale: 'en-US',
+        availableLocales: ['en-US', 'es-ES', 'fr-FR'],
         translations: {
           'en-US': { greeting: 'Hello' },
           'es-ES': { greeting: 'Hola' },
@@ -81,6 +84,7 @@ describe('I18nService', () => {
       const config: I18nConfig = {
         enabled: true,
         defaultLocale: 'en-US',
+        availableLocales: ['en-US', 'es-ES'],
         translations: {
           'en-US': {
             greeting: 'Hello',
@@ -132,6 +136,7 @@ describe('I18nService', () => {
       const config: I18nConfig = {
         enabled: true,
         defaultLocale: 'en-US',
+        availableLocales: ['en-US'],
         translations: {
           'en-US': {
             message: 'Hello {{name}}, you have {{count}} messages'
@@ -150,6 +155,7 @@ describe('I18nService', () => {
       const rtlConfig: I18nConfig = {
         enabled: true,
         defaultLocale: 'ar-SA',
+        availableLocales: ['ar-SA'],
         translations: { 'ar-SA': {} }
       };
       service.initialize(rtlConfig);
@@ -162,6 +168,7 @@ describe('I18nService', () => {
       const ltrConfig: I18nConfig = {
         enabled: true,
         defaultLocale: 'en-US',
+        availableLocales: ['en-US'],
         translations: { 'en-US': {} }
       };
       service.initialize(ltrConfig);
@@ -174,6 +181,7 @@ describe('I18nService', () => {
       const hebrewConfig: I18nConfig = {
         enabled: true,
         defaultLocale: 'he-IL',
+        availableLocales: ['he-IL'],
         translations: { 'he-IL': {} }
       };
       service.initialize(hebrewConfig);
@@ -185,6 +193,7 @@ describe('I18nService', () => {
       const farsiConfig: I18nConfig = {
         enabled: true,
         defaultLocale: 'fa-IR',
+        availableLocales: ['fa-IR'],
         translations: { 'fa-IR': {} }
       };
       service.initialize(farsiConfig);
@@ -198,6 +207,7 @@ describe('I18nService', () => {
       const config: I18nConfig = {
         enabled: true,
         defaultLocale: 'en-US',
+        availableLocales: ['en-US'],
         translations: {}
       };
       service.initialize(config);
@@ -232,6 +242,7 @@ describe('I18nService', () => {
       const config: I18nConfig = {
         enabled: true,
         defaultLocale: 'en-US',
+        availableLocales: ['en-US'],
         translations: {}
       };
       service.initialize(config);
@@ -269,6 +280,7 @@ describe('I18nService', () => {
       const config: I18nConfig = {
         enabled: true,
         defaultLocale: 'en-US',
+        availableLocales: ['en-US'],
         translations: {}
       };
       service.initialize(config);
@@ -303,6 +315,7 @@ describe('I18nService', () => {
       const config: I18nConfig = {
         enabled: true,
         defaultLocale: 'en-US',
+        availableLocales: ['en-US'],
         translations: {}
       };
       service.initialize(config);
@@ -314,6 +327,7 @@ describe('I18nService', () => {
       const config: I18nConfig = {
         enabled: true,
         defaultLocale: 'en-US',
+        availableLocales: ['en-US'],
         translations: {
           'en-US': {
             level1: {
@@ -335,6 +349,7 @@ describe('I18nService', () => {
       const config: I18nConfig = {
         enabled: true,
         defaultLocale: 'en-US',
+        availableLocales: ['en-US'],
         translations: {
           'en-US': {
             number: 123,

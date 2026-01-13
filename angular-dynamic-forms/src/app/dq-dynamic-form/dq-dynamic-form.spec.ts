@@ -604,7 +604,7 @@ describe('DqDynamicForm', () => {
       component['formValues'].set({ accountType: 'personal' });
       fixture.detectChanges();
 
-      const isVisible = component['isFieldVisible'](schema.fields[1]);
+      const isVisible = component['isFieldVisible'](schema.fields![1]);
       expect(isVisible).toBe(false);
     });
 
@@ -641,7 +641,7 @@ describe('DqDynamicForm', () => {
       component['formValues'].set({ accountType: 'business' });
       fixture.detectChanges();
 
-      const isVisible = component['isFieldVisible'](schema.fields[1]);
+      const isVisible = component['isFieldVisible'](schema.fields![1]);
       expect(isVisible).toBe(true);
     });
 

@@ -1,7 +1,7 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
-import { FormSubmission } from '../models/field.model';
+import { FormSubmission, AutosaveConfig } from '../models/field.model';
 
 /**
  * Service for handling form submission and autosave functionality
@@ -24,7 +24,7 @@ export class SubmissionService {
 
   private autosaveTimer: ReturnType<typeof setInterval> | null = null;
   private autosaveKey = '';
-  private autosaveConfig: any = null;
+  private autosaveConfig: AutosaveConfig | null = null;
   private submissionConfig: FormSubmission | null = null;
   private readonly MAX_RETRY_ATTEMPTS = 3;
 
@@ -126,7 +126,7 @@ export class SubmissionService {
    * Configure and enable autosave
    */
   enableAutosave(
-    config: any,
+    config: AutosaveConfig,
     key: string,
     saveCallback: () => void
   ): void {

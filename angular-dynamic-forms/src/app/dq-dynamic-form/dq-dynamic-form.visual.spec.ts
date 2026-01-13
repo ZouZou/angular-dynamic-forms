@@ -140,7 +140,7 @@ describe('DqDynamicForm - Visual Regression Tests', () => {
       const schema: FormSchema = {
         title: 'Readonly Text',
         fields: [
-          { type: 'text', name: 'id', label: 'ID', readonly: true, value: '12345' }
+          { type: 'text', name: 'id', label: 'ID', readonly: true }
         ]
       };
 
