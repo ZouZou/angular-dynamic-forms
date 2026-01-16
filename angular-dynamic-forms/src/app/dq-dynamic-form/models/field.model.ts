@@ -307,6 +307,7 @@ export interface DataTableConfig {
   bordered?: boolean;                  // Show table borders (default: true)
   hoverable?: boolean;                 // Highlight row on hover (default: true)
   dense?: boolean;                     // Compact row height (default: false)
+  showLabel?: boolean;                 // Show field label above table (default: true)
   // Sorting
   defaultSort?: {                      // Default sort configuration
     column: string;                    // Column key to sort by

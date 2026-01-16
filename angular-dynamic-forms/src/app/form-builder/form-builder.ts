@@ -330,6 +330,7 @@ export class FormBuilder {
             mode: 'multiple',
             showSelectAll: true
           },
+          showLabel: true,
           emptyMessage: 'No data available'
         }
       }

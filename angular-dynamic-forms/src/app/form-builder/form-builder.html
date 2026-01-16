@@ -926,6 +926,16 @@
                   <!-- Other Options -->
                   <h5 style="margin-top: 1.5rem;">Other Options</h5>
                   <div class="form-group">
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="field.tableConfig.showLabel !== false"
+                        (change)="updateTableConfig('showLabel', $any($event.target).checked)"
+                      >
+                      Show Table Label
+                    </label>
+                  </div>
+                  <div class="form-group">
                     <label>Empty Message</label>
                     <input
                       type="text"

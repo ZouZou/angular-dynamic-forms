@@ -93,7 +93,10 @@ export class DevToolsService {
     }
 
     if (!field.label) {
-      errors.push(`${fieldRef}: Missing required property "label"`);
+      const allowMissingLabel = field.type === 'datatable' && field.tableConfig?.showLabel === false;
+      if (!allowMissingLabel) {
+        errors.push(`${fieldRef}: Missing required property "label"`);
+      }
     }
 
     // Validate field type

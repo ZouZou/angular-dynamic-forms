@@ -236,7 +236,9 @@
       <!-- DataTable -->
       @if (field.type === 'datatable' && field.tableConfig) {
       <div class="datatable-wrapper" [class.bordered]="field.tableConfig.bordered !== false" [class.dense]="field.tableConfig.dense">
-        <label class="form-label">{{ field.label }}</label>
+          @if (field.tableConfig.showLabel !== false) {
+          <label class="form-label">{{ field.label }}</label>
+          }
 
         <!-- Search/Filter Bar -->
         @if (field.tableConfig.filter?.enabled) {
