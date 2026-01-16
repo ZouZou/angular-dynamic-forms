@@ -1,7 +1,7 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
-import { Field, FormSection } from '../../../dq-dynamic-form/models/field.model';
+import { Field, FormSection } from 'dq-dynamic-form';
 
 /**
  * Displays the schema tree with sections/fields and drag-and-drop support

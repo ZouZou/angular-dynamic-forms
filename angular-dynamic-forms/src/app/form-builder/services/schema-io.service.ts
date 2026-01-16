@@ -1,6 +1,6 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { FormSchema } from '../../dq-dynamic-form/models/field.model';
-import { DevToolsService, ValidationResult } from '../../dq-dynamic-form/dev-tools.service';
+import { FormSchema } from 'dq-dynamic-form';
+import { DevToolsService, ValidationResult } from 'dq-dynamic-form';
 
 /**
  * Service for handling schema import/export and validation

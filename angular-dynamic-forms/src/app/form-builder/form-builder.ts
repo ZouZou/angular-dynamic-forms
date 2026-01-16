@@ -2,9 +2,9 @@ import { Component, signal, computed, inject, ChangeDetectionStrategy, effect } 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
-import { DqDynamicForm } from '../dq-dynamic-form/dq-dynamic-form';
-import { DevToolsService, ValidationResult } from '../dq-dynamic-form/dev-tools.service';
-import { FormSchema, Field, FormSection } from '../dq-dynamic-form/models/field.model';
+import { DqDynamicForm } from 'dq-dynamic-form';
+import { DevToolsService, ValidationResult } from 'dq-dynamic-form';
+import { FormSchema, Field, FormSection } from 'dq-dynamic-form';
 import { SchemaStateService } from './services/schema-state.service';
 import { SchemaIOService } from './services/schema-io.service';
 import { FieldPaletteComponent, FieldTemplate } from './components/palette/field-palette.component';

@@ -1,5 +1,5 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
-import { Field, FormSection } from '../../../dq-dynamic-form/models/field.model';
+import { Field, FormSection } from 'dq-dynamic-form';
 
 /**
  * Editor for basic field properties: name, label, placeholder, flags, and layout

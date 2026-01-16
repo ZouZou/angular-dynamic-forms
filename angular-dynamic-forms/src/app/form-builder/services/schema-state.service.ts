@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { FormSchema, Field, FormSection } from '../../dq-dynamic-form/models/field.model';
+import { FormSchema, Field, FormSection } from 'dq-dynamic-form';
 
 /**
  * Service for managing form schema state and operations

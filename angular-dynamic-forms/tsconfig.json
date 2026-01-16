@@ -3,6 +3,12 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "paths": {
+      "dq-dynamic-form": [
+        "./projects/dq-dynamic-form/src/public-api.ts",
+        "./dist/dq-dynamic-form"
+      ]
+    },
     "strict": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
@@ -28,6 +34,12 @@
     },
     {
       "path": "./tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/dq-dynamic-form/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/dq-dynamic-form/tsconfig.spec.json"
     }
   ]
 }

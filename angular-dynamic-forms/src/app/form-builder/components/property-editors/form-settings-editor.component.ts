@@ -1,5 +1,5 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
-import { FormSchema } from '../../../dq-dynamic-form/models/field.model';
+import { FormSchema } from 'dq-dynamic-form';
 
 /**
  * Editor for form-level settings: metadata, submission, and autosave configuration

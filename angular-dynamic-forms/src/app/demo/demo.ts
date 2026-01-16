@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DqDynamicForm } from '../dq-dynamic-form/dq-dynamic-form';
+import { DqDynamicForm } from 'dq-dynamic-form';
 
 @Component({
   selector: 'app-demo',

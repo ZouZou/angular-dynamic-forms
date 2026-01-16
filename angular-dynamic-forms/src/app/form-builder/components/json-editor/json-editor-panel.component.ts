@@ -1,5 +1,5 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
-import { ValidationResult } from '../../../dq-dynamic-form/dev-tools.service';
+import { ValidationResult } from 'dq-dynamic-form';
 
 /**
  * JSON editor panel with validation results display

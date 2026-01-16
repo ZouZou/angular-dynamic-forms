@@ -1,5 +1,5 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
-import { Field } from '../../../dq-dynamic-form/models/field.model';
+import { Field } from 'dq-dynamic-form';
 
 /**
  * Editor for timeline field configuration

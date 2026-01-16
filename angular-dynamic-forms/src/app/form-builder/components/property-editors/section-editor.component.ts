@@ -1,5 +1,5 @@
 import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
-import { FormSection } from '../../../dq-dynamic-form/models/field.model';
+import { FormSection } from 'dq-dynamic-form';
 
 /**
  * Editor for section properties in multi-step forms
