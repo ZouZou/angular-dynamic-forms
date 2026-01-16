@@ -1,0 +1,41 @@
+Pulled the runtime renderer into a proper Angular library inside this repo and wired the app to import from the library package instead of src/app/dq-dynamic-form. That gives you a buildable/publishable dq-
+  dynamic-form package while keeping local dev working via tsconfig paths.
+
+  Details
+
+  - Runtime renderer moved to projects/dq-dynamic-form/src/lib and exported via projects/dq-dynamic-form/src/public-api.ts.
+  - App imports now come from dq-dynamic-form instead of src/app/dq-dynamic-form (e.g. src/app/form-builder/form-builder.ts).
+  - Local path resolution updated to use projects/dq-dynamic-form/src/public-api.ts first (tsconfig.json).
+  - Library peer deps aligned with your app (projects/dq-dynamic-form/package.json).
+
+  Private registry publish flow
+
+  1. Build the library
+
+     npx ng build dq-dynamic-form
+  2. Set your registry + auth (example)
+
+     npm config set @your-scope:registry https://registry.your-company.com/
+     npm config set //registry.your-company.com/:_authToken=YOUR_TOKEN
+  3. (Recommended) scope the package name for private registry
+      - Update projects/dq-dynamic-form/package.json → "name": "@your-scope/dq-dynamic-form"
+  4. Publish from the dist output
+
+     cd dist/dq-dynamic-form
+     npm publish
+  5. Consume in another app
+
+     npm install @your-scope/dq-dynamic-form
+
+  Consumer setup checklist
+
+  - Import the standalone component where used:
+
+    import { DqDynamicForm } from '@your-scope/dq-dynamic-form';
+  - Ensure animations + HttpClient are enabled:
+      - provideAnimations() (or BrowserAnimationsModule)
+      - provideHttpClient() (or HttpClientModule)
+  - Add ng-select theme to global styles (same as this app):
+    node_modules/@ng-select/ng-select/themes/default.theme.css
+
+  If you want me to scope the package name and add publishConfig with your registry URL, send the scope + registry URL and I’ll wire it in.
